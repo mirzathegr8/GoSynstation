@@ -11,7 +11,8 @@ synstation.go\
 constants.go\
 physReciever.go\
 physRecieverSectored.go\
-powerC.go
+powerC.go\
+trace.go
 
 include $(GOROOT)/src/Make.pkg
 
