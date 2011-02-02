@@ -10,9 +10,12 @@ import "fmt"
 
 // counters to observe connection agents health
 var sens_connect, sens_disconnect, sens_lostconnect int
-func GetConnect() int    { a := sens_connect; sens_connect = 0; return a }
-func GetDisConnect() int { a := sens_disconnect; sens_disconnect = 0; return a }
+var Hopcount int
+
+func GetConnect() int     { a := sens_connect; sens_connect = 0; return a }
+func GetDisConnect() int  { a := sens_disconnect; sens_disconnect = 0; return a }
 func GetLostConnect() int { a := sens_lostconnect; sens_lostconnect = 0; return a }
+func GetHopCount() int    { a := Hopcount; Hopcount = 0; return a }
 
 // a DBS is a reciever, a list of active connection
 // it also is an agent and has a clock and internal random number generator
@@ -31,7 +34,7 @@ type DBS struct {
 func (dbs *DBS) Init() {
 
 	dbs.Connec = list.New()
-	dbs.RndCh= make([]int,NCh)
+	dbs.RndCh = make([]int, NCh)
 	dbs.R.Init()
 	var p geom.Pos
 	p.X = Rgen.Float64() * Field
@@ -43,18 +46,16 @@ func (dbs *DBS) Init() {
 // Physics : evaluate SNRs at reciever, evaluate BER of connections
 func (dbs *DBS) RunPhys() {
 
-	
-	dbs.R.DoTracking(dbs.Connec) 	
+	dbs.R.DoTracking(dbs.Connec)
 
 	dbs.R.MeasurePower(nil)
-
 
 	dbs.Clock = dbs.Rgen.Intn(3)
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
 		c.BitErrorRate(&dbs.R)
-		
+
 	}
 
 	SyncChannel <- 1
@@ -68,32 +69,32 @@ func (dbs *DBS) RandomChan() {
 
 	for i := 0; i < NCh; i++ {
 		SortCh.Push(i)
-	dbs.RndCh[i]=i
+		dbs.RndCh[i] = i
 	}
 
-//randomizesd reserved top canals
-/*	for i := 10; i > 1; i-- {
-		j := dbs.Rgen.Intn(i) + NCh-10
-		SortCh.Swap(NCh-10+i-1, j)
-		dbs.RndCh[NCh-10+i-1] =SortCh.Pop()
-	}
-	dbs.RndCh[NCh-10]=SortCh.Pop()
-*/
-//randomizes other canals
-/*	for i := NCh - 11; i > NChRes; i-- {
-		j := dbs.Rgen.Intn(i-NChRes) + NChRes 
-		SortCh.Swap(i, j)
-		dbs.RndCh[i] =SortCh.Pop()
-	}
-	dbs.RndCh[NChRes] = SortCh.Pop()
-	dbs.RndCh[0] = 0
-*/
+	//randomizesd reserved top canals
+	/*	for i := 10; i > 1; i-- {
+			j := dbs.Rgen.Intn(i) + NCh-10
+			SortCh.Swap(NCh-10+i-1, j)
+			dbs.RndCh[NCh-10+i-1] =SortCh.Pop()
+		}
+		dbs.RndCh[NCh-10]=SortCh.Pop()
+	*/
+	//randomizes other canals
+	/*	for i := NCh - 11; i > NChRes; i-- {
+			j := dbs.Rgen.Intn(i-NChRes) + NChRes 
+			SortCh.Swap(i, j)
+			dbs.RndCh[i] =SortCh.Pop()
+		}
+		dbs.RndCh[NChRes] = SortCh.Pop()
+		dbs.RndCh[0] = 0
+	*/
 	//fmt.Println(dbs.RndCh);
 
-	for i := NCh-1 ; i > NChRes; i-- {
-		j := dbs.Rgen.Intn(i-NChRes) + NChRes 
+	for i := NCh - 1; i > NChRes; i-- {
+		j := dbs.Rgen.Intn(i-NChRes) + NChRes
 		SortCh.Swap(i, j)
-		dbs.RndCh[i] =SortCh.Pop()
+		dbs.RndCh[i] = SortCh.Pop()
 	}
 	dbs.RndCh[NChRes] = SortCh.Pop()
 	dbs.RndCh[0] = 0
@@ -118,33 +119,33 @@ func (dbs *DBS) IsInUse(i int) bool { //
 
 }
 
-func syncThread(){ SyncChannel<- 1}
+func syncThread() { SyncChannel <- 1 }
 
 func (dbs *DBS) RunAgent() {
 
 	defer syncThread()
-        // defer dbs.optimizePowerAllocationSimple()
+	// defer dbs.optimizePowerAllocationSimple()
 	defer dbs.optimizePowerAllocation()
-		
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
-		
-		if c.GetCh()==0 {
+
+		if c.GetCh() == 0 {
 			//check that the signal on the connecting channel is still the same 
 			// and that its power is still enough
-			Rc,Eval:=dbs.R.EvalBestSignalSNR(0)
-			if c.GetE()!=Rc.Signal {
-				dbs.disconnect(e);
+			Rc, Eval := dbs.R.EvalBestSignalSNR(0)
+			if c.GetE() != Rc.Signal {
+				dbs.disconnect(e)
 				sens_disconnect--
 				sens_lostconnect++
-			} else {			
-			if 10*math.Log10(Eval) < SNRThresConnec-2{
-				dbs.disconnect(e);
-				sens_disconnect--
-				sens_lostconnect++
-			}}
-		
+			} else {
+				if 10*math.Log10(Eval) < SNRThresConnec-2 {
+					dbs.disconnect(e)
+					sens_disconnect--
+					sens_lostconnect++
+				}
+			}
+
 		}
 		// remove any connection that does not satify the threshold
 		if c.BER > math.Log10(BERThres) {
@@ -182,49 +183,48 @@ func (dbs *DBS) RunAgent() {
 		} else {
 
 			//find and connect
-			
 
-			
 			//First try to connect unconnected mobiles
-			
+
 			{
-			Rc,Eval:=dbs.R.EvalBestSignalSNR(0)
-			
-			if Rc.Signal != nil {	
-				if !dbs.IsConnected(Rc.Signal){
-				if 10*math.Log10(Eval) > SNRThresConnec {
-					dbs.connect(Rc.Signal)
-					return // we are done connecting
-				}}
+				Rc, Eval := dbs.R.EvalBestSignalSNR(0)
 
-			}}
-
-		// if no unconnected mobiles got connected, find one to provide it with macrodiversity
-			var max float64
-			max = -10.0 			
-			var Rc *ChanReciever
-			for j:=NConnec-dbs.Connec.Len();j>0;j--{
-			for i:=NChRes; i<NCh; i++ {
-				if !dbs.IsInUse(i) {								
-					Rt,r := dbs.R.EvalSignalConnection(i)
-					if r > max {
-						max = r
-						Rc=Rt
+				if Rc.Signal != nil {
+					if !dbs.IsConnected(Rc.Signal) {
+						if 10*math.Log10(Eval) > SNRThresConnec {
+							dbs.connect(Rc.Signal)
+							return // we are done connecting
+						}
 					}
+
 				}
 			}
-			if Rc != nil {
-				dbs.connect(Rc.Signal)
-			} else {break;}
+
+			// if no unconnected mobiles got connected, find one to provide it with macrodiversity
+			var max float64
+			max = -10.0
+			var Rc *ChanReciever
+			for j := NConnec - dbs.Connec.Len(); j > 0; j-- {
+				for i := NChRes; i < NCh; i++ {
+					if !dbs.IsInUse(i) {
+						Rt, r := dbs.R.EvalSignalConnection(i)
+						if r > max {
+							max = r
+							Rc = Rt
+						}
+					}
+				}
+				if Rc != nil {
+					dbs.connect(Rc.Signal)
+				} else {
+					break
+				}
 			}
-			
-			
+
 		}
 
 	}
 
-	
-	
 }
 
 func (dbs *DBS) connect(e EmitterInt) {
@@ -235,13 +235,9 @@ func (dbs *DBS) connect(e EmitterInt) {
 }
 
 
-var Hopcount int
+func (dbs *DBS) channelHopping2() {
 
-
-
-func (dbs *DBS) channelHopping2(){
-
-//pour trier les connections actives
+	//pour trier les connections actives
 	var MobileList vector.Vector
 
 	//pour trier les canaux
@@ -254,31 +250,32 @@ func (dbs *DBS) channelHopping2(){
 		if c.Status == 0 { // only change if master
 
 			if c.E.GetCh() == 0 { //if the mobile is waiting to be assigned a proper channel
-				
+
 				var ratio float64
 				nch := 0
 
 				//Parse channels in some order  given by dbs.RndCh to find a suitable channel 
 				for j := NChRes; j < NCh; j++ {
-					i := dbs.RndCh[j]					
-					if !dbs.IsInUse(i) && i != c.E.GetCh(){
+					i := dbs.RndCh[j]
+					if !dbs.IsInUse(i) && i != c.E.GetCh() {
 
-					_, ber, snr, _ := dbs.R.EvalSignalBER(c.E,i)	
-				
-					if  ber<math.Log10(BERThres/10) {
-						if snr > ratio {
-							ratio = snr
-							nch = i
-							//assign and exit
+						_, ber, snr, _ := dbs.R.EvalSignalBER(c.E, i)
+
+						if ber < math.Log10(BERThres/10) {
+							if snr > ratio {
+								ratio = snr
+								nch = i
+								//assign and exit
+							}
 						}
-					}}
+					}
 				}
 				if nch != 0 {
 					dbs.changeChannel(c, nch)
 					return
 				}
 
-			// sort mobile connection for channel hopping
+				// sort mobile connection for channel hopping
 			} else {
 				ratio := c.EvalRatio(&dbs.R)
 				var i int
@@ -297,97 +294,98 @@ func (dbs *DBS) channelHopping2(){
 	for k := 0; k < MobileList.Len() && k < 15; k++ {
 		co := MobileList.At(k).(ConnecType)
 		//ratio := co.EvalRatio(&dbs.R)		
-		
-		d:= co.GetE().GetPos().Distance(dbs.R.GetPos())
-		
-	//if (10*math.Log10(co.GetSNR())< SNRThres){
+
+		d := co.GetE().GetPos().Distance(dbs.R.GetPos())
+
+		//if (10*math.Log10(co.GetSNR())< SNRThres){
 		//var ir int
 		//ir:= NCh-NChRes + (6+int(math.Log10(Pr)))
 		//if d<100 {ir=28
 		//}else {ir=0}
-				
-	//	ir:= NCh-NChRes + int(( -float(d)/1500*float(NCh-NChRes) ))
+
+		//	ir:= NCh-NChRes + int(( -float(d)/1500*float(NCh-NChRes) ))
 		//if (ir<0) {ir=0}
-	//	if ir> NCh-2 {ir=NCh-2}
-	
-		ir:=5
-		if (d<300){
-		if !( co.GetE().GetCh() > NCh-ir) || (co.GetSNR()<SNRThresChHop-3){		
-		for j := NCh-ir; j < NCh; j++ {
-			
-			i := dbs.RndCh[j]			
-			if !dbs.IsInUse(i) && i != co.GetE().GetCh() {
-				_, snr, _, _:=dbs.R.EvalSignalSNR(co.GetE(),i)	
-				if snr > SNRThresChHop  {
-					dbs.changeChannel(co, i)
-					Hopcount++
-					break
+		//	if ir> NCh-2 {ir=NCh-2}
+
+		ir := 5
+		if d < 300 {
+			if !(co.GetE().GetCh() > NCh-ir) || (co.GetSNR() < SNRThresChHop-3) {
+				for j := NCh - ir; j < NCh; j++ {
+
+					i := dbs.RndCh[j]
+					if !dbs.IsInUse(i) && i != co.GetE().GetCh() {
+						_, snr, _, _ := dbs.R.EvalSignalSNR(co.GetE(), i)
+						if snr > SNRThresChHop {
+							dbs.changeChannel(co, i)
+							Hopcount++
+							break
+						}
+					}
 				}
 			}
-		}}}else {
+		} else {
 
-		if !( co.GetE().GetCh() < NCh-ir) || (co.GetSNR()<SNRThresChHop-3){		
-		for j := NChRes; j < NCh-ir; j++ {
-			
-			i := dbs.RndCh[j]
-			
-			if !dbs.IsInUse(i) && i != co.GetE().GetCh() {
-				_, snr,_,_:=dbs.R.EvalSignalSNR(co.GetE(),i)
-				if snr > SNRThresChHop  {
-					dbs.changeChannel(co, i)
-					Hopcount++
-					break
+			if !(co.GetE().GetCh() < NCh-ir) || (co.GetSNR() < SNRThresChHop-3) {
+				for j := NChRes; j < NCh-ir; j++ {
+
+					i := dbs.RndCh[j]
+
+					if !dbs.IsInUse(i) && i != co.GetE().GetCh() {
+						_, snr, _, _ := dbs.R.EvalSignalSNR(co.GetE(), i)
+						if snr > SNRThresChHop {
+							dbs.changeChannel(co, i)
+							Hopcount++
+							break
+						}
+					}
 				}
-			}}}
-
+			}
 
 		}
 
 	}
-		//}
-
+	//}
 
 	/*
-	for k := 0; k < MobileList.Len() && k < 1; k++ {
-		co := MobileList.At(k).(ConnecType)
-		ratio := co.EvalRatio(&dbs.R)
-		
-				
-		if (Pr<8e-9) && co.GetE().GetCh()>NCh-3{
+		for k := 0; k < MobileList.Len() && k < 1; k++ {
+			co := MobileList.At(k).(ConnecType)
+			ratio := co.EvalRatio(&dbs.R)
 
-	//push down		
-		for j := NChRes; j < NCh; j++ {
-			
-			i := dbs.RndCh[j]
-			
-			if !dbs.IsInUse(i) && i != co.GetE().GetCh() {
-				Rnew, ev, Pr:=dbs.R.EvalSignalBER(co.E,i)
-				if Pr/(Rnew.Pint+WNoise) > ratio/2 {
-					dbs.changeChannel(co, i)
-					Hopcount++
-					break
+
+			if (Pr<8e-9) && co.GetE().GetCh()>NCh-3{
+
+		//push down		
+			for j := NChRes; j < NCh; j++ {
+
+				i := dbs.RndCh[j]
+
+				if !dbs.IsInUse(i) && i != co.GetE().GetCh() {
+					Rnew, ev, Pr:=dbs.R.EvalSignalBER(co.E,i)
+					if Pr/(Rnew.Pint+WNoise) > ratio/2 {
+						dbs.changeChannel(co, i)
+						Hopcount++
+						break
+					}
 				}
-			}
-		}} else{
+			}} else{
 
-	//push up		
-		for j := NCh-2; j < NCh; j++ {
-			
-			i := dbs.RndCh[j]			
-			if !dbs.IsInUse(i) && i != co.GetE().GetCh() {
-				Rnew, ev, Pr:=dbs.R.EvalSignalBER(co.E,i)
-				if Pr/(Rnew.Pint+WNoise) > ratio/2 {
-					dbs.changeChannel(co, i)
-					Hopcount++
-					break
+		//push up		
+			for j := NCh-2; j < NCh; j++ {
+
+				i := dbs.RndCh[j]			
+				if !dbs.IsInUse(i) && i != co.GetE().GetCh() {
+					Rnew, ev, Pr:=dbs.R.EvalSignalBER(co.E,i)
+					if Pr/(Rnew.Pint+WNoise) > ratio/2 {
+						dbs.changeChannel(co, i)
+						Hopcount++
+						break
+					}
 				}
-			}
-		}}
+			}}
 
 
-	}
-*/
-	
+		}
+	*/
 
 
 }
@@ -411,19 +409,20 @@ func (dbs *DBS) channelHopping() {
 
 				var ratio float64
 				nch := 0
-				
+
 				//Parse channels in some order  given by dbs.RndCh to find a suitable channel 
 				for j := NChRes; j < NCh; j++ {
-					i := dbs.RndCh[j]					
-					if !dbs.IsInUse(i) && i != c.E.GetCh(){
-						_,snr,_,_:=dbs.R.EvalSignalSNR(c.E,i)	
+					i := dbs.RndCh[j]
+					if !dbs.IsInUse(i) && i != c.E.GetCh() {
+						_, snr, _, _ := dbs.R.EvalSignalSNR(c.E, i)
 						if 10*math.Log10(snr) > SNRThresChHop {
-						if snr > ratio {
-							ratio = snr
-							nch = i
-							//assign and exit
+							if snr > ratio {
+								ratio = snr
+								nch = i
+								//assign and exit
+							}
 						}
-					}}
+					}
 				}
 				if nch != 0 {
 					dbs.changeChannel(c, nch)
@@ -449,23 +448,23 @@ func (dbs *DBS) channelHopping() {
 	for k := 0; k < MobileList.Len() && k < 2; k++ {
 		co := MobileList.At(k).(ConnecType)
 		ratio := co.EvalRatio(&dbs.R)
-		chHop := 0			
-				
+		chHop := 0
+
 		for j := NChRes; j < NCh; j++ {
-			
+
 			i := dbs.RndCh[j]
-			
+
 			if !dbs.IsInUse(i) && i != co.GetE().GetCh() {
 
-				_, snr,_,_:=dbs.R.EvalSignalSNR(co.GetE(),i)
+				_, snr, _, _ := dbs.R.EvalSignalSNR(co.GetE(), i)
 
 				if snr > ratio {
-				   ratio=snr
-				   chHop=i	
+					ratio = snr
+					chHop = i
 				}
 			}
 		}
-		if chHop>0{
+		if chHop > 0 {
 			dbs.changeChannel(co, chHop)
 			Hopcount++
 		}
@@ -533,7 +532,9 @@ func (dbs *DBS) optimizePowerAllocation() {
 				}
 			}
 
-			if delta>1 || delta< -1 {fmt.Println("Power Error ",delta)}
+			if delta > 1 || delta < -1 {
+				fmt.Println("Power Error ", delta)
+			}
 
 			M.PowerDelta(delta)
 
@@ -547,42 +548,44 @@ func (dbs *DBS) optimizePowerAllocation() {
 
 func (dbs *DBS) optimizePowerAllocationSimple() {
 
-	
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
 		M := c.E
 
 		if c.Status == 0 {
-			if c.E.GetCh() != 0  { // if master connection	
+			if c.E.GetCh() != 0 { // if master connection	
 
-			L:=float64(100)
-			d:=(L-dbs.R.GetPos().Distance(M.GetPos()))/L
-			var p float64
-			if (d>0) {
-//				p=1-math.Pow(d,1)
-				p=1-d
-			}else {p=1}
+				L := float64(100)
+				d := (L - dbs.R.GetPos().Distance(M.GetPos())) / L
+				var p float64
+				if d > 0 {
+					//p=1-math.Pow(d,1)
+					p = 1 - d
+				} else {
+					p = 1
+				}
 
-			//p:=0.001*(math.Pow(dbs.R.GetPos().Distance(M.GetPos()),4)/100000)
+				//p:=0.001*(math.Pow(dbs.R.GetPos().Distance(M.GetPos()),4)/100000)
 
-			M.SetPower(p)
+				M.SetPower(p)
 
 			} else {
-			M.SetPower(1)
+				M.SetPower(1)
 			}
-			
-		} 
 
-		
+		}
+
 	}
 
 }
 
-func (dbs *DBS) IsConnected(tx EmitterInt) bool{
+func (dbs *DBS) IsConnected(tx EmitterInt) bool {
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
-		if c.E == tx {return true}
+		if c.E == tx {
+			return true
+		}
 	}
 	return false
 
