@@ -25,7 +25,7 @@ type EmitterS struct {
 	Diversity int
 	Requested float64
 	MaxBER    float64
-	SNRb	  float64
+	SNRb      float64
 }
 
 // EmitterS with additional registers for BER and diversity evaluation, 
@@ -35,7 +35,7 @@ type Emitter struct {
 
 	//data used during calculation runtime
 	SBERtotal  float64
-	SMaxBER	   float64
+	SMaxBER    float64
 	SDiversity int
 
 	MasterConnection *Connection
@@ -87,20 +87,19 @@ func (e *Emitter) isdone() chan int {
 
 // function called by connections to inform BER quality of a link to the emitter
 func (e *Emitter) AddConnection(c *Connection) {
-	if (c.BER<math.Log10(BERThres)){
-	e.SBERtotal += c.BER
-	e.SDiversity++
-	c.Status = 1	//we set the status as slave, as master status will be set after all connections data has been recieved
-	num_con++
+	if c.BER < math.Log10(BERThres) {
+		e.SBERtotal += c.BER
+		e.SDiversity++
+		c.Status = 1 //we set the status as slave, as master status will be set after all connections data has been recieved
+		num_con++
 	}
 
-	if e.SMaxBER > c.BER {	//evaluate which connection is the best and memorizes which will be masterconnection
+	if e.SMaxBER > c.BER { //evaluate which connection is the best and memorizes which will be masterconnection
 		e.MasterConnection = c
 		e.SMaxBER = c.BER
-		e.SNRb=c.SNR
-		
-	}
+		e.SNRb = c.SNR
 
+	}
 
 }
 
@@ -111,8 +110,6 @@ func (e *Emitter) Req() float64  { return e.Requested }
 func (M *Emitter) PowerDelta(delta float64) {
 	M.SetPower(M.Power + delta)
 }
-
-
 
 
 func (M *Emitter) SetPower(P float64) {
@@ -137,3 +134,4 @@ func (M *Emitter) SetCh(nch int) {
 	}
 
 }
+
