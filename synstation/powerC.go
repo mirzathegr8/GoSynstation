@@ -1,7 +1,7 @@
-
-
 package synstation
 
+
+//Adds power contral for macrodiversity based on 
 func PowerC(dbsA []DBS) {
 
 	var maxMob int
@@ -12,97 +12,96 @@ func PowerC(dbsA []DBS) {
 		}
 	}
 
-
-
 	for ch := 2; ch < NCh; ch++ {
 
-	go powerch(ch,dbsA,maxMob) 
+		go powerch(ch, dbsA, maxMob)
 
 	}
 
 }
 
-func powerch(ch int,dbsA []DBS, maxMob int){
+func powerch(ch int, dbsA []DBS, maxMob int) {
 
-		Gij := make([][]float64, maxMob)
-		for i := 0; i < maxMob; i++ {
-			Gij[i] = make([]float64, D)
+	Gij := make([][]float64, maxMob)
+	for i := 0; i < maxMob; i++ {
+		Gij[i] = make([]float64, D)
+	}
+
+	ConnectMat := make([][]bool, maxMob)
+	for i := 0; i < maxMob; i++ {
+		ConnectMat[i] = make([]bool, D)
+	}
+
+	P := make([]float64, M)
+	SumL := make([]float64, M)
+	Pplus := make([]float64, M)
+
+	nbMch := SystemChan[ch].Emitters.Len() //number of mobiles on this channel
+	if nbMch > 1 {
+
+		for i, tx := 0, SystemChan[ch].Emitters.Front(); tx != nil; tx, i = tx.Next(), i+1 {
+			txx := tx.Value.(EmitterInt)
+			for j := 0; j < D; j++ {
+				Gij[i][j], _ = dbsA[j].R.RicePropagation(txx)
+				ConnectMat[i][j] = dbsA[j].IsConnected(txx)
+			}
 		}
 
-		ConnectMat := make([][]bool, maxMob)
-		for i := 0; i < maxMob; i++ {
-			ConnectMat[i] = make([]bool, D)
+		for i := 0; i < nbMch; i++ {
+			P[i] = 0.0
+			for j := 0; j < D; j++ {
+				if ConnectMat[i][j] {
+					P[i] += Gij[i][j]
+				}
+			}
+			P[i] = 1.0 / P[i]
 		}
 
-		P := make([]float64, M)
-		SumL := make([]float64, M)
-		Pplus := make([]float64, M)
+		for m := 0; m < 20; m++ {
 
-		nbMch := SystemChan[ch].Emitters.Len() //number of mobiles on this channel
-		if nbMch > 1 {
-			
-			for i,tx := 0,SystemChan[ch].Emitters.Front(); tx != nil; tx,i = tx.Next(),i+1 {
-				txx := tx.Value.(EmitterInt)
-				for j := 0; j < D; j++ {
-					Gij[i][j], _ = dbsA[j].R.RicePropagation(txx)
-					ConnectMat[i][j] = dbsA[j].IsConnected(txx)
+			Gamma := float64(0.0)
+
+			for j := 0; j < D; j++ {
+				SumL[j] = 0.0
+				for l := 0; l < nbMch; l++ {
+					SumL[j] += Gij[l][j] * P[l]
+				}
+
+				if ConnectMat[1][j] {
+					Gamma += Gij[1][j] * P[1] / (SumL[j] - Gij[1][j]*P[1])
 				}
 			}
 
 			for i := 0; i < nbMch; i++ {
-				P[i] = 0.0
+				SumJ := float64(0.0)
 				for j := 0; j < D; j++ {
 					if ConnectMat[i][j] {
-						P[i] += Gij[i][j]
+						SumJ += Gij[i][j] / (SumL[j] - Gij[i][j]*P[i])
 					}
 				}
-				P[i] = 1.0 / P[i]
+
+				Pplus[i] = Gamma / SumJ
 			}
 
-			for m := 0; m < 20; m++ {
-
-				Gamma := float64(0.0)
-
-				for j := 0; j < D; j++ {
-					SumL[j] = 0.0
-					for l := 0; l < nbMch; l++ {
-						SumL[j] += Gij[l][j] * P[l]
-					}
-
-					if ConnectMat[1][j] {
-						Gamma += Gij[1][j] * P[1] / (SumL[j] - Gij[1][j]*P[1])
-					}
-				}
-
-				for i := 0; i < nbMch; i++ {
-					SumJ := float64(0.0)
-					for j := 0; j < D; j++ {
-						if ConnectMat[i][j] {
-							SumJ += Gij[i][j] / (SumL[j] - Gij[i][j]*P[i])
-						}
-					}
-
-					Pplus[i] = Gamma / SumJ
-				}
-
-				for i := 0; i < nbMch; i++ {
-					P[i] = Pplus[i]
-				}
-
-			}
-
-			maxP := Pplus[0]
-			for i := 1; i < nbMch; i++ {
-				if Pplus[i] > maxP {
-					maxP = Pplus[i]
-				}
-			}
-
-			for i,tx := 0,SystemChan[ch].Emitters.Front(); tx != nil; tx,i = tx.Next(),i+1 {
-				txx := tx.Value.(EmitterInt)
-				txx.SetPower(Pplus[i] / maxP)
+			for i := 0; i < nbMch; i++ {
+				P[i] = Pplus[i]
 			}
 
 		}
 
+		maxP := Pplus[0]
+		for i := 1; i < nbMch; i++ {
+			if Pplus[i] > maxP {
+				maxP = Pplus[i]
+			}
+		}
+
+		for i, tx := 0, SystemChan[ch].Emitters.Front(); tx != nil; tx, i = tx.Next(), i+1 {
+			txx := tx.Value.(EmitterInt)
+			txx.SetPower(Pplus[i] / maxP)
+		}
+
 	}
+
+}
+
