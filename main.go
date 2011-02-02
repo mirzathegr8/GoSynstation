@@ -12,10 +12,11 @@ import "os"
 
 // Data to save for output during simulation
 type outputData struct {
-	k, connected, BER1, BER2, BER3           float
-	d_connec, d_discon, d_lost		 float
-	lost                                     float
-	Diversity				float
+	k, connected, BER1, BER2, BER3 float
+	d_connec, d_discon, d_lost     float
+	lost                           float
+	Diversity                      float
+	HopCount                       float
 }
 
 func (o *outputData) Add(o2 *outputData) {
@@ -25,9 +26,10 @@ func (o *outputData) Add(o2 *outputData) {
 	o.BER3 += o2.BER3
 	o.d_connec += o2.d_connec
 	o.d_discon += o2.d_discon
-	o.d_lost +=  o2.d_lost
-	o.lost     += o2.lost
+	o.d_lost += o2.d_lost
+	o.lost += o2.lost
 	o.Diversity += o2.Diversity
+	o.HopCount += o2.HopCount
 }
 
 
@@ -38,21 +40,23 @@ func (o *outputData) Div(k float) {
 	o.BER3 /= k
 	o.d_connec /= k
 	o.d_discon /= k
-	o.lost     /= k
-	o.Diversity/= k
-	o.d_lost /=k
+	o.lost /= k
+	o.Diversity /= k
+	o.d_lost /= k
+	o.HopCount /= k
 }
 
 func (o outputData) String() string {
 	return fmt.Sprint(o.connected, "	",
-			o.BER1, "	",
-			o.BER2, "	", 
-			o.BER3, "	",
-			o.d_connec, "	",
-			o.d_discon, "	",
-			o.lost, "	",
-			o.d_lost,"	",
-			o.Diversity)
+		o.BER1, "	",
+		o.BER2, "	",
+		o.BER3, "	",
+		o.d_connec, "	",
+		o.d_discon, "	",
+		o.lost, "	",
+		o.d_lost, "	",
+		o.Diversity, "	",
+		o.HopCount)
 
 }
 
@@ -63,7 +67,7 @@ var outChannel chan outputData
 func printData() {
 
 	for r := range outChannel {
-		fmt.Println(r.k,"	", r.String())
+		fmt.Println(r.k, "	", r.String())
 	}
 
 }
@@ -73,9 +77,9 @@ func main() {
 
 	runtime.GOMAXPROCS(14)
 	//runtime.LockOSThread() // prevnt opengl calls in draw package to call opengl in different threads
-	
-	var outD outputData // one to print
-	var outDs outputData	// one to sum and take mean over simulation
+
+	var outD outputData  // one to print
+	var outDs outputData // one to sum and take mean over simulation
 
 	var synstations [synstation.D]synstation.DBS
 	var mobiles [synstation.M]synstation.Mob
@@ -107,13 +111,12 @@ func main() {
 
 	fmt.Println("Init done")
 
-
-//	draw.DrawReceptionField(synstations[:],"receptionLevel.png")
+	//	draw.DrawReceptionField(synstations[:],"receptionLevel.png")
 
 	go printData() //launch thread to print output
 
 	//heating up simulation
-	for k := -200; k <0; k++ {
+	for k := -200; k < 0; k++ {
 
 		for i := range synstations {
 			go synstations[i].RunPhys()
@@ -123,7 +126,6 @@ func main() {
 			go mobiles[i].RunPhys()
 		}
 
-
 		//synchronise here
 		n := 0
 		for _ = range synstation.SyncChannel {
@@ -132,7 +134,6 @@ func main() {
 				break
 			}
 		}
-
 
 		// physics is done, now launch mobiles data work
 		for i := range mobiles {
@@ -164,23 +165,20 @@ func main() {
 				break
 			}
 
-		}		
+		}
 
 		//geting a bit more data
 		outD.d_connec = float(synstation.GetConnect())
 		outD.d_discon = float(synstation.GetDisConnect())
-		outD.Diversity= float(synstation.GetDiversity())/float(synstation.M)
+		outD.Diversity = float(synstation.GetDiversity()) / float(synstation.M)
 		outD.lost = float(synstation.SystemChan[0].GetAdded())
 		outD.d_lost = float(synstation.GetLostConnect())
-
-		
+		outD.HopCount = float(synstation.GetHopCount())
 
 		if k%10 == 0 {
 			outD.k = float(k)
 			outChannel <- outD //sent data to print to  stdout		
 		}
-
-	
 
 		//Run DBS Agent, and sync
 		for i := range synstations {
@@ -212,7 +210,6 @@ func main() {
 			go mobiles[i].RunPhys()
 		}
 
-
 		//synchronise here
 		n := 0
 		for _ = range synstation.SyncChannel {
@@ -221,7 +218,6 @@ func main() {
 				break
 			}
 		}
-
 
 		// physics is done, now launch mobiles data work
 		for i := range mobiles {
@@ -253,22 +249,26 @@ func main() {
 				break
 			}
 
-		}		
+		}
 
 		//geting a bit more data
 		outD.d_connec = float(synstation.GetConnect())
 		outD.d_discon = float(synstation.GetDisConnect())
-		outD.Diversity= float(synstation.GetDiversity())/float(synstation.M)
+		outD.Diversity = float(synstation.GetDiversity()) / float(synstation.M)
 		outD.lost = float(synstation.SystemChan[0].GetAdded())
 		outD.d_lost = float(synstation.GetLostConnect())
+		outD.HopCount = float(synstation.GetHopCount())
 
 		outDs.Add(&outD)
 
 		if k%10 == 0 {
 			outD.k = float(k)
 			outChannel <- outD //sent data to print to  stdout
-			//draw.Draw(synstations[0:synstation.D], mobiles[0:synstation.M], k)
-		}	
+
+			t := synstation.CreateTrace(mobiles[0:synstation.M], synstations[0:synstation.D], k)
+			draw.Draw(t)
+
+		}
 
 		//Run DBS Agent, and sync
 		for i := range synstations {
@@ -288,7 +288,6 @@ func main() {
 
 	}
 
-
 	// Print some status data
 
 	outDs.Div(float(synstation.Duration))
@@ -298,7 +297,6 @@ func main() {
 		fmt.Print(" ", synstations[i].Connec.Len())
 	}
 	fmt.Println()
-	
 
 	for i := range synstation.SystemChan {
 		fmt.Print(" ", synstation.SystemChan[i].Emitters.Len())
@@ -326,8 +324,6 @@ func main() {
 	}
 	fmt.Println("];")*/
 
-
-
 	//outChannel.close()
 
 	//And finaly close channels and background processes
@@ -342,85 +338,80 @@ func main() {
 
 }
 
-func SaveToFile(mobiles []synstation.Mob){
+func SaveToFile(mobiles []synstation.Mob) {
 
-	
-	outF,err  :=os.Open("out.m", os.O_WRONLY, 0666)
-
+	outF, err := os.Open("out.m", os.O_WRONLY, 0666)
 
 	fmt.Println(err)
 
-	outF.WriteString(fmt.Sprintln("# name: Ptxr\n# type: matrix\n# rows: ",synstation.M,"\n# columns: ",1))	
-	for i:=0; i< synstation.M ;i++ {
-		 outF.WriteString(fmt.Sprintln( mobiles[i].Power," "))
-		
+	outF.WriteString(fmt.Sprintln("# name: Ptxr\n# type: matrix\n# rows: ", synstation.M, "\n# columns: ", 1))
+	for i := 0; i < synstation.M; i++ {
+		outF.WriteString(fmt.Sprintln(mobiles[i].Power, " "))
+
 	}
 	outF.WriteString("\n")
 
-outF.WriteString(fmt.Sprintln("# name: Pr\n# type: matrix\n# rows: ",synstation.M,"\n# columns: ",1))	
-	for i:=0; i< synstation.M ;i++ {
-		if (mobiles[i].GetMasterConnec()!=nil) {
-		 outF.WriteString(fmt.Sprintln( mobiles[i].GetMasterConnec().Pr," "))
-		} else{
-		 outF.WriteString(fmt.Sprintln( -1," "))
+	outF.WriteString(fmt.Sprintln("# name: Pr\n# type: matrix\n# rows: ", synstation.M, "\n# columns: ", 1))
+	for i := 0; i < synstation.M; i++ {
+		if mobiles[i].GetMasterConnec() != nil {
+			outF.WriteString(fmt.Sprintln(mobiles[i].GetMasterConnec().Pr, " "))
+		} else {
+			outF.WriteString(fmt.Sprintln(-1, " "))
 		}
-		
+
 	}
 	outF.WriteString("\n")
 
-	outF.WriteString(fmt.Sprintln("# name: Div\n# type: matrix\n# rows: ",synstation.M,"\n# columns: ",1))	
-	for i:=0; i< synstation.M ;i++ {
-		 outF.WriteString(fmt.Sprintln( mobiles[i].Diversity," "))
-		
+	outF.WriteString(fmt.Sprintln("# name: Div\n# type: matrix\n# rows: ", synstation.M, "\n# columns: ", 1))
+	for i := 0; i < synstation.M; i++ {
+		outF.WriteString(fmt.Sprintln(mobiles[i].Diversity, " "))
+
 	}
 	outF.WriteString("\n")
 
-	outF.WriteString(fmt.Sprintln("# name: BERt\n# type: matrix\n# rows: ",synstation.M,"\n# columns: ",1))	
-	for i:=0; i< synstation.M ;i++ {
-		 outF.WriteString(fmt.Sprintln( mobiles[i].BERtotal," "))
-		
+	outF.WriteString(fmt.Sprintln("# name: BERt\n# type: matrix\n# rows: ", synstation.M, "\n# columns: ", 1))
+	for i := 0; i < synstation.M; i++ {
+		outF.WriteString(fmt.Sprintln(mobiles[i].BERtotal, " "))
+
 	}
 	outF.WriteString("\n")
 
+	outF.WriteString(fmt.Sprintln("# name: MaxSNR\n# type: matrix\n# rows: ", synstation.M, "\n# columns: ", 1))
+	for i := 0; i < synstation.M; i++ {
+		outF.WriteString(fmt.Sprintln(mobiles[i].SNRb, " "))
 
-	outF.WriteString(fmt.Sprintln("# name: MaxSNR\n# type: matrix\n# rows: ",synstation.M,"\n# columns: ",1))	
-	for i:=0; i< synstation.M ;i++ {
-		 outF.WriteString(fmt.Sprintln( mobiles[i].SNRb," "))
-		
 	}
 	outF.WriteString("\n")
 
-	outF.WriteString(fmt.Sprintln("# name: MaxBER\n# type: matrix\n# rows: ",synstation.M,"\n# columns: ",1))	
-	for i:=0; i< synstation.M ;i++ {
-		 outF.WriteString(fmt.Sprintln( mobiles[i].MaxBER," "))
-		
+	outF.WriteString(fmt.Sprintln("# name: MaxBER\n# type: matrix\n# rows: ", synstation.M, "\n# columns: ", 1))
+	for i := 0; i < synstation.M; i++ {
+		outF.WriteString(fmt.Sprintln(mobiles[i].MaxBER, " "))
+
 	}
 	outF.WriteString("\n")
 
-	outF.WriteString(fmt.Sprintln("# name: Ch\n# type: matrix\n# rows: ",synstation.M,"\n# columns: ",1))	
-	for i:=0; i< synstation.M ;i++ {
-		 outF.WriteString(fmt.Sprintln( mobiles[i].GetCh()," "))
-		
+	outF.WriteString(fmt.Sprintln("# name: Ch\n# type: matrix\n# rows: ", synstation.M, "\n# columns: ", 1))
+	for i := 0; i < synstation.M; i++ {
+		outF.WriteString(fmt.Sprintln(mobiles[i].GetCh(), " "))
+
 	}
 	outF.WriteString("\n")
 
-outF.WriteString(fmt.Sprintln("# name: XX\n# type: matrix\n# rows: ",synstation.M,"\n# columns: ",1))	
-	for i:=0; i< synstation.M ;i++ {
-		 outF.WriteString(fmt.Sprintln( mobiles[i].Pos.X," "))
-		
+	outF.WriteString(fmt.Sprintln("# name: XX\n# type: matrix\n# rows: ", synstation.M, "\n# columns: ", 1))
+	for i := 0; i < synstation.M; i++ {
+		outF.WriteString(fmt.Sprintln(mobiles[i].Pos.X, " "))
+
 	}
 	outF.WriteString("\n")
 
-outF.WriteString(fmt.Sprintln("# name: YY\n# type: matrix\n# rows: ",synstation.M,"\n# columns: ",1))	
-	for i:=0; i< synstation.M ;i++ {
-		 outF.WriteString(fmt.Sprintln( mobiles[i].Pos.Y," "))
-		
+	outF.WriteString(fmt.Sprintln("# name: YY\n# type: matrix\n# rows: ", synstation.M, "\n# columns: ", 1))
+	for i := 0; i < synstation.M; i++ {
+		outF.WriteString(fmt.Sprintln(mobiles[i].Pos.Y, " "))
+
 	}
 	outF.WriteString("\n")
 
-
-	outF.Close();
-
+	outF.Close()
 
 }
 
