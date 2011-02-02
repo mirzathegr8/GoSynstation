@@ -38,8 +38,8 @@ func (M *Mob) Init() {
 	M.Ch = 1 // not connected // that's a trick to initialize SystemChannel emitters list
 	M.SetCh(0)
 
-	M.Speed[0] = (M.Rgen.Float64()*2-1)*MaxSpeed
-	M.Speed[1] = (M.Rgen.Float64()*2-1)*MaxSpeed
+	M.Speed[0] = (M.Rgen.Float64()*2 - 1) * MaxSpeed
+	M.Speed[1] = (M.Rgen.Float64()*2 - 1) * MaxSpeed
 
 	//M.R.X = M.X
 	//M.R.Y = M.Y
@@ -91,8 +91,8 @@ func (M *Mob) RunPhys() {
 // finnaly sents to syncchannel BER level
 func (M *Mob) FetchData() {
 
-	M.BERtotal, M.Diversity, M.MaxBER = M.SBERtotal, M.SDiversity,M.SMaxBER
-	M.SBERtotal, M.SDiversity, M.SMaxBER = 0.0, 0,0.0
+	M.BERtotal, M.Diversity, M.MaxBER = M.SBERtotal, M.SDiversity, M.SMaxBER
+	M.SBERtotal, M.SDiversity, M.SMaxBER = 0.0, 0, 0.0
 
 	M.move()
 
@@ -110,3 +110,4 @@ func (M *Mob) FetchData() {
 		SyncChannel <- M.BERtotal
 	}
 }
+
