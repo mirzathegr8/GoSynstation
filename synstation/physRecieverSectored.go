@@ -4,13 +4,13 @@ import "geom"
 import "container/list"
 
 // structure to store evaluation of interference at a location
-// this has to be initialized with PhysReciever.Init() function to init memory
-type PhysRecieverSectored struct {
-	R []PhysReciever
+// this has to be initialized with PhysReceiver.Init() function to init memory
+type PhysReceiverSectored struct {
+	R []PhysReceiver
 }
 
-func (r *PhysRecieverSectored) Init() {
-	r.R = make([]PhysReciever, 3)
+func (r *PhysReceiverSectored) Init() {
+	r.R = make([]PhysReceiver, 3)
 	for i := 0; i < 3; i++ {
 		r.R[i].Init()
 	}
@@ -26,26 +26,26 @@ func (r *PhysRecieverSectored) Init() {
 	}
 }
 
-func (r *PhysRecieverSectored) SetPos(p geom.Pos) {
+func (r *PhysReceiverSectored) SetPos(p geom.Pos) {
 	for i := 0; i < 3; i++ {
 		r.R[i].SetPos(p)
 	}
 }
-func (r *PhysRecieverSectored) GetPos() *geom.Pos {
+func (r *PhysReceiverSectored) GetPos() *geom.Pos {
 	return &r.R[0].Pos
 }
 
 
 // Evaluates interference for all channels with overlapping effect,
 // channel 0 is considered to have no interference as traffic is suppose to only hold minimal signalization 
-func (rx *PhysRecieverSectored) MeasurePower(tx EmitterInt) {
+func (rx *PhysReceiverSectored) MeasurePower(tx EmitterInt) {
 	for i := 0; i < 3; i++ {
 		rx.R[i].MeasurePower(tx)
 	}
 }
 
 
-func (r *PhysRecieverSectored) EvalSignalPr(e EmitterInt, ch int) (Pr, K float64) {
+func (r *PhysReceiverSectored) EvalSignalPr(e EmitterInt, ch int) (Pr, K float64) {
 	var p [3]float64
 	var k [3]float64
 
@@ -56,9 +56,9 @@ func (r *PhysRecieverSectored) EvalSignalPr(e EmitterInt, ch int) (Pr, K float64
 	return p[ir], k[ir]
 }
 
-func (r *PhysRecieverSectored) EvalBestSignalSNR(ch int) (Rc *ChanReciever, SNR float64) {
+func (r *PhysReceiverSectored) EvalBestSignalSNR(ch int) (Rc *ChanReceiver, SNR float64) {
 	/*var e [3]float64
-	var R [3]*ChanReciever		
+	var R [3]*ChanReceiver		
 
 	for i:=range e {
 		R[i],e[i] = r.R[i].EvalBestSignalSNR(ch)	
@@ -83,9 +83,9 @@ func (r *PhysRecieverSectored) EvalBestSignalSNR(ch int) (Rc *ChanReciever, SNR 
 
 }
 
-func (r *PhysRecieverSectored) EvalSignalConnection(ch int) (*ChanReciever, float64) {
+func (r *PhysReceiverSectored) EvalSignalConnection(ch int) (*ChanReceiver, float64) {
 	var e [3]float64
-	var R [3]*ChanReciever
+	var R [3]*ChanReceiver
 
 	for i := range e {
 		R[i], e[i] = r.R[i].EvalSignalConnection(ch)
@@ -95,8 +95,8 @@ func (r *PhysRecieverSectored) EvalSignalConnection(ch int) (*ChanReciever, floa
 }
 
 
-func (r *PhysRecieverSectored) EvalSignalSNR(ex EmitterInt, ch int) (Rc *ChanReciever, SNR, Pr, K float64) {
-	var R [3]*ChanReciever
+func (r *PhysReceiverSectored) EvalSignalSNR(ex EmitterInt, ch int) (Rc *ChanReceiver, SNR, Pr, K float64) {
+	var R [3]*ChanReceiver
 	var s [3]float64
 	var p [3]float64
 	var k [3]float64
@@ -109,8 +109,8 @@ func (r *PhysRecieverSectored) EvalSignalSNR(ex EmitterInt, ch int) (Rc *ChanRec
 }
 
 
-func (r *PhysRecieverSectored) EvalSignalBER(ex EmitterInt, ch int) (Rc *ChanReciever, BER, SNR, Pr float64) {
-	var R [3]*ChanReciever
+func (r *PhysReceiverSectored) EvalSignalBER(ex EmitterInt, ch int) (Rc *ChanReceiver, BER, SNR, Pr float64) {
+	var R [3]*ChanReceiver
 	var b [3]float64
 	var s [3]float64
 	var p [3]float64
@@ -148,11 +148,11 @@ func findMin(arr []float64) int {
 }
 
 
-func (rx *PhysRecieverSectored) DoTracking(Connec *list.List) bool {
+func (rx *PhysReceiverSectored) DoTracking(Connec *list.List) bool {
 	return false
 }
 
-func (rx *PhysRecieverSectored) RicePropagation(E EmitterInt) (fading float64, K float64) {
+func (rx *PhysReceiverSectored) RicePropagation(E EmitterInt) (fading float64, K float64) {
 	return rx.R[0].RicePropagation(E)
 }
 

@@ -7,24 +7,24 @@ import "fmt"
 
 // Structure to hold interference level, and multilevel interference with overlaping channels calculation
 // as well as the best signal and its recieved power
-type ChanReciever struct {
+type ChanReceiver struct {
 	Pint     float64
 	Pint1lvl float64    // to store total received power level including interference;
 	Signal   EmitterInt // to store received power_levels of emitters in channel without co-	
 	PrMax    float64
 }
 
-func (chR ChanReciever) String() string { return fmt.Sprintf("{%f %f}", chR.Pint*1e15, chR.PrMax*1e15) }
+func (chR ChanReceiver) String() string { return fmt.Sprintf("{%f %f}", chR.Pint*1e15, chR.PrMax*1e15) }
 
 
-type PhysRecieverInt interface {
+type PhysReceiverInt interface {
 	Init()
-	EvalSignalConnection(ch int) (*ChanReciever, float64)
-	EvalBestSignalSNR(ch int) (Rc *ChanReciever, eval float64)
+	EvalSignalConnection(ch int) (*ChanReceiver, float64)
+	EvalBestSignalSNR(ch int) (Rc *ChanReceiver, eval float64)
 	EvalSignalPr(e EmitterInt, ch int) (Pr, K float64)
 
-	EvalSignalSNR(e EmitterInt, ch int) (Rc *ChanReciever, SNR, Pr, K float64)
-	EvalSignalBER(e EmitterInt, ch int) (Rc *ChanReciever, BER, SNR, Pr float64)
+	EvalSignalSNR(e EmitterInt, ch int) (Rc *ChanReceiver, SNR, Pr, K float64)
+	EvalSignalBER(e EmitterInt, ch int) (Rc *ChanReceiver, BER, SNR, Pr float64)
 
 	MeasurePower(tx EmitterInt)
 	SetPos(p geom.Pos)
@@ -37,31 +37,31 @@ type PhysRecieverInt interface {
 
 
 // structure to store evaluation of interference at a location
-// this has to be initialized with PhysReciever.Init() function to init memory
-type PhysReciever struct {
+// this has to be initialized with PhysReceiver.Init() function to init memory
+type PhysReceiver struct {
 	geom.Pos
-	Channels    []ChanReciever
+	Channels    []ChanReceiver
 	Orientation []float64 //angle of orientation for beamforming for each channel -1 indicates no beamforming
 }
 
-func (r *PhysReciever) Init() {
-	r.Channels = make([]ChanReciever, NCh)
+func (r *PhysReceiver) Init() {
+	r.Channels = make([]ChanReceiver, NCh)
 	r.Orientation = make([]float64, NCh)
 	for i := 0; i < len(r.Orientation); i++ {
 		r.Orientation[i] = -1
 	}
 }
 
-func (r *PhysReciever) SetPos(p geom.Pos) {
+func (r *PhysReceiver) SetPos(p geom.Pos) {
 	r.Pos = p
 }
-func (r *PhysReciever) GetPos() *geom.Pos {
+func (r *PhysReceiver) GetPos() *geom.Pos {
 	return &r.Pos
 }
 
 
 // function used to evaluate a potential connection of the for the best recieved signal on a channel
-func (r *PhysReciever) EvalSignalConnection(ch int) (Rc *ChanReciever, Eval float64) {
+func (r *PhysReceiver) EvalSignalConnection(ch int) (Rc *ChanReceiver, Eval float64) {
 
 	Rc = &r.Channels[ch]
 	Eval = -100 //Eval is in [0 inf[, -100 means no signal
@@ -76,7 +76,7 @@ func (r *PhysReciever) EvalSignalConnection(ch int) (Rc *ChanReciever, Eval floa
 
 }
 
-func (r *PhysReciever) EvalBestSignalSNR(ch int) (Rc *ChanReciever, Eval float64) {
+func (r *PhysReceiver) EvalBestSignalSNR(ch int) (Rc *ChanReceiver, Eval float64) {
 
 	Rc = &r.Channels[ch]
 	Eval = 0
@@ -95,7 +95,7 @@ func (r *PhysReciever) EvalBestSignalSNR(ch int) (Rc *ChanReciever, Eval float64
 }
 
 
-func (r *PhysReciever) EvalSignalPr(e EmitterInt, ch int) (Pr, K float64) {
+func (r *PhysReceiver) EvalSignalPr(e EmitterInt, ch int) (Pr, K float64) {
 	var fading float64
 
 	gain := r.GainBeam(e, ch)
@@ -105,7 +105,7 @@ func (r *PhysReciever) EvalSignalPr(e EmitterInt, ch int) (Pr, K float64) {
 	return e.GetPower() * fading * gain, K
 }
 
-func (r *PhysReciever) EvalSignalSNR(e EmitterInt, ch int) (Rc *ChanReciever, SNR float64, Pr float64, K float64) {
+func (r *PhysReceiver) EvalSignalSNR(e EmitterInt, ch int) (Rc *ChanReceiver, SNR float64, Pr float64, K float64) {
 
 	Rc = &r.Channels[ch]
 	SNR = 0
@@ -124,7 +124,7 @@ func (r *PhysReciever) EvalSignalSNR(e EmitterInt, ch int) (Rc *ChanReciever, SN
 
 }
 
-func (r *PhysReciever) EvalSignalBER(e EmitterInt, ch int) (Rc *ChanReciever, BER float64, SNR float64, Pr float64) {
+func (r *PhysReceiver) EvalSignalBER(e EmitterInt, ch int) (Rc *ChanReceiver, BER float64, SNR float64, Pr float64) {
 	var K float64
 	Rc, SNR, Pr, K = r.EvalSignalSNR(e, ch)
 
@@ -140,7 +140,7 @@ func (r *PhysReciever) EvalSignalBER(e EmitterInt, ch int) (Rc *ChanReciever, BE
 
 
 // first level interference calculation for all channels. internal function
-func (rx *PhysReciever) measurePowerFromChannel(em EmitterInt) {
+func (rx *PhysReceiver) measurePowerFromChannel(em EmitterInt) {
 
 	for i := 0; i < NCh; i++ {
 		rx.Channels[i].Pint1lvl = 0
@@ -170,7 +170,7 @@ func (rx *PhysReciever) measurePowerFromChannel(em EmitterInt) {
 
 // Evaluates interference for all channels with overlapping effect,
 // channel 0 is considered to have no interference as traffic is suppose to only hold minimal signalization 
-func (rx *PhysReciever) MeasurePower(tx EmitterInt) {
+func (rx *PhysReceiver) MeasurePower(tx EmitterInt) {
 
 	rx.measurePowerFromChannel(tx)
 
@@ -188,7 +188,7 @@ func (rx *PhysReciever) MeasurePower(tx EmitterInt) {
 }
 
 
-func (rx *PhysReciever) GainBeam(tx EmitterInt, ch int) float64 {
+func (rx *PhysReceiver) GainBeam(tx EmitterInt, ch int) float64 {
 
 	if ch > 0 && rx.Orientation[ch] >= 0 {
 
@@ -225,7 +225,7 @@ func (rx *PhysReciever) GainBeam(tx EmitterInt, ch int) float64 {
 }
 
 
-func (rx *PhysReciever) RicePropagation(E EmitterInt) (fading float64, K float64) {
+func (rx *PhysReceiver) RicePropagation(E EmitterInt) (fading float64, K float64) {
 	d := rx.Distance(E.GetPos())
 	a := d + 2
 	a = a * a
@@ -236,14 +236,14 @@ func (rx *PhysReciever) RicePropagation(E EmitterInt) (fading float64, K float64
 	return
 }
 
-func (rx *PhysReciever) SlowFading(E *geom.Pos) (c float64) {
+func (rx *PhysReceiver) SlowFading(E *geom.Pos) (c float64) {
 	//	a:=math.Sin(E.X/math.Pi/300.0) 
 	//	b:=math.Cos(E.Y/math.Pi/320.0)
 	//	return a*a * b*b  +.02;
 	return 0.0
 }
 
-func (rx *PhysReciever) DoTracking(Connec *list.List) bool {
+func (rx *PhysReceiver) DoTracking(Connec *list.List) bool {
 
 	if SetReceiverType == BEAM {
 		for i := 0; i < len(rx.Orientation); i++ {

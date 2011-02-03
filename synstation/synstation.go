@@ -21,7 +21,7 @@ func GetHopCount() int    { a := Hopcount; Hopcount = 0; return a }
 // it also is an agent and has a clock and internal random number generator
 // RndCh stores channels sequence used when parsing channels for allocation
 type DBS struct {
-	R      PhysRecieverInt
+	R      PhysReceiverInt
 	Connec *list.List
 	Clock  int
 	Rgen   *rand.Rand
@@ -33,9 +33,9 @@ type DBS struct {
 func (dbs *DBS) Init() {
 	switch SetReceiverType {
 	case OMNI, BEAM:
-		dbs.R = new(PhysReciever)
+		dbs.R = new(PhysReceiver)
 	case SECTORED:
-		dbs.R = new(PhysRecieverSectored)
+		dbs.R = new(PhysReceiverSectored)
 	}
 	dbs.Connec = list.New()
 	dbs.RndCh = make([]int, NCh)
@@ -207,7 +207,7 @@ func (dbs *DBS) RunAgent() {
 			// if no unconnected mobiles got connected, find one to provide it with macrodiversity
 			var max float64
 			max = -10.0
-			var Rc *ChanReciever
+			var Rc *ChanReceiver
 			for j := NConnec - dbs.Connec.Len(); j > 0; j-- {
 				for i := NChRes; i < NCh; i++ {
 					if !dbs.IsInUse(i) {
