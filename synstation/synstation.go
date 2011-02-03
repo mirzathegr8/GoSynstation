@@ -21,8 +21,7 @@ func GetHopCount() int    { a := Hopcount; Hopcount = 0; return a }
 // it also is an agent and has a clock and internal random number generator
 // RndCh stores channels sequence used when parsing channels for allocation
 type DBS struct {
-	//R      PhysRecieverSectored
-	R      PhysReciever
+	R      PhysRecieverInt
 	Connec *list.List
 	Clock  int
 	Rgen   *rand.Rand
@@ -32,7 +31,12 @@ type DBS struct {
 
 
 func (dbs *DBS) Init() {
-
+	switch SetReceiverType {
+	case OMNI, BEAM:
+		dbs.R = new(PhysReciever)
+	case SECTORED:
+		dbs.R = new(PhysRecieverSectored)
+	}
 	dbs.Connec = list.New()
 	dbs.RndCh = make([]int, NCh)
 	dbs.R.Init()
@@ -54,7 +58,7 @@ func (dbs *DBS) RunPhys() {
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
-		c.BitErrorRate(&dbs.R)
+		c.BitErrorRate(dbs.R)
 
 	}
 
@@ -277,11 +281,11 @@ func (dbs *DBS) channelHopping2() {
 
 				// sort mobile connection for channel hopping
 			} else {
-				ratio := c.EvalRatio(&dbs.R)
+				ratio := c.EvalRatio(dbs.R)
 				var i int
 				for i = 0; i < MobileList.Len(); i++ {
 					co := MobileList.At(i).(ConnecType)
-					if ratio < co.EvalRatio(&dbs.R) {
+					if ratio < co.EvalRatio(dbs.R) {
 						break
 					}
 				}
@@ -431,11 +435,11 @@ func (dbs *DBS) channelHopping() {
 
 				// sort mobile connection for channel hopping
 			} else {
-				ratio := c.EvalRatio(&dbs.R)
+				ratio := c.EvalRatio(dbs.R)
 				var i int
 				for i = 0; i < MobileList.Len(); i++ {
 					co := MobileList.At(i).(ConnecType)
-					if ratio < co.EvalRatio(&dbs.R) {
+					if ratio < co.EvalRatio(dbs.R) {
 						break
 					}
 				}
@@ -447,7 +451,7 @@ func (dbs *DBS) channelHopping() {
 	// change channel to some mobiles
 	for k := 0; k < MobileList.Len() && k < 2; k++ {
 		co := MobileList.At(k).(ConnecType)
-		ratio := co.EvalRatio(&dbs.R)
+		ratio := co.EvalRatio(dbs.R)
 		chHop := 0
 
 		for j := NChRes; j < NCh; j++ {

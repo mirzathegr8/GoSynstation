@@ -18,6 +18,7 @@ func (chR ChanReciever) String() string { return fmt.Sprintf("{%f %f}", chR.Pint
 
 
 type PhysRecieverInt interface {
+	Init()
 	EvalSignalConnection(ch int) (*ChanReciever, float64)
 	EvalBestSignalSNR(ch int) (Rc *ChanReciever, eval float64)
 	EvalSignalPr(e EmitterInt, ch int) (Pr, K float64)
@@ -244,7 +245,7 @@ func (rx *PhysReciever) SlowFading(E *geom.Pos) (c float64) {
 
 func (rx *PhysReciever) DoTracking(Connec *list.List) bool {
 
-	if SetTracking {
+	if SetReceiverType == BEAM {
 		for i := 0; i < len(rx.Orientation); i++ {
 			rx.Orientation[i] = -1
 		}
@@ -259,8 +260,9 @@ func (rx *PhysReciever) DoTracking(Connec *list.List) bool {
 				rx.Orientation[c.GetCh()] = theta //+ (dbs.Rgen.Float64()*30-15)
 			}
 		}
+		return true
 	}
 
-	return SetTracking
+	return false
 }
 

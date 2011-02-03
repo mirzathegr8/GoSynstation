@@ -7,12 +7,9 @@ import "rand"
 // it also is an agent and has an internal clock
 type Mob struct {
 	Emitter
-
 	Speed [2]float64
-
 	//R    PhysReciever
-	Rgen *rand.Rand
-
+	Rgen  *rand.Rand
 	clock int
 }
 

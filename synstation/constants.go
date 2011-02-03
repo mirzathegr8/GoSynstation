@@ -1,11 +1,11 @@
 package synstation
 
-const Field = 12000 //length in meters
+const Field = 6000 //length in meters
 
 const Duration = 500 // in iterations 
 
-const M = 4000 //numbers of mobiles
-const D = 400  // numbers of DBS
+const M = 1000 //numbers of mobiles
+const D = 100  // numbers of DBS
 
 const L2 = 2 // modulation factor
 
@@ -24,5 +24,14 @@ var SNRThresChHop = float64(0)
 
 var MaxSpeed = float64(5)
 
-var SetTracking = false
+
+var SetReceiverType = SECTORED
+
+type ReceiverType int
+
+const (
+	OMNI = iota
+	BEAM
+	SECTORED
+)
 
