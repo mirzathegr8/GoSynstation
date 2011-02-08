@@ -8,17 +8,11 @@ import "rand"
 type Mob struct {
 	Emitter
 	Speed [2]float64
-	//R    PhysReciever
+	//R    PhysReceiver
 	Rgen  *rand.Rand
 	clock int
 }
 
-
-var Rgen *rand.Rand
-
-func init() {
-	Rgen = rand.New(rand.NewSource(123813541954235))
-}
 
 func (M *Mob) Init() {
 
