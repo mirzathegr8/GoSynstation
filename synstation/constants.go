@@ -1,11 +1,12 @@
 package synstation
 
-const Field = 6000 //length in meters
 
-const Duration = 500 // in iterations 
+const Field = 12000 //length in meters
 
-const M = 1000 //numbers of mobiles
-const D = 100  // numbers of DBS
+const Duration = 200 // in iterations 
+
+const M = 4000 //numbers of mobiles
+const D = 400  // numbers of DBS
 
 const L2 = 2 // modulation factor
 
@@ -22,16 +23,33 @@ var SNRThresConnec = float64(35)
 
 var SNRThresChHop = float64(0)
 
-var MaxSpeed = float64(5)
+var MaxSpeed = float64(1.3889)
 
 
-var SetReceiverType = SECTORED
+var SetReceiverType = BEAM
 
-type ReceiverType int
+//type ReceiverType int
 
 const (
 	OMNI = iota
 	BEAM
 	SECTORED
 )
+
+var SetShadowMap = SHADOWMAP
+
+//type ReceiverType int
+
+const (
+	NOSHADOW = iota
+	SHADOWMAP
+)
+
+
+const shadow_deviance = 10
+const corr_res = 50
+const shadow_sampling = 15
+const mval = 0.1
+const maplength = 1500
+const mapsize = 600
 
