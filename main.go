@@ -76,7 +76,6 @@ func printData() {
 func main() {
 
 	runtime.GOMAXPROCS(14)
-	//runtime.LockOSThread() // prevnt opengl calls in draw package to call opengl in different threads
 
 	var outD outputData  // one to print
 	var outDs outputData // one to sum and take mean over simulation
@@ -88,8 +87,17 @@ func main() {
 	outChannel = make(chan outputData, 8000)
 
 	for i := range synstations {
-		synstations[i].Init()
+		go synstations[i].Init()
 	}
+	//sync
+	n := 0
+	for _ = range synstation.SyncChannel {
+		n++
+		if n >= synstation.D {
+			break
+		}
+	}
+
 	/*d:=0
 	nD := int(math.Sqrt(synstation.D))
 	for i:=0;i< nD ;i++{
@@ -111,7 +119,7 @@ func main() {
 
 	fmt.Println("Init done")
 
-	//	draw.DrawReceptionField(synstations[:],"receptionLevel.png")
+	draw.DrawReceptionField(synstations[:], "receptionLevel.png")
 
 	go printData() //launch thread to print output
 
@@ -127,7 +135,7 @@ func main() {
 		}
 
 		//synchronise here
-		n := 0
+		n = 0
 		for _ = range synstation.SyncChannel {
 			n++
 			if n >= synstation.D+synstation.M {
@@ -265,8 +273,8 @@ func main() {
 			outD.k = float(k)
 			outChannel <- outD //sent data to print to  stdout
 
-			t := synstation.CreateTrace(mobiles[0:synstation.M], synstations[0:synstation.D], k)
-			draw.Draw(t)
+			//	t := synstation.CreateTrace(mobiles[0:synstation.M], synstations[0:synstation.D], k)
+			//	draw.Draw(t)
 
 		}
 
