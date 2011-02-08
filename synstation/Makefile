@@ -2,17 +2,21 @@
 
 include $(GOROOT)/src/Make.inc
 
+#CGO_LDFLAGS=  -lm
+DEPS=sselib
 TARG=synstation
-GOFILES=emitter.go\
+GOFILES=constants.go\
+init.go\
+emitter.go\
 channels.go\
 connection.go\
 mobile.go\
 synstation.go\
-constants.go\
-physReciever.go\
-physRecieverSectored.go\
+physReceiverSectored.go\
 powerC.go\
-trace.go
+trace.go\
+physReceiver.go\
+
 
 include $(GOROOT)/src/Make.pkg
 
