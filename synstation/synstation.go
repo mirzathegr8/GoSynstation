@@ -39,12 +39,13 @@ func (dbs *DBS) Init() {
 	}
 	dbs.Connec = list.New()
 	dbs.RndCh = make([]int, NCh)
-	dbs.R.Init()
 	var p geom.Pos
 	p.X = Rgen.Float64() * Field
 	p.Y = Rgen.Float64() * Field
 	dbs.R.SetPos(p)
 	dbs.Rgen = rand.New(rand.NewSource(Rgen.Int63()))
+	dbs.R.Init(dbs.Rgen)
+	SyncChannel <- 1
 }
 
 // Physics : evaluate SNRs at reciever, evaluate BER of connections
