@@ -1,19 +1,8 @@
 package synstation
 
 
-import "fmt"
 import "geom"
 import "math"
-
-
-var SyncChannel chan float64
-
-
-func init() {
-
-	SyncChannel = make(chan float64, 100000)
-	fmt.Println(" SyncChannel created")
-}
 
 
 // This struct stores flat data to be directly output for serialization, i.e. no pointers, no channels
