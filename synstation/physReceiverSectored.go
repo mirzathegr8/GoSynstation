@@ -2,6 +2,7 @@ package synstation
 
 import "geom"
 import "container/list"
+import "rand"
 
 // structure to store evaluation of interference at a location
 // this has to be initialized with PhysReceiver.Init() function to init memory
@@ -9,10 +10,10 @@ type PhysReceiverSectored struct {
 	R []PhysReceiver
 }
 
-func (r *PhysReceiverSectored) Init() {
+func (r *PhysReceiverSectored) Init(Rgen *rand.Rand) {
 	r.R = make([]PhysReceiver, 3)
 	for i := 0; i < 3; i++ {
-		r.R[i].Init()
+		r.R[i].Init(Rgen)
 	}
 
 	r.R[0].Orientation[0] = -1
