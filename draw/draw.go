@@ -46,7 +46,6 @@ func Close() {
 		close(d[i].ackChan)
 	}
 	close(sentData)
-
 }
 
 
@@ -70,15 +69,16 @@ func (d *DataSave) Init(MobileNumber int, ConnectionNumber int) {
 
 //what to do with drawing context/surface when simulation finishes
 func (d *DataSave) Close() {
+	if d.t != nil {
+		for p := 0; p < d.t.NumConn; p++ {
+			c := &d.t.Connec[p]
+			d.cv.SetColor(0.0, 0.0, 0.0, 1.0)
+			d.cv.DrawCircle(float(c.B.X)/2.0, float(c.B.Y)/2.0, 5.0)
+			d.cv.Stroke()
+		}
 
-	for p := 0; p < d.t.NumConn; p++ {
-		c := &d.t.Connec[p]
-		d.cv.SetColor(0.0, 0.0, 0.0, 1.0)
-		d.cv.DrawCircle(float(c.B.X)/2.0, float(c.B.Y)/2.0, 5.0)
-		d.cv.Stroke()
+		d.cv.Save("FinalOutput", d.t.K)
 	}
-
-	d.cv.Save("FinalOutput", d.t.K)
 	d.cv.Close()
 }
 
