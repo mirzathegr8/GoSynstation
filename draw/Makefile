@@ -1,12 +1,17 @@
 
 
-include $(GOROOT)/src/Make.inc
+CCGO=gccgo
+CFLAGS = -o4 -mtune=corei7 
 
 TARG=draw
 GOFILES=draw.go\
 drawImage.go
 
-include $(GOROOT)/src/Make.pkg
+
+draw.o : 
+	$(CCGO) -c $(GOFILES)  -o $(TARG).o
+
+
 
 
 

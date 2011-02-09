@@ -1,9 +1,7 @@
 
+CCGO=gccgo
+CFLAGS = -o4 -mtune=corei7 
 
-include $(GOROOT)/src/Make.inc
-
-#CGO_LDFLAGS=  -lm
-DEPS=sselib
 TARG=synstation
 GOFILES=constants.go\
 init.go\
@@ -15,9 +13,12 @@ synstation.go\
 physReceiverSectored.go\
 powerC.go\
 trace.go\
-physReceiver.go\
+physReceiver.go
 
 
-include $(GOROOT)/src/Make.pkg
+synstation.o : 
+	$(CCGO) -c $(GOFILES)  -o $(TARG).o
+
+
 
 

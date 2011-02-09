@@ -1,95 +1,78 @@
-
-
 package gocairo
 
+type MyCanvas struct { }
+func create() *MyCanvas __asm__ ("create");
+func clear(cv *MyCanvas)  __asm__ ("clear");
+func drawConnection(cv *MyCanvas, x1 float, y1 float,x2 float,y2 float)  __asm__ ("drawConnection");
+func drawCircle(cv *MyCanvas,x float,y float,r float)  __asm__ ("drawCircle");
+func setColor(cv *MyCanvas,r float,g float,b float,a float)  __asm__ ("setColor");
+func save(cv *MyCanvas, name *byte, k int )  __asm__ ("save");
+func stroke(cv *MyCanvas)  __asm__ ("stroke");
+func move_to(cv *MyCanvas, x float, y float)  __asm__ ("move_to");
+func line_to(cv *MyCanvas, x float, y float)  __asm__ ("line_to");
+func close_path(cv *MyCanvas)  __asm__ ("close_path");
+func fill(cv *MyCanvas)  __asm__ ("fill");
+func fill_preserve(cv *MyCanvas)  __asm__ ("fill_preserve");
+func freeC(cv *MyCanvas)  __asm__ ("freeC");
 
-
-// #include "cairolib.h"
-import "C"
-
-
-
-type Canvas struct{
-	Cv *C.MyCanvas
-
+type Canvas struct {
+	Cv *MyCanvas
 }
 
-//var I sync.Mutex
 
-func Cairotest(){
-	C.cairolibtest()
-}
-
-func (Cv *Canvas) Create(){
-	//I.Lock()
-	Cv.Cv = C.create()
-	C.clear(Cv.Cv)
-	//I.Unlock()
+func (Cv *Canvas) Create() {
+	Cv.Cv = create()
+	clear(Cv.Cv)
 }
 
 func (Cv *Canvas) Clear() {
-	//I.Lock()
-	C.clear(Cv.Cv)
-	//I.Unlock()
+	clear(Cv.Cv)
 }
 
-func (Cv *Canvas) DrawLine(x1 float, y1 float,x2 float,y2 float ){
-	C.drawConnection(Cv.Cv, _Ctype_float(x1), 
-				_Ctype_float(y1), 
-				_Ctype_float(x2),
-				_Ctype_float(y2) )
+func (Cv *Canvas) DrawLine(x1 float, y1 float, x2 float, y2 float) {
+	drawConnection(Cv.Cv, x1, y1, x2, y2)
 }
 
 
-func (Cv *Canvas) DrawCircle(x float, y float,r float){
-	C.drawCircle(Cv.Cv, _Ctype_float(x),
-			_Ctype_float(y),
-			_Ctype_float(r)	)
+func (Cv *Canvas) DrawCircle(x float, y float, r float) {
+	drawCircle(Cv.Cv, x, y, r)
 }
 
-func (Cv *Canvas) SetColor(r float, g float,b float, a float){
-	C.setColor(Cv.Cv, _Ctype_float(r),_Ctype_float(g),_Ctype_float(b), _Ctype_float(a))
-}
-	
-func (Cv *Canvas)Save( name string, k int){
-	//I.Lock()
-	C.save(Cv.Cv, C.CString(name), C.int(k))
-	//I.Unlock()
-	
+func (Cv *Canvas) SetColor(r float, g float, b float, a float) {
+	setColor(Cv.Cv, r, g, b, a)
 }
 
-func (Cv *Canvas) Stroke (){
-	//I.Lock()
-	C.stroke(Cv.Cv)
-	//I.Unlock()
+func (Cv *Canvas) Save(nkame string, k int) {
+var name = [4]byte{'f', 'o', 'o', 0};
+	save(Cv.Cv, &name[0], k)
 }
 
-func (Cv *Canvas) MoveTo (x,y float){
-	C.move_to(Cv.Cv,_Ctype_float(x),_Ctype_float(y))
+func (Cv *Canvas) Stroke() {
+	stroke(Cv.Cv)
 }
 
-func (Cv *Canvas) LineTo (x,y float){
-	C.line_to(Cv.Cv,_Ctype_float(x),_Ctype_float(y))
+func (Cv *Canvas) MoveTo(x, y float) {
+	move_to(Cv.Cv, x, y)
 }
 
-func (Cv *Canvas) ClosePath (){
-	C.close_path(Cv.Cv)
+func (Cv *Canvas) LineTo(x, y float) {
+	line_to(Cv.Cv, x, y)
 }
 
-func (Cv *Canvas) Fill(){
-	//I.Lock()
-	C.fill(Cv.Cv)
-	//I.Unlock()
+func (Cv *Canvas) ClosePath() {
+	close_path(Cv.Cv)
 }
 
-func (Cv *Canvas) FillPreserve(){
-	//I.Lock()
-	C.fill_preserve(Cv.Cv)
-	//I.Unlock()
+func (Cv *Canvas) Fill() {
+	fill(Cv.Cv)
+}
+
+func (Cv *Canvas) FillPreserve() {
+	fill_preserve(Cv.Cv)
 }
 
 
-	
-func (Cv *Canvas)Close(){	
-	C.freeC(Cv.Cv)
+func (Cv *Canvas) Close() {
+	freeC(Cv.Cv)
 }
+

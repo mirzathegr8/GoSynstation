@@ -26,7 +26,7 @@ var SNRThresChHop = float64(0)
 var MaxSpeed = float64(1.3889)
 
 
-var SetReceiverType = BEAM
+var SetReceiverType = OMNI
 
 //type ReceiverType int
 
@@ -46,8 +46,8 @@ const (
 )
 
 
-const shadow_deviance = 10
-const corr_res = 50
+const shadow_deviance = 15
+const corr_res = 100
 const shadow_sampling = 15
 const mval = 0.1
 const maplength = 1500

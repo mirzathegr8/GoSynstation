@@ -324,7 +324,7 @@ func main() {
 	}
 	fmt.Println("];")*/
 
-	SaveToFile(mobiles[:])
+	//SaveToFile(mobiles[:])
 
 	/*fmt.Printf(" Div=[")
 	for i:= range mobiles{

@@ -1,11 +1,12 @@
 
 
-include $(GOROOT)/src/Make.inc
+CCGO=gccgo
+CFLAGS = -o4 -mtune=corei7 
 
 TARG=geom
 GOFILES=geom.go\
 
-
-include $(GOROOT)/src/Make.pkg
+geom.o : 
+	$(CCGO) -c $(GOFILES) -o $(TARG).o
 
 
