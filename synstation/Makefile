@@ -16,6 +16,7 @@ physReceiverSectored.go\
 powerC.go\
 trace.go\
 physReceiver.go\
+fastfading.go\
 
 
 include $(GOROOT)/src/Make.pkg
