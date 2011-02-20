@@ -14,10 +14,14 @@ import "rand"
 // Structure to hold interference level, and multilevel interference with overlaping channels calculation
 // as well as the best signal and its recieved power
 type ChanReceiver struct {
-	Pint     float64
-	Pint1lvl float64    // to store total received power level including interference;
-	Signal   EmitterInt // to store received power_levels of emitters in channel without co-	
-	PrMax    float64
+	Pint     float64 // to store total received power level including interference;
+	Pint1lvl float64 // to store received power_levels of emitters in channel without co-interference 
+
+	Signal EmitterInt
+
+	PrMax float64
+
+	meanPint MeanData
 }
 
 func (chR ChanReceiver) String() string { return fmt.Sprintf("{%f %f}", chR.Pint*1e15, chR.PrMax*1e15) }
@@ -25,22 +29,60 @@ func (chR ChanReceiver) String() string { return fmt.Sprintf("{%f %f}", chR.Pint
 
 type PhysReceiverInt interface {
 	Init(r *rand.Rand)
-	EvalSignalConnection(ch int) (*ChanReceiver, float64)
+	EvalSignalConnection(ch int) (*ChanReceiver, float64, float64)
 	EvalBestSignalSNR(ch int) (Rc *ChanReceiver, eval float64)
-	EvalSignalPr(e EmitterInt, ch int) (Pr, K float64)
-
-	EvalSignalSNR(e EmitterInt, ch int) (Rc *ChanReceiver, SNR, Pr, K float64)
 	EvalSignalBER(e EmitterInt, ch int) (Rc *ChanReceiver, BER, SNR, Pr float64)
+	EvalSignalSNR(e EmitterInt, ch int) (Rc *ChanReceiver, SNR, Pr, K float64)
+
+	evalSignalPr(e EmitterInt, ch int) (Pr, K float64)
 
 	MeasurePower(tx EmitterInt)
+
 	SetPos(p geom.Pos)
 	GetPos() *geom.Pos
 
 	DoTracking(Connec *list.List) bool
 
-	RicePropagation(E EmitterInt) (fading float64, K float64)
+	ricePropagation(E EmitterInt) (fading float64, K float64)
+
+	Fading(E EmitterInt) (fad, d float64)
+
+	EvalInstantBER(E EmitterInt) (Rc *ChanReceiver, BER, SNR, Pr float64)
+	//evalInstantSNR(E EmitterInt, ch int) (Rc *ChanReceiver, SNR, Pr float64)
+	//evalInstantPr(E EmitterInt) float64
+
+	GenFastFading()
 }
 
+
+const meanN = 100
+
+type MeanData struct {
+	sum   float64
+	meanD [meanN]float64
+	p     int
+}
+
+func (m *MeanData) Add(a float64) {
+	m.sum += a
+	m.sum -= m.meanD[m.p]
+	m.meanD[m.p] = a
+	m.p++
+	if m.p >= meanN {
+		m.p = 0
+	}
+}
+func (m *MeanData) Get() float64 {
+	return m.sum / meanN
+}
+
+func (m *MeanData) Clear(a float64) {
+	m.p = 0
+	for i := range m.meanD {
+		m.meanD[i] = a
+	}
+	m.sum = a * meanN
+}
 
 // structure to store evaluation of interference at a location
 // this has to be initialized with PhysReceiver.Init() function to init memory
@@ -49,9 +91,12 @@ type PhysReceiver struct {
 	Channels    []ChanReceiver
 	Orientation []float64 //angle of orientation for beamforming for each channel -1 indicates no beamforming
 	shadow      shadowMapInt
+	Rgen        *rand.Rand
+	FF          FadingData
 }
 
 func (r *PhysReceiver) Init(Rgen *rand.Rand) {
+	r.Rgen = Rgen
 	r.Channels = make([]ChanReceiver, NCh)
 	r.Orientation = make([]float64, NCh)
 	for i := 0; i < len(r.Orientation); i++ {
@@ -75,13 +120,13 @@ func (r *PhysReceiver) GetPos() *geom.Pos {
 
 
 // function used to evaluate a potential connection of the for the best recieved signal on a channel
-func (r *PhysReceiver) EvalSignalConnection(ch int) (Rc *ChanReceiver, Eval float64) {
+func (r *PhysReceiver) EvalSignalConnection(ch int) (Rc *ChanReceiver, Eval, BER float64) {
 
 	Rc = &r.Channels[ch]
 	Eval = -100 //Eval is in [0 inf[, -100 means no signal
 
 	if Rc.Signal != nil {
-		_, BER, _, _ := r.EvalSignalBER(Rc.Signal, ch)
+		_, BER, _, _ = r.EvalSignalBER(Rc.Signal, ch)
 		Ptot := Rc.Signal.BERT() + BER
 		Eval = Ptot * math.Log(Ptot/BER)
 	}
@@ -94,7 +139,7 @@ func (r *PhysReceiver) EvalBestSignalSNR(ch int) (Rc *ChanReceiver, Eval float64
 
 	Rc = &r.Channels[ch]
 	Eval = 0
-
+	//fmt.Println(Rc.Signal, " ")
 	if Rc.Signal != nil {
 
 		if ch == 0 {
@@ -109,29 +154,31 @@ func (r *PhysReceiver) EvalBestSignalSNR(ch int) (Rc *ChanReceiver, Eval float64
 }
 
 
-func (r *PhysReceiver) EvalSignalPr(e EmitterInt, ch int) (Pr, K float64) {
+func (r *PhysReceiver) evalSignalPr(e EmitterInt, ch int) (Pr, K float64) {
+
 	var fading float64
 
 	gain := r.GainBeam(e, ch)
 
-	fading, K = r.RicePropagation(e)
+	fading, K = r.ricePropagation(e)
 
 	return e.GetPower() * fading * gain, K
+
 }
 
 func (r *PhysReceiver) EvalSignalSNR(e EmitterInt, ch int) (Rc *ChanReceiver, SNR float64, Pr float64, K float64) {
 
 	Rc = &r.Channels[ch]
 	SNR = 0
-	Pr, K = r.EvalSignalPr(e, ch)
+	Pr, K = r.evalSignalPr(e, ch)
 
 	switch {
-	case ch == 0: //this channel is the obsever channel to follow mobiles while they are not assigned a channel
+	case ch == 0: //this channel is the obsever channel to follow Mobiles while they are not assigned a channel
 		SNR = Pr / 1e-15 //WNoise			
 	case ch == e.GetCh(): // same channel so substract Pr from Pint
-		SNR = Pr / (Rc.Pint - Pr + WNoise)
+		SNR = Pr / (Rc.meanPint.Get() - Pr + WNoise)
 	default: // different channel so Pr is not in the sum Pint
-		SNR = Pr / (Rc.Pint + WNoise)
+		SNR = Pr / (Rc.meanPint.Get() + WNoise)
 	}
 
 	return
@@ -139,6 +186,7 @@ func (r *PhysReceiver) EvalSignalSNR(e EmitterInt, ch int) (Rc *ChanReceiver, SN
 }
 
 func (r *PhysReceiver) EvalSignalBER(e EmitterInt, ch int) (Rc *ChanReceiver, BER float64, SNR float64, Pr float64) {
+
 	var K float64
 	Rc, SNR, Pr, K = r.EvalSignalSNR(e, ch)
 
@@ -150,6 +198,8 @@ func (r *PhysReceiver) EvalSignalBER(e EmitterInt, ch int) (Rc *ChanReceiver, BE
 	BER = math.Log10(BER)
 
 	return Rc, BER, SNR, Pr
+
+	return
 }
 
 
@@ -161,23 +211,46 @@ func (rx *PhysReceiver) measurePowerFromChannel(em EmitterInt) {
 		rx.Channels[i].Signal = nil
 		rx.Channels[i].Pint = 0
 		rx.Channels[i].PrMax = 0
+	}
 
-		for tx := SystemChan[i].Emitters.Front(); tx != nil; tx = tx.Next() {
-			txx := tx.Value.(EmitterInt)
+	var Ns = 0
+	if em != nil {
+		Ns = em.GetId()
+	} else {
+		Ns = -1
+	}
 
-			if em != txx {
-				P, _ := rx.EvalSignalPr(txx, i)
+	for i := 0; i < Ns; i++ {
+		P := rx.evalInstantPr(&Mobiles[i])
+		//P, _ := rx.evalSignalPr(Mobiles[i], i)
 
-				if P > rx.Channels[i].PrMax {
-					rx.Channels[i].Signal = txx
-					rx.Channels[i].PrMax = P
+		ch := Mobiles[i].GetCh()
+		if P > rx.Channels[ch].PrMax {
+			rx.Channels[ch].Signal = &Mobiles[i]
+			rx.Channels[ch].PrMax = P
 
-				}
-
-				rx.Channels[i].Pint1lvl += P
-			}
 		}
+		rx.Channels[ch].Pint1lvl += P
 
+	}
+
+	for i := Ns + 1; i < M; i++ {
+
+		P := rx.evalInstantPr(&Mobiles[i])
+		//P, _ := rx.evalSignalPr(Mobiles[i], i)
+
+		ch := Mobiles[i].GetCh()
+		if P > rx.Channels[ch].PrMax {
+			rx.Channels[ch].Signal = &Mobiles[i]
+			rx.Channels[ch].PrMax = P
+
+		}
+		rx.Channels[ch].Pint1lvl += P
+
+	}
+
+	for i := 0; i < NChRes; i++ {
+		rx.Channels[i].Pint1lvl = rx.Channels[i].PrMax
 	}
 
 }
@@ -193,10 +266,12 @@ func (rx *PhysReceiver) MeasurePower(tx EmitterInt) {
 		for _, coc := range SystemChan[i].coIntC {
 			rx.Channels[i].Pint += coc.factor * rx.Channels[coc.c].Pint1lvl
 		}
+		rx.Channels[i].meanPint.Add(rx.Channels[i].Pint)
 	}
 
 	for i := 0; i < NChRes; i++ {
 		rx.Channels[i].Pint = rx.Channels[i].PrMax + WNoise //just a bit more noise 
+		rx.Channels[i].meanPint.Add(rx.Channels[i].Pint)
 	}
 
 }
@@ -239,12 +314,13 @@ func (rx *PhysReceiver) GainBeam(tx EmitterInt, ch int) float64 {
 }
 
 
-func (rx *PhysReceiver) RicePropagation(E EmitterInt) (fading float64, K float64) {
-	d := rx.Distance(E.GetPos())
-	a := d + 2
-	a = a * a
-	a = a * a
-	fading = (1.0 * rx.SlowFading(E.GetPos())) / a
+func (rx *PhysReceiver) ricePropagation(E EmitterInt) (fading float64, K float64) {
+	//	d := rx.DistanceSquare(E.GetPos())
+	//	a := d + 2
+	//a = a * a
+	//	a = a * a
+	var d float64
+	fading, d = rx.Fading(E) //= (1.0 * rx.SlowFading(E.GetPos())) / a
 	K = 1 / (d + 1)
 	//K=0;
 	return
@@ -400,5 +476,82 @@ func (s *shadowMap) evalShadowFadingDirect(d geom.Pos) float64 {
 	}
 
 	return math.Pow(10, val/10)
+}
+
+
+func (rx *PhysReceiver) Fading(E EmitterInt) (fad, d float64) {
+	d = rx.Distance(E.GetPos())
+	a := d + 2
+	a = a * a
+	a = a * a
+	fad = (1.0 * rx.SlowFading(E.GetPos())) / a
+	return
+
+}
+
+
+func (rx *PhysReceiver) EvalInstantBER(E EmitterInt) (Rc *ChanReceiver, BER, SNR, Pr float64) {
+
+	if E.GetCh() == 0 {
+
+		Rc, BER, SNR, Pr = rx.EvalSignalBER(E, 0)
+
+	} else {
+
+		Rc, SNR, Pr = rx.evalInstantSNR(E)
+
+		/*if E.GetCh() == 10 {
+			//Pr2, _ = rx.evalSignalPr(E)
+			fmt.Println(Rc.Pint - Pr)
+		}*/
+
+		BER = L1 * math.Exp(-SNR/2/L2) / 2.0
+
+		if BER < 0.0000000000001 {
+			//	fmt.Println(" SNR ", SNR, BER, SystemChan[E.GetCh()].Emitters.Len(), Rc.Pint, Pr)
+			BER = -12
+
+		} else {
+			BER = math.Log10(BER)
+		}
+
+		//	fmt.Println(" BER instant ", Pr, " ", SNR, " ", BER)
+
+	}
+
+	return
+
+}
+
+func (r *PhysReceiver) evalInstantSNR(E EmitterInt) (Rc *ChanReceiver, SNR, Pr float64) {
+
+	Rc = &r.Channels[E.GetCh()]
+	SNR = 0
+	Pr = r.evalInstantPr(E)
+
+	SNR = Pr / (Rc.Pint - Pr + WNoise)
+
+	return
+
+}
+
+
+func (rx *PhysReceiver) evalInstantPr(E EmitterInt) (Pr float64) {
+
+	gain := rx.GainBeam(E, E.GetCh())
+	fading, _ := rx.Fading(E)
+	//	K := float64(0) //1 / (d + 1)
+	//R := float64(1)
+
+	/*if E.GetCh() != 0 {
+		R = rx.FF.GetFastFading(E.GetId())
+	}*/
+	Pr = fading * gain * E.GetPower() //* R
+	return
+
+}
+
+func (rx *PhysReceiver) GenFastFading() {
+	//rx.FF.GenerateFading(rx.Rgen)
 }
 
