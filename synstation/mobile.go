@@ -1,6 +1,7 @@
 package synstation
 
 import "rand"
+//import "fmt"
 
 
 //  a mobile is an emitter with mobility : speed data, 
@@ -14,10 +15,9 @@ type Mob struct {
 }
 
 
-func (M *Mob) Init() {
+func (M *Mob) Init(i int ) {
 
-	M.done = make(chan int)
-
+	M.Id = i
 	M.Rgen = rand.New(rand.NewSource(Rgen.Int63()))
 
 	M.Requested = -3.0
@@ -26,8 +26,9 @@ func (M *Mob) Init() {
 	M.Y = M.Rgen.Float64() * Field
 	M.Power = 1
 
-	M.Ch = 1 // not connected // that's a trick to initialize SystemChannel emitters list
-	M.SetCh(0)
+	M.Ch = 0
+
+	SystemChan[0].Change <- &M.Emitter
 
 	M.Speed[0] = (M.Rgen.Float64()*2 - 1) * MaxSpeed
 	M.Speed[1] = (M.Rgen.Float64()*2 - 1) * MaxSpeed
@@ -101,4 +102,9 @@ func (M *Mob) FetchData() {
 		SyncChannel <- M.BERtotal
 	}
 }
+/*
+func (M *Mob) RunAgent() {
+	M._SetCh()
+	SyncChannel <- 1
+}*/
 
