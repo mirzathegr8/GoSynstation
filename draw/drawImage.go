@@ -28,8 +28,6 @@ func DrawReceptionField(dbs []synstation.DBS, name string) {
 	TMax = -300
 	TMin = +300
 
-	ch := synstation.NChRes
-
 	sums := float64(0)
 	for x := 0; x < Size; x++ {
 
@@ -49,7 +47,7 @@ func DrawReceptionField(dbs []synstation.DBS, name string) {
 
 				if geom.Abs(inField(x)-dbs[k].R.GetPos().X) < 1500 &&
 					geom.Abs(inField(y)-dbs[k].R.GetPos().Y) < 1500 {
-					p, _ := dbs[k].R.EvalSignalPr(e, ch)
+					p, _ := dbs[k].R.Fading(e)
 					if p > Pr {
 						Pr = p
 					}

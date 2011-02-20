@@ -104,21 +104,21 @@ func drawingThread(MobileNumber, ConnectionNumber int, drawIt func(*DataSave)) {
 
 func drawP(d *DataSave) {
 
-	/*d.cv.Clear()
+	d.cv.Clear()
 
 	for p := 0; p < d.t.NumConn; p++ {
-			c := &d.t.Connec[p]
-			d.cv.SetColor(0.5, .5, 0.5, 0.1)
+		c := &d.t.Connec[p]
+		d.cv.SetColor(0.5, .5, 0.5, 0.1)
 
-			d.cv.DrawLine(float(c.A.X),
-					float(c.A.Y),
-					float(c.B.X),
-					float(c.B.Y))
-			d.cv.Stroke()	
+		d.cv.DrawLine(float(c.A.X),
+			float(c.A.Y),
+			float(c.B.X),
+			float(c.B.Y))
+		d.cv.Stroke()
 		d.cv.SetColor(0.0, 0.0, 0.0, 1.0)
 		d.cv.DrawCircle(float(c.B.X), float(c.B.Y), 5.0)
 		d.cv.Stroke()
-	}*/
+	}
 
 	for i := range d.t.Mobs {
 
@@ -153,15 +153,14 @@ func drawP(d *DataSave) {
 			}
 		}
 
-		d.cv.SetColor(r, g, b, 0.02)
+		d.cv.SetColor(r, g, b, 1)
 
 		d.cv.DrawCircle(float(p.X)/2.0, float(p.Y)/2.0, 10.0)
 		d.cv.Stroke()
 
 	}
 
-	//d.cv.Save("test", d.t.K)
-
+	d.cv.Save("test", d.t.K)
 
 }
 
