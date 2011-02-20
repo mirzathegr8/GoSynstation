@@ -17,7 +17,7 @@ func GetDisConnect() int  { a := sens_disconnect; sens_disconnect = 0; return a 
 func GetLostConnect() int { a := sens_lostconnect; sens_lostconnect = 0; return a }
 func GetHopCount() int    { a := Hopcount; Hopcount = 0; return a }
 
-// a DBS is a reciever, a list of active connection
+// a DBS is a receiver, a list of active connection
 // it also is an agent and has a clock and internal random number generator
 // RndCh stores channels sequence used when parsing channels for allocation
 type DBS struct {
@@ -36,6 +36,8 @@ func (dbs *DBS) Init() {
 		dbs.R = new(PhysReceiver)
 	case SECTORED:
 		dbs.R = new(PhysReceiverSectored)
+	default:
+		dbs.R = new(PhysReceiver)
 	}
 	dbs.Connec = list.New()
 	dbs.RndCh = make([]int, NCh)
@@ -52,6 +54,7 @@ func (dbs *DBS) Init() {
 func (dbs *DBS) RunPhys() {
 
 	dbs.R.DoTracking(dbs.Connec)
+	dbs.R.GenFastFading()
 
 	dbs.R.MeasurePower(nil)
 
@@ -124,13 +127,34 @@ func (dbs *DBS) IsInUse(i int) bool { //
 
 }
 
+
+func (dbs *DBS) connect(e EmitterInt, m float64) {
+	//fmt.Println(dbs.R.GetPos(), " connect ", e.GetPos(), " ", e.GetCh())
+
+	Conn := CreateConnection(e, m)
+	dbs.Connec.PushBack(Conn)
+	sens_connect++
+}
+
+func (dbs *DBS) IsConnected(tx EmitterInt) bool {
+
+	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
+		c := e.Value.(*Connection)
+		if c.E == tx {
+			return true
+		}
+	}
+	return false
+
+}
+
 func syncThread() { SyncChannel <- 1 }
 
 func (dbs *DBS) RunAgent() {
 
 	defer syncThread()
 	// defer dbs.optimizePowerAllocationSimple()
-	defer dbs.optimizePowerAllocation()
+	//defer dbs.optimizePowerAllocation()
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
@@ -153,7 +177,7 @@ func (dbs *DBS) RunAgent() {
 
 		}
 		// remove any connection that does not satify the threshold
-		if c.BER > math.Log10(BERThres) {
+		if c.meanBER.Get() > math.Log10(BERThres) {
 			dbs.disconnect(e)
 			sens_disconnect--
 			sens_lostconnect++
@@ -197,7 +221,7 @@ func (dbs *DBS) RunAgent() {
 				if Rc.Signal != nil {
 					if !dbs.IsConnected(Rc.Signal) {
 						if 10*math.Log10(Eval) > SNRThresConnec {
-							dbs.connect(Rc.Signal)
+							dbs.connect(Rc.Signal, -3)
 							return // we are done connecting
 						}
 					}
@@ -206,21 +230,24 @@ func (dbs *DBS) RunAgent() {
 			}
 
 			// if no unconnected mobiles got connected, find one to provide it with macrodiversity
-			var max float64
-			max = -10.0
-			var Rc *ChanReceiver
+
 			for j := NConnec - dbs.Connec.Len(); j > 0; j-- {
+				var max, BERe float64
+				max = -10.0
+				var Rc *ChanReceiver
+				Rc = nil
 				for i := NChRes; i < NCh; i++ {
-					if !dbs.IsInUse(i) {
-						Rt, r := dbs.R.EvalSignalConnection(i)
+					if dbs.IsInUse(i) == false {
+						Rt, r, e := dbs.R.EvalSignalConnection(i)
 						if r > max {
 							max = r
 							Rc = Rt
+							BERe = e
 						}
 					}
 				}
 				if Rc != nil {
-					dbs.connect(Rc.Signal)
+					dbs.connect(Rc.Signal, BERe)
 				} else {
 					break
 				}
@@ -230,13 +257,6 @@ func (dbs *DBS) RunAgent() {
 
 	}
 
-}
-
-func (dbs *DBS) connect(e EmitterInt) {
-	Conn := new(Connection)
-	Conn.E = e
-	dbs.Connec.PushBack(Conn)
-	sens_connect++
 }
 
 
@@ -581,18 +601,6 @@ func (dbs *DBS) optimizePowerAllocationSimple() {
 		}
 
 	}
-
-}
-
-func (dbs *DBS) IsConnected(tx EmitterInt) bool {
-
-	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
-		c := e.Value.(*Connection)
-		if c.E == tx {
-			return true
-		}
-	}
-	return false
 
 }
 
