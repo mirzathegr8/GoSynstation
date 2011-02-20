@@ -46,12 +46,12 @@ func (rx *PhysReceiverSectored) MeasurePower(tx EmitterInt) {
 }
 
 
-func (r *PhysReceiverSectored) EvalSignalPr(e EmitterInt, ch int) (Pr, K float64) {
+func (r *PhysReceiverSectored) evalSignalPr(e EmitterInt, ch int) (Pr, K float64) {
 	var p [3]float64
 	var k [3]float64
 
 	for i := range p {
-		p[i], k[i] = r.R[i].EvalSignalPr(e, ch)
+		p[i], k[i] = r.R[i].evalSignalPr(e, ch)
 	}
 	ir := findMax(p[:])
 	return p[ir], k[ir]
@@ -84,15 +84,16 @@ func (r *PhysReceiverSectored) EvalBestSignalSNR(ch int) (Rc *ChanReceiver, SNR 
 
 }
 
-func (r *PhysReceiverSectored) EvalSignalConnection(ch int) (*ChanReceiver, float64) {
+func (r *PhysReceiverSectored) EvalSignalConnection(ch int) (*ChanReceiver, float64, float64) {
 	var e [3]float64
 	var R [3]*ChanReceiver
+	var BER [3]float64
 
 	for i := range e {
-		R[i], e[i] = r.R[i].EvalSignalConnection(ch)
+		R[i], e[i], BER[i] = r.R[i].EvalSignalConnection(ch)
 	}
 	ir := findMax(e[:])
-	return R[ir], e[ir]
+	return R[ir], e[ir], BER[ir]
 }
 
 
@@ -153,7 +154,32 @@ func (rx *PhysReceiverSectored) DoTracking(Connec *list.List) bool {
 	return false
 }
 
-func (rx *PhysReceiverSectored) RicePropagation(E EmitterInt) (fading float64, K float64) {
-	return rx.R[0].RicePropagation(E)
+func (rx *PhysReceiverSectored) ricePropagation(E EmitterInt) (fading float64, K float64) {
+	return rx.R[0].ricePropagation(E)
+}
+
+func (rx *PhysReceiverSectored) Fading(E EmitterInt) (fad, d float64) {
+	return rx.R[0].Fading(E)
+}
+
+
+func (rx *PhysReceiverSectored) EvalInstantBER(E EmitterInt) (Rc *ChanReceiver, BER, SNR, Pr float64) {
+	var R [3]*ChanReceiver
+	var b [3]float64
+	var s [3]float64
+	var p [3]float64
+
+	for i := range b {
+		R[i], b[i], s[i], p[i] = rx.R[i].EvalInstantBER(E)
+	}
+	ir := findMin(b[:])
+	return R[ir], b[ir], s[ir], p[ir]
+}
+
+
+func (rx *PhysReceiverSectored) GenFastFading() {
+	for i := range rx.R {
+		rx.R[i].FF.GenerateFading(rx.R[i].Rgen)
+	}
 }
 
