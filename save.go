@@ -1,35 +1,57 @@
+package main
 
+import "synstation"
+import "os"
+import "fmt"
 
-func SaveMobBER( BER chan float64, M int){
+func init() {
 
+	saveBER = make(chan *synstation.Trace, 10)
+	saveBERMax = make(chan *synstation.Trace, 10)
 
-
+	go SaveMobBER()
+	go SaveMobBERMax()
 
 }
 
+var saveBER chan *synstation.Trace
+var saveBERMax chan *synstation.Trace
 
-func Draw(syns []synstation.DBS, mobs []synstation.Mob, k int) {
+func SaveMobBER() {
 
-	data := <-sentData
+	outF, err := os.Open("BER.m", os.O_WRONLY, 0666)
+	fmt.Println(err)
+	outF.WriteString(fmt.Sprintln("# name: BERMat\n# type: matrix\n# rows: ", synstation.Duration, "\n# columns: ", synstation.M))
 
-	l := 0
-	for i := range syns {
-		for e := syns[i].Connec.Front(); e != nil; e = e.Next() {
-			c := e.Value.(*synstation.Connection)
-			data.connec[l].Copy(c)
-			data.connec[l].B = syns[i].R.Pos
-			data.connec[l].Ch = c.GetCh()
-			l++
+	for t := range saveBER {
+		for i := 0; i < synstation.M; i++ {
+			outF.WriteString(fmt.Sprint(t.Mobs[i].BERtotal, " "))
+
 		}
-	}
-	data.NumConn = l
-	for i := range mobs {
-		data.mobs[i] = mobs[i].EmitterS
+		outF.WriteString("\n")
+
 	}
 
-	data.k = k
+	outF.Close()
+}
 
-	data.ackChan <- 1
 
+func SaveMobBERMax() {
+
+	outF, err := os.Open("BERMax.m", os.O_WRONLY, 0666)
+	fmt.Println(err)
+	outF.WriteString(fmt.Sprintln("# name: BERMaxMat\n# type: matrix\n# rows: ", synstation.Duration, "\n# columns: ", synstation.M))
+
+	for t := range saveBERMax {
+
+		for i := 0; i < synstation.M; i++ {
+			outF.WriteString(fmt.Sprint(t.Mobs[i].MaxBER, " "))
+
+		}
+		outF.WriteString("\n")
+
+	}
+
+	outF.Close()
 }
 
