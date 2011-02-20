@@ -29,7 +29,11 @@ type Emitter struct {
 
 	MasterConnection *Connection
 
-	done chan int
+	//done chan int
+
+	touch bool
+
+	Id int
 }
 
 
@@ -45,8 +49,19 @@ type EmitterInt interface {
 	PowerDelta(float64)
 	SetPower(float64)
 	GetPos() *geom.Pos
-	isdone() chan int
+	//	isdone() chan int
 	GetMasterConnec() *Connection
+	GetId() int
+	_setCh(i int)
+}
+
+func (e *Emitter) _setCh(i int) {
+	e.Ch = i
+	e.touch = false
+}
+
+func (e *Emitter) GetId() int {
+	return e.Id
 }
 
 func (e *Emitter) GetMasterConnec() *Connection {
@@ -70,20 +85,20 @@ func (e *Emitter) GetCh() int {
 }
 
 // channel used by channels change thread to inform emitter that channel hop has been applied
-func (e *Emitter) isdone() chan int {
+/*func (e *Emitter) isdone() chan int {
 	return e.done
-}
+}*/
 
 // function called by connections to inform BER quality of a link to the emitter
 func (e *Emitter) AddConnection(c *Connection) {
-	if c.BER < math.Log10(BERThres) {
-		e.SBERtotal += c.BER
+	if c.meanBER.Get() < math.Log10(BERThres) {
+		e.SBERtotal += c.meanBER.Get()
 		e.SDiversity++
 		c.Status = 1 //we set the status as slave, as master status will be set after all connections data has been recieved
 		num_con++
 	}
 
-	if e.SMaxBER > c.BER { //evaluate which connection is the best and memorizes which will be masterconnection
+	if e.SMaxBER > c.meanBER.Get() { //evaluate which connection is the best and memorizes which will be masterconnection
 		e.MasterConnection = c
 		e.SMaxBER = c.BER
 		e.SNRb = c.SNR
@@ -115,12 +130,27 @@ func (M *Emitter) SetPower(P float64) {
 // synchronizes lists
 func (M *Emitter) SetCh(nch int) {
 
-	if nch != M.Ch {
-		oldCh := M.Ch
-		M.Ch = nch
-		SystemChan[oldCh].Change <- M
-		_ = <-M.done
+	//	M.nch = nch
+
+	if M.touch == false {
+
+		SystemChan[nch].Change <- M
+		M.touch = true
+	}
+}
+
+/*func (M *Emitter) _SetCh() {
+
+	//nch, ok := <-M.chChange
+	if M.nch >= 0 {
+		if M.nch != M.Ch {
+			oldCh := M.Ch
+			M.Ch = M.nch
+			SystemChan[oldCh].Change <- M
+			_ = <-M.done
+		}
+		M.nch = -1
 	}
 
-}
+}*/
 
