@@ -3,7 +3,7 @@
 include $(GOROOT)/src/Make.inc
 
 #CGO_LDFLAGS=  -lm
-DEPS=sselib
+DEPS=
 TARG=synstation
 GOFILES=constants.go\
 init.go\
