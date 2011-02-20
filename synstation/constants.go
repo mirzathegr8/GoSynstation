@@ -3,14 +3,15 @@ package synstation
 
 const Field = 12000 //length in meters
 
-const Duration = 200 // in iterations 
+const Duration = 1000 // in iterations 
 
 const M = 4000 //numbers of mobiles
 const D = 400  // numbers of DBS
 
 const L2 = 2 // modulation factor
+const L1 = 1
 
-var NCh = 70 // number of channels
+var NCh = 45 // number of channels
 // 10 0 11 .1 12 .2 19 .5 37 .75
 var roverlap = 0.0 // ratio of overlaping of two adjacent channels
 
@@ -23,10 +24,10 @@ var SNRThresConnec = float64(35)
 
 var SNRThresChHop = float64(0)
 
-var MaxSpeed = float64(1.3889)
+var MaxSpeed = float64(1.3889 / 50)
 
 
-var SetReceiverType = BEAM
+var SetReceiverType = OMNI
 
 //type ReceiverType int
 
@@ -36,7 +37,7 @@ const (
 	SECTORED
 )
 
-var SetShadowMap = SHADOWMAP
+var SetShadowMap = NOSHADOW
 
 //type ReceiverType int
 
@@ -52,4 +53,11 @@ const shadow_sampling = 15
 const mval = 0.1
 const maplength = 1500
 const mapsize = 600
+
+var FastFading = MONTECARLO
+
+const (
+	MEANEVAL = iota
+	MONTECARLO
+)
 
