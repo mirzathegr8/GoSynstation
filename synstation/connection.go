@@ -17,6 +17,10 @@ type Connection struct {
 	BER    float64
 
 	Status int //0 master ,1 slave
+
+	meanPr  MeanData
+	meanSNR MeanData
+	meanBER MeanData
 }
 
 
@@ -49,9 +53,14 @@ func (co *Connection) GetE() EmitterInt { return co.E }
 func (co *Connection) GetPr() float64   { return co.Pr }
 func (co *Connection) GetSNR() float64  { return co.SNR }
 
+
 func (co *Connection) BitErrorRate(rx PhysReceiverInt) {
 
-	_, co.BER, co.SNR, co.Pr = rx.EvalSignalBER(co.E, co.E.GetCh())
+	_, co.BER, co.SNR, co.Pr = rx.EvalInstantBER(co.GetE())
+
+	co.meanPr.Add(co.Pr)
+	co.meanBER.Add(co.BER)
+	co.meanSNR.Add(co.SNR)
 
 	co.Status = 1 //let mobile set master state		
 	co.E.AddConnection(co)
@@ -60,7 +69,8 @@ func (co *Connection) BitErrorRate(rx PhysReceiverInt) {
 
 func (co *Connection) EvalRatio(rx PhysReceiverInt) float64 {
 	//_,SNR,_,_ := rx.EvalSignalSNR(co.E,co.E.GetCh())
-	return co.SNR
+	//return co.SNR
+	return co.meanSNR.Get()
 }
 
 func (co *Connection) EvalRatioConnect() float64 {
@@ -69,6 +79,14 @@ func (co *Connection) EvalRatioConnect() float64 {
 
 func (co *Connection) EvalRatioDisconnect() float64 {
 	Ptot := co.E.BERT()
-	return Ptot * math.Log(Ptot/co.BER)
+	return Ptot * math.Log(Ptot/co.meanBER.Get())
+}
+
+func CreateConnection(E EmitterInt, v float64) *Connection {
+	Conn := new(Connection)
+	Conn.E = E
+	Conn.meanBER.Clear(v)
+	Conn.Status = 1
+	return Conn
 }
 
