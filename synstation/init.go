@@ -1,32 +1,27 @@
 package synstation
 
 import "math"
-import "fmt"
+//import "fmt"
 import "rand"
-import "container/list"
+//import "container/list"
 
 var SyncChannel chan float64
+
+
+var Synstations [D]DBS
+var Mobiles [M]Mob
 
 func init() {
 
 	SyncChannel = make(chan float64, 100000)
-	fmt.Println(" SyncChannel created")
-
 	Rgen = rand.New(rand.NewSource(123813541954235))
 	Rgen2 = rand.New(rand.NewSource(12384235))
-	fmt.Println("init done")
-
-	// function called automatically on pacakge load, initializes system channels
 
 	// create channels
-
 	SystemChan = make([]*channel, NCh)
 	for i := range SystemChan {
 		c := new(channel)
-		c.i = i
-		c.Emitters = list.New()
-		c.Change = make(chan EmitterInt, 100)
-		go c.changeChan()
+		c.Init(i)
 		SystemChan[i] = c
 	}
 
@@ -59,6 +54,27 @@ func init() {
 		}
 	}
 
+	for i := range Synstations {
+		Synstations[i].Init()
+	}
+	//sync
+	Sync(D)
+
+	/*d:=0
+	nD := int(math.Sqrt(synstation.D))
+	for i:=0;i< nD ;i++{
+		for j:=0;j < nD;j++{
+			x:=synstation.Field/float64(nD)*(float64(i)+ .5*float64(j%2) )
+			y:=synstation.Field/float64(nD)*(float64(j)+.5)
+			Synstations[d].R.SetPos(geom.Pos{x,y})
+			d++
+		}
+	}*/
+
+	for i := range Mobiles {
+		Mobiles[i].Init(i)
+	}
+
 }
 
 
@@ -67,4 +83,11 @@ func init() {
 var Rgen *rand.Rand  //on used for position
 var Rgen2 *rand.Rand //one used to init shadow maps
 //different rndvar are used to ensure repeatability of position with or without shadow maps
+
+
+func Sync(k int) {
+	for n := 0; n < k; n++ {
+		<-SyncChannel
+	}
+}
 
