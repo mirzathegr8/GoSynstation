@@ -44,7 +44,7 @@ func init() {
 
 			for k := 1; k <= overlapN; k++ {
 
-				fac := 1.0 - float(k)*(1.0-roverlap)
+				fac := 1.0 - float64(k)*(1.0-roverlap)
 
 				SystemChan[i].coIntC[overlapN-k].c = i - k
 				SystemChan[i].coIntC[overlapN-k].factor = float64(fac)
