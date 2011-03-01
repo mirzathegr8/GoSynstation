@@ -41,10 +41,10 @@ func (dbs *DBS) Init() {
 	dbs.RndCh = make([]int, NCh)
 	var p geom.Pos
 	p.X = Rgen.Float64() * Field
-	p.Y = Rgen.Float64() * Field
-	dbs.R.SetPos(p)
+	p.Y = Rgen.Float64() * Field	
 	dbs.Rgen = rand.New(rand.NewSource(Rgen.Int63()))
 	dbs.R.Init(dbs.Rgen)
+	dbs.R.SetPos(p)
 	SyncChannel <- 1
 }
 
