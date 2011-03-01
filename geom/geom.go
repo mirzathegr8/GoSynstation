@@ -9,12 +9,12 @@ type Pos struct {
 	Y float64
 }
 
-func (p *Pos) GetX() float {
-	return float(p.X)
+func (p *Pos) GetX() float32 {
+	return float32(p.X)
 }
 
-func (p *Pos) GetY() float {
-	return float(p.Y)
+func (p *Pos) GetY() float32 {
+	return float32(p.Y)
 }
 
 func (p *Pos) Distance(p2 *Pos) float64 {
@@ -99,8 +99,8 @@ func (p Pos) Det(p2 Pos) float64{
 	return p.X*p2.Y - p.Y*p2.X
 }
 
-func (p Pos) ToFloat() (x ,y float){
-	return float(p.X),float(p.Y)
+func (p Pos) ToFloat() (x ,y float32){
+	return float32(p.X),float32(p.Y)
 }
 
 

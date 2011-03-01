@@ -6,7 +6,6 @@ import "math"
 import "geom"
 import "image"
 import "image/png"
-import "log"
 import "os"
 import "fmt"
 //import "rand"
@@ -127,7 +126,7 @@ func DrawReceptionField(dbs []synstation.DBS, name string) {
 	f, err := os.Open(name, os.O_CREATE|os.O_WRONLY, 0666)
 
 	if err = png.Encode(f, im); err != nil {
-		log.Exit(err)
+		os.Exit(1)
 	}
 
 }

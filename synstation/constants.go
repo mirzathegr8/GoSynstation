@@ -26,7 +26,7 @@ var SNRThresChHop = float64(0)
 var MaxSpeed = float64(1.3889)
 
 
-var SetReceiverType = BEAM
+var SetReceiverType = SECTORED
 
 //type ReceiverType int
 
@@ -36,7 +36,7 @@ const (
 	SECTORED
 )
 
-var SetShadowMap = SHADOWMAP
+var SetShadowMap = NOSHADOW
 
 //type ReceiverType int
 

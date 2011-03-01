@@ -33,7 +33,7 @@ func (Cv *Canvas) Clear() {
 	//I.Unlock()
 }
 
-func (Cv *Canvas) DrawLine(x1 float, y1 float,x2 float,y2 float ){
+func (Cv *Canvas) DrawLine(x1 float32 , y1 float32 ,x2 float32 ,y2 float32  ){
 	C.drawConnection(Cv.Cv, _Ctype_float(x1), 
 				_Ctype_float(y1), 
 				_Ctype_float(x2),
@@ -41,13 +41,13 @@ func (Cv *Canvas) DrawLine(x1 float, y1 float,x2 float,y2 float ){
 }
 
 
-func (Cv *Canvas) DrawCircle(x float, y float,r float){
+func (Cv *Canvas) DrawCircle(x float32 , y float32 ,r float32 ){
 	C.drawCircle(Cv.Cv, _Ctype_float(x),
 			_Ctype_float(y),
 			_Ctype_float(r)	)
 }
 
-func (Cv *Canvas) SetColor(r float, g float,b float, a float){
+func (Cv *Canvas) SetColor(r float32 , g float32 ,b float32 , a float32 ){
 	C.setColor(Cv.Cv, _Ctype_float(r),_Ctype_float(g),_Ctype_float(b), _Ctype_float(a))
 }
 	
@@ -64,11 +64,11 @@ func (Cv *Canvas) Stroke (){
 	//I.Unlock()
 }
 
-func (Cv *Canvas) MoveTo (x,y float){
+func (Cv *Canvas) MoveTo (x,y float32 ){
 	C.move_to(Cv.Cv,_Ctype_float(x),_Ctype_float(y))
 }
 
-func (Cv *Canvas) LineTo (x,y float){
+func (Cv *Canvas) LineTo (x,y float32 ){
 	C.line_to(Cv.Cv,_Ctype_float(x),_Ctype_float(y))
 }
 

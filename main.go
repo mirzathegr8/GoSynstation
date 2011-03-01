@@ -12,11 +12,11 @@ import "os"
 
 // Data to save for output during simulation
 type outputData struct {
-	k, connected, BER1, BER2, BER3 float
-	d_connec, d_discon, d_lost     float
-	lost                           float
-	Diversity                      float
-	HopCount                       float
+	k, connected, BER1, BER2, BER3 float64
+	d_connec, d_discon, d_lost     float64
+	lost                           float64
+	Diversity                      float64
+	HopCount                       float64
 }
 
 func (o *outputData) Add(o2 *outputData) {
@@ -33,7 +33,7 @@ func (o *outputData) Add(o2 *outputData) {
 }
 
 
-func (o *outputData) Div(k float) {
+func (o *outputData) Div(k float64) {
 	o.connected /= k
 	o.BER1 /= k
 	o.BER2 /= k
@@ -176,15 +176,15 @@ func main() {
 		}
 
 		//geting a bit more data
-		outD.d_connec = float(synstation.GetConnect())
-		outD.d_discon = float(synstation.GetDisConnect())
-		outD.Diversity = float(synstation.GetDiversity()) / float(synstation.M)
-		outD.lost = float(synstation.SystemChan[0].GetAdded())
-		outD.d_lost = float(synstation.GetLostConnect())
-		outD.HopCount = float(synstation.GetHopCount())
+		outD.d_connec = float64(synstation.GetConnect())
+		outD.d_discon = float64(synstation.GetDisConnect())
+		outD.Diversity = float64(synstation.GetDiversity()) / float64(synstation.M)
+		outD.lost = float64(synstation.SystemChan[0].GetAdded())
+		outD.d_lost = float64(synstation.GetLostConnect())
+		outD.HopCount = float64(synstation.GetHopCount())
 
 		if k%10 == 0 {
-			outD.k = float(k)
+			outD.k = float64(k)
 			outChannel <- outD //sent data to print to  stdout		
 		}
 
@@ -260,17 +260,17 @@ func main() {
 		}
 
 		//geting a bit more data
-		outD.d_connec = float(synstation.GetConnect())
-		outD.d_discon = float(synstation.GetDisConnect())
-		outD.Diversity = float(synstation.GetDiversity()) / float(synstation.M)
-		outD.lost = float(synstation.SystemChan[0].GetAdded())
-		outD.d_lost = float(synstation.GetLostConnect())
-		outD.HopCount = float(synstation.GetHopCount())
+		outD.d_connec = float64(synstation.GetConnect())
+		outD.d_discon = float64(synstation.GetDisConnect())
+		outD.Diversity = float64(synstation.GetDiversity()) / float64(synstation.M)
+		outD.lost = float64(synstation.SystemChan[0].GetAdded())
+		outD.d_lost = float64(synstation.GetLostConnect())
+		outD.HopCount = float64(synstation.GetHopCount())
 
 		outDs.Add(&outD)
 
 		if k%10 == 0 {
-			outD.k = float(k)
+			outD.k = float64(k)
 			outChannel <- outD //sent data to print to  stdout
 
 			//	t := synstation.CreateTrace(mobiles[0:synstation.M], synstations[0:synstation.D], k)
@@ -298,7 +298,7 @@ func main() {
 
 	// Print some status data
 
-	outDs.Div(float(synstation.Duration))
+	outDs.Div(float64(synstation.Duration))
 	fmt.Println("Mean", outDs.String())
 
 	for i := range synstations {
