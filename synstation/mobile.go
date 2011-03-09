@@ -15,7 +15,7 @@ type Mob struct {
 }
 
 
-func (M *Mob) Init(i int ) {
+func (M *Mob) Init(i int) {
 
 	M.Id = i
 	M.Rgen = rand.New(rand.NewSource(Rgen.Int63()))
@@ -33,8 +33,6 @@ func (M *Mob) Init(i int ) {
 	M.Speed[0] = (M.Rgen.Float64()*2 - 1) * MaxSpeed
 	M.Speed[1] = (M.Rgen.Float64()*2 - 1) * MaxSpeed
 
-	//M.R.X = M.X
-	//M.R.Y = M.Y
 }
 
 func (M *Mob) getInt() EmitterInt {
@@ -83,8 +81,8 @@ func (M *Mob) RunPhys() {
 // finnaly sents to syncchannel BER level
 func (M *Mob) FetchData() {
 
-	M.BERtotal, M.Diversity, M.MaxBER = M.SBERtotal, M.SDiversity, M.SMaxBER
-	M.SBERtotal, M.SDiversity, M.SMaxBER = 0.0, 0, 0.0
+	M.BERtotal, M.Diversity, M.MaxBER, M.InstMaxBER = M.SBERtotal, M.SDiversity, M.SMaxBER, M.SInstMaxBER
+	M.SInstMaxBER, M.SBERtotal, M.SDiversity, M.SMaxBER = 0, 0, 0, 0
 
 	M.move()
 
@@ -102,9 +100,4 @@ func (M *Mob) FetchData() {
 		SyncChannel <- M.BERtotal
 	}
 }
-/*
-func (M *Mob) RunAgent() {
-	M._SetCh()
-	SyncChannel <- 1
-}*/
 
