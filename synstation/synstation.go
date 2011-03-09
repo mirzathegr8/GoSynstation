@@ -44,9 +44,9 @@ func (dbs *DBS) Init() {
 	var p geom.Pos
 	p.X = Rgen.Float64() * Field
 	p.Y = Rgen.Float64() * Field
-	dbs.R.SetPos(p)
 	dbs.Rgen = rand.New(rand.NewSource(Rgen.Int63()))
-	dbs.R.Init(dbs.Rgen)
+	dbs.R.Init(p,dbs.Rgen)
+
 	SyncChannel <- 1
 }
 
@@ -177,7 +177,7 @@ func (dbs *DBS) RunAgent() {
 
 		}
 		// remove any connection that does not satify the threshold
-		if c.meanBER.Get() > math.Log10(BERThres) {
+		if c.GetLogMeanBER() > math.Log10(BERThres) {
 			dbs.disconnect(e)
 			sens_disconnect--
 			sens_lostconnect++
@@ -221,7 +221,7 @@ func (dbs *DBS) RunAgent() {
 				if Rc.Signal != nil {
 					if !dbs.IsConnected(Rc.Signal) {
 						if 10*math.Log10(Eval) > SNRThresConnec {
-							dbs.connect(Rc.Signal, -3)
+							dbs.connect(Rc.Signal, 0.001)
 							return // we are done connecting
 						}
 					}
@@ -232,22 +232,23 @@ func (dbs *DBS) RunAgent() {
 			// if no unconnected mobiles got connected, find one to provide it with macrodiversity
 
 			for j := NConnec - dbs.Connec.Len(); j > 0; j-- {
-				var max, BERe float64
+				var max float64
 				max = -10.0
 				var Rc *ChanReceiver
 				Rc = nil
 				for i := NChRes; i < NCh; i++ {
 					if dbs.IsInUse(i) == false {
-						Rt, r, e := dbs.R.EvalSignalConnection(i)
+						Rt, r, _ := dbs.R.EvalSignalConnection(i)
 						if r > max {
 							max = r
 							Rc = Rt
-							BERe = e
+				//	fmt.Println("attempt connect ",max,bb )
+							//BERe = e
 						}
 					}
 				}
 				if Rc != nil {
-					dbs.connect(Rc.Signal, BERe)
+					dbs.connect(Rc.Signal, 0.001)
 				} else {
 					break
 				}
@@ -285,6 +286,7 @@ func (dbs *DBS) channelHopping2() {
 					if !dbs.IsInUse(i) && i != c.E.GetCh() {
 
 						_, ber, snr, _ := dbs.R.EvalSignalBER(c.E, i)
+						ber=math.Log10(ber)
 
 						if ber < math.Log10(BERThres/10) {
 							if snr > ratio {
