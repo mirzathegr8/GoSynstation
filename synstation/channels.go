@@ -9,7 +9,7 @@ type channel struct {
 	coIntC   []coIntChan //set of interfering channels and factors
 
 	Change chan EmitterInt // channel to inform change of emitter
-	Remove chan EmitterInt // channel to inform change of emitter
+//	Remove chan EmitterInt // channel to inform change of emitter
 
 	added, removed int //counter
 
@@ -21,7 +21,7 @@ func (c *channel) Init(i int) {
 	c.i = i
 	c.Emitters = list.New()
 	c.Change = make(chan EmitterInt, M+10)
-	c.Remove = make(chan EmitterInt, M+10)
+//	c.Remove = make(chan EmitterInt, M+10)
 
 	//c.done = make(chan int)
 
@@ -79,42 +79,43 @@ func (ch *channel) ChangeChan() {
 
 }
 
-func (ch *channel) RemoveChan() {
-
-	/*for true {
-		tx := <-ch.Remove
-		if tx != nil {
-			if ch.i == 0 {
-				//	fmt.Println(" remove 0 ", tx.GetId())
-			}
-			ch.remove(tx)
-			ch.removed++
-		} else {
-			break
-		}
-		if ch.i != 0 {
-			countm++
-		}
-	}*/
-
-	SyncChannel <- 1
-
-}
-
+//func (ch *channel) RemoveChan() {
+//
+//	/*for true {
+//		tx := <-ch.Remove
+//		if tx != nil {
+//			if ch.i == 0 {
+//				//	fmt.Println(" remove 0 ", tx.GetId())
+//			}
+//			ch.remove(tx)
+//			ch.removed++
+//		} else {
+//			break
+//		}
+//		if ch.i != 0 {
+//			countm++
+//		}
+//	}*/
+//
+//	SyncChannel <- 1
+//
+//}
+//
 
 func ChannelHop() {
 
 	countp = 0
 	countm = 0
 
-	for i := range SystemChan {
-		SystemChan[i].Remove <- nil
-		go SystemChan[i].RemoveChan()
+//	for i := range SystemChan {
+//		SystemChan[i].Remove <- nil
+//		go SystemChan[i].RemoveChan()
+//
+//	}
+//	for i := 0; i < NCh; i++ {
+//		_ = <-SyncChannel
+//	}
 
-	}
-	for i := 0; i < NCh; i++ {
-		_ = <-SyncChannel
-	}
 	for i := range SystemChan {
 		SystemChan[i].Change <- nil
 		go SystemChan[i].ChangeChan()
