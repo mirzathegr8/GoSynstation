@@ -3,7 +3,7 @@
 include $(GOROOT)/src/Make.inc
 
 #CGO_LDFLAGS=  -lm
-DEPS=sselib
+DEPS=
 TARG=synstation
 GOFILES=constants.go\
 init.go\
@@ -17,6 +17,8 @@ powerC.go\
 trace.go\
 physReceiver.go\
 fastfading.go\
+powerData.go\
+meanStruct.go
 
 
 include $(GOROOT)/src/Make.pkg
