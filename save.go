@@ -45,7 +45,7 @@ func InstMaxBER( t *synstation.Trace,  i int) float64 { return t.Mobs[i].InstMax
 func BER( t *synstation.Trace,  i int) float64 { return t.Mobs[i].BERtotal} 
 func SNR( t *synstation.Trace,  i int) float64 { return t.Mobs[i].SNRb} 
 func CH( t *synstation.Trace,  i int) float64 { return float64(t.Mobs[i].Ch)} 
-func Div( t *synstation.Trace,  i int) float64 { return float64(t.Mobs[i].Diversity)} 
+func DIV( t *synstation.Trace,  i int) float64 { return float64(t.Mobs[i].Diversity)} 
 
 func WriteDataToFile( method func (t *synstation.Trace, i int) float64 , m int, channel chan *synstation.Trace, file string )  { 
 
