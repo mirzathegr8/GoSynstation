@@ -4,7 +4,7 @@ package main
 import "fmt"
 import s "synstation"
 import "runtime"
-import "draw"
+//import "draw"
 import "os"
 //import "math"
 //import "geom"
@@ -12,11 +12,11 @@ import "os"
 
 // Data to save for output during simulation
 type outputData struct {
-	k, connected, BER1, BER2, BER3 float
-	d_connec, d_discon, d_lost     float
-	lost                           float
-	Diversity                      float
-	HopCount                       float
+	k, connected, BER1, BER2, BER3 float64
+	d_connec, d_discon, d_lost     float64
+	lost                           float64
+	Diversity                      float64
+	HopCount                       float64
 }
 
 func (o *outputData) Add(o2 *outputData) {
@@ -33,7 +33,7 @@ func (o *outputData) Add(o2 *outputData) {
 }
 
 
-func (o *outputData) Div(k float) {
+func (o *outputData) Div(k float64) {
 	o.connected /= k
 	o.BER1 /= k
 	o.BER2 /= k
@@ -85,7 +85,9 @@ func main() {
 
 	var n = 0
 
-	draw.Init(s.M, s.D*s.NConnec) // init drawing system
+	s.Init()
+
+	//draw.Init(s.M, s.D*s.NConnec) // init drawing system
 
 	fmt.Println("Init done")
 
@@ -93,79 +95,7 @@ func main() {
 
 	go printData() //launch thread to print output
 
-	//heating up simulation
-	for k := 0; k < 0; k++ {
 
-		for i := range s.Synstations {
-			s.Synstations[i].RunPhys()
-		}
-
-		for i := range s.Mobiles {
-			go s.Mobiles[i].RunPhys()
-		}
-
-		//synchronise here
-		s.Sync(s.D + s.M)
-
-		// physics is done, now launch Mobiles data work
-		for i := range s.Mobiles {
-			go s.Mobiles[i].FetchData()
-		}
-
-		//here we synchronise threads and fetch data for ouput at the same time
-		outD.connected, outD.BER1, outD.BER2, outD.BER3 = 0, 0, 0, 0
-
-		n = 0
-		for v := range s.SyncChannel {
-			n++
-
-			//fmt.Print(s," ")	
-			switch {
-			case v < -3:
-				outD.BER1++
-				fallthrough
-			case v < -2:
-				outD.BER2++
-				fallthrough
-			case v < -1:
-				outD.BER3++
-				fallthrough
-			case v < -0.01:
-				outD.connected++
-			}
-			if n >= s.M {
-				break
-			}
-
-		}
-
-		//geting a bit more data
-		outD.d_connec = float(s.GetConnect())
-		outD.d_discon = float(s.GetDisConnect())
-		outD.Diversity = float(s.GetDiversity()) / float(s.M)
-		outD.lost = float(s.SystemChan[0].GetAdded())
-		outD.d_lost = float(s.GetLostConnect())
-		outD.HopCount = float(s.GetHopCount())
-
-		//if k%10 == 0 {
-		outD.k = float(k)
-		outChannel <- outD //sent data to print to  stdout		
-		//}
-
-		//Run DBS Agent, and sync
-		for i := range s.Synstations {
-			go s.Synstations[i].RunAgent()
-		}
-
-		//sync
-		s.Sync(s.D)
-
-		s.ChannelHop()
-		//s.PowerC(Synstations[:])
-
-	}
-
-	//end of preset
 
 	fmt.Println("Start Simulation")
 
@@ -217,26 +147,22 @@ func main() {
 		}
 
 		//geting a bit more data
-		outD.d_connec = float(s.GetConnect())
-		outD.d_discon = float(s.GetDisConnect())
-		outD.Diversity = float(s.GetDiversity()) / float(s.M)
-		outD.lost = float(s.SystemChan[0].GetAdded())
-		outD.d_lost = float(s.GetLostConnect())
-		outD.HopCount = float(s.GetHopCount())
+		outD.d_connec = float64(s.GetConnect())
+		outD.d_discon = float64(s.GetDisConnect())
+		outD.Diversity = float64(s.GetDiversity()) / float64(s.M)
+		outD.lost = float64(s.SystemChan[0].GetAdded())
+		outD.d_lost = float64(s.GetLostConnect())
+		outD.HopCount = float64(s.GetHopCount())
 
 		outDs.Add(&outD)
 
+		outD.k = float64(k)
 		if k%10 == 0 {
-			outD.k = float(k)
 			outChannel <- outD //sent data to print to  stdout
-
-			t := s.CreateTrace(s.Mobiles[:], s.Synstations[:], k)
-			//draw.Draw(t)
-			//fmt.Println("top")
-			saveBER <- t
-			saveBERMax <- t
-
 		}
+		t := s.CreateTrace(s.Mobiles[:], s.Synstations[:], k)
+		//draw.Draw(t)
+		sendTrace(t)
 
 		//Run DBS Agent, and sync
 		for i := range s.Synstations {
@@ -253,7 +179,7 @@ func main() {
 
 	// Print some status data
 
-	outDs.Div(float(s.Duration))
+	outDs.Div(float64(s.Duration))
 	fmt.Println("Mean", outDs.String())
 
 	for i := range s.Synstations {
@@ -276,7 +202,9 @@ func main() {
 	}
 	close(s.SyncChannel)
 
-	draw.Close()
+	StopSave()
+
+	//draw.Close()
 
 }
 
