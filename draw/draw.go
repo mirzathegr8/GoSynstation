@@ -73,7 +73,7 @@ func (d *DataSave) Close() {
 		for p := 0; p < d.t.NumConn; p++ {
 			c := &d.t.Connec[p]
 			d.cv.SetColor(0.0, 0.0, 0.0, 1.0)
-			d.cv.DrawCircle(float(c.B.X)/2.0, float(c.B.Y)/2.0, 5.0)
+			d.cv.DrawCircle(float32(c.B.X)/2.0, float32(c.B.Y)/2.0, 5.0)
 			d.cv.Stroke()
 		}
 
@@ -110,13 +110,13 @@ func drawP(d *DataSave) {
 		c := &d.t.Connec[p]
 		d.cv.SetColor(0.5, .5, 0.5, 0.1)
 
-		d.cv.DrawLine(float(c.A.X),
-			float(c.A.Y),
-			float(c.B.X),
-			float(c.B.Y))
+		d.cv.DrawLine(float32(c.A.X),
+			float32(c.A.Y),
+			float32(c.B.X),
+			float32(c.B.Y))
 		d.cv.Stroke()
 		d.cv.SetColor(0.0, 0.0, 0.0, 1.0)
-		d.cv.DrawCircle(float(c.B.X), float(c.B.Y), 5.0)
+		d.cv.DrawCircle(float32(c.B.X), float32(c.B.Y), 5.0)
 		d.cv.Stroke()
 	}
 
@@ -124,19 +124,19 @@ func drawP(d *DataSave) {
 
 		p := &d.t.Mobs[i]
 
-		var r, g, b, v float
+		var r, g, b, v float32
 
 		if p.BERtotal < synstation.BERThres && p.Ch > 0 {
 			/*	r = 1.0
 				g = 0.0
 				b = 0.0
 			} else {*/
-			//v=float(-p.Diversity)*2.0 +2	
-			//v = float((p.BERtotal - p.MaxBER) / p.BERtotal * -2.0)
-			v = float(p.BERtotal) //-  (float(-p.Diversity)*2.0 +2)
-			//v=float(p.MaxBER)
-			//v= -3*float(math.Log10(p.SNRb))
-			//v= -6*float(p.Power)
+			//v=float32(-p.Diversity)*2.0 +2	
+			//v = float32((p.BERtotal - p.MaxBER) / p.BERtotal * -2.0)
+			v = float32(p.BERtotal) //-  (float32(-p.Diversity)*2.0 +2)
+			//v=float32(p.MaxBER)
+			//v= -3*float32(math.Log10(p.SNRb))
+			//v= -6*float32(p.Power)
 
 			switch {
 
@@ -155,7 +155,7 @@ func drawP(d *DataSave) {
 
 		d.cv.SetColor(r, g, b, 1)
 
-		d.cv.DrawCircle(float(p.X)/2.0, float(p.Y)/2.0, 10.0)
+		d.cv.DrawCircle(float32(p.X)/2.0, float32(p.Y)/2.0, 10.0)
 		d.cv.Stroke()
 
 	}
@@ -167,25 +167,25 @@ func drawP(d *DataSave) {
 
 func drawChan(d *DataSave) {
 
-	v := float64(d.t.K) / 1000.0 * -8.0
+	v := float32(d.t.K) / 1000.0 * -8.0
 
-	var r, g, b float
+	var r, g, b float32
 
 	switch {
 
 	case v > -2.0:
-		b = 2.0 + float(v)/2.0
-		g = -float(v)
+		b = 2.0 + v/2.0
+		g = -v
 	case v > -4:
 		g = 1
-		r = -float(v)/2.0 - 1.0
+		r = -v/2.0 - 1.0
 	case v > -6:
 		r = 1.0
-		b = -float(v)/2.0 - 2.0
+		b = -v/2.0 - 2.0
 		g = 1.0 - b
 	default:
 		r = 1.0
-		b = 4.0 + float(v)/2.0
+		b = 4.0 + v/2.0
 		g = 0.0
 	}
 
@@ -199,7 +199,7 @@ func drawChan(d *DataSave) {
 
 			r := 15 * math.Log(-30.0/p.BERtotal)
 
-			d.cv.DrawCircle(float(p.X)/2.0, float(p.Y)/2.0, float(r))
+			d.cv.DrawCircle(float32(p.X)/2.0, float32(p.Y)/2.0, float32(r))
 			d.cv.Stroke()
 
 		}
@@ -380,7 +380,7 @@ func drawVoronoi(d *DataSave) {
 					if jnext < 0 {
 						fmt.Println("index out of range")
 						d.cv.SetColor(1, 0, 0, 1)
-						d.cv.DrawCircle(float(m1.Pos.X)/2.0, float(m1.Pos.Y)/2.0, 40.0)
+						d.cv.DrawCircle(float32(m1.Pos.X)/2.0, float32(m1.Pos.Y)/2.0, 40.0)
 						break
 					}
 					a := i
@@ -400,13 +400,13 @@ func drawVoronoi(d *DataSave) {
 				d.cv.ClosePath()
 
 				p := m1
-				var r, g, b float
-				//v=float(-p.Diversity)*2.0 +2	
-				//v=float((p.BERtotal-p.MaxBER)/p.BERtotal* -2.0)
-				//v := float(p.BERtotal) //-  (float(-p.Diversity)*2.0 +2)
-				//v=float(p.MaxBER)
-				v := -3 * float(math.Log10(p.SNRb))
-				//v= -6*float(p.Power)
+				var r, g, b float32
+				//v=float32(-p.Diversity)*2.0 +2	
+				//v=float32((p.BERtotal-p.MaxBER)/p.BERtotal* -2.0)
+				//v := float32(p.BERtotal) //-  (float32(-p.Diversity)*2.0 +2)
+				//v=float32(p.MaxBER)
+				v := -3 * float32(math.Log10(p.SNRb))
+				//v= -6*float32(p.Power)
 
 				switch {
 
@@ -431,7 +431,7 @@ func drawVoronoi(d *DataSave) {
 				//d.cv.Stroke()
 
 				/*d.cv.SetColor(0, 0, 0, 1)
-				d.cv.DrawCircle(float(m1.Pos.X)/2.0, float(m1.Pos.Y)/2.0, 10.0)
+				d.cv.DrawCircle(float32(m1.Pos.X)/2.0, float32(m1.Pos.Y)/2.0, 10.0)
 				d.cv.Stroke()*/
 
 			}
@@ -447,14 +447,14 @@ func drawVoronoi(d *DataSave) {
 					d.cv.SetColor(0.0, .5, 0.5, 1)
 				}
 
-				d.cv.DrawLine(float(c.A.X)/2,
-					float(c.A.Y)/2,
-					float(c.B.X)/2,
-					float(c.B.Y)/2)
+				d.cv.DrawLine(float32(c.A.X)/2,
+					float32(c.A.Y)/2,
+					float32(c.B.X)/2,
+					float32(c.B.Y)/2)
 				d.cv.Stroke()
 			}
 			d.cv.SetColor(0.5, 0.5, 1.0, 1.0)
-			d.cv.DrawCircle(float(c.B.X)/2, float(c.B.Y)/2, 15.0)
+			d.cv.DrawCircle(float32(c.B.X)/2, float32(c.B.Y)/2, 15.0)
 			d.cv.Stroke()
 		}*/
 
