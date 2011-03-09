@@ -10,10 +10,10 @@ type PhysReceiverSectored struct {
 	R []PhysReceiver
 }
 
-func (r *PhysReceiverSectored) Init(Rgen *rand.Rand) {
+func (r *PhysReceiverSectored) Init(p geom.Pos, Rgen *rand.Rand) {
 	r.R = make([]PhysReceiver, 3)
 	for i := 0; i < 3; i++ {
-		r.R[i].Init(Rgen)
+		r.R[i].Init(p,Rgen)
 	}
 
 	r.R[0].Orientation[0] = -1
