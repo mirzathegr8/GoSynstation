@@ -39,7 +39,7 @@ func init() {
 
 			for k := 1; k <= overlapN; k++ {
 
-				fac := 1.0 - float(k)*(1.0-roverlap)
+				fac := 1.0 - float64(k)*(1.0-roverlap)
 
 				SystemChan[i].coIntC[overlapN-k].c = i - k
 				SystemChan[i].coIntC[overlapN-k].factor = float64(fac)
@@ -54,11 +54,6 @@ func init() {
 		}
 	}
 
-	for i := range Synstations {
-		Synstations[i].Init()
-	}
-	//sync
-	Sync(D)
 
 	/*d:=0
 	nD := int(math.Sqrt(synstation.D))
@@ -89,5 +84,15 @@ func Sync(k int) {
 	for n := 0; n < k; n++ {
 		<-SyncChannel
 	}
+}
+
+func Init(){
+
+	for i := range Synstations {
+		go Synstations[i].Init()
+	}
+	//sync
+	Sync(D)
+
 }
 
