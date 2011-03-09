@@ -3,55 +3,89 @@ package main
 import "synstation"
 import "os"
 import "fmt"
+import "container/vector"
+
+var syncsavech chan int
+
+var saveData vector.Vector
 
 func init() {
 
-	saveBER = make(chan *synstation.Trace, 10)
-	saveBERMax = make(chan *synstation.Trace, 10)
+	syncsavech= make(chan int)
 
-	go SaveMobBER()
-	go SaveMobBERMax()
+	//saveData=new(vector.Vector)//make([]saveTraceItem,5)
 
+	saveData.Push(CreateStart(MaxBER, synstation.M, "BERMax"))
+	saveData.Push(CreateStart(InstMaxBER, synstation.M, "InstMatBER"))
+	saveData.Push(CreateStart(BER, synstation.M, "BER"))
+	saveData.Push(CreateStart(SNR, synstation.M, "SNR"))
+	saveData.Push(CreateStart(CH, synstation.M, "CH"))
+	saveData.Push(CreateStart(DIV, synstation.M, "DIV"))
+	
 }
 
-var saveBER chan *synstation.Trace
-var saveBERMax chan *synstation.Trace
+type saveTraceItem struct{
+	save chan *synstation.Trace
+}
 
-func SaveMobBER() {
+func CreateStart(method func (t *synstation.Trace, i int) float64 , m int , file string ) saveTraceItem{
+	var a saveTraceItem
+	a.save = make(chan *synstation.Trace, 1000)
+	go WriteDataToFile(method, m, a.save, file)
+	return a
+}
 
-	outF, err := os.Open("BER.m", os.O_WRONLY, 0666)
+func (s *saveTraceItem) Stop(){
+	close(s.save)
+	<- syncsavech
+}
+
+func MaxBER( t *synstation.Trace,  i int) float64 { return t.Mobs[i].MaxBER}  
+func InstMaxBER( t *synstation.Trace,  i int) float64 { return t.Mobs[i].InstMaxBER} 
+func BER( t *synstation.Trace,  i int) float64 { return t.Mobs[i].BERtotal} 
+func SNR( t *synstation.Trace,  i int) float64 { return t.Mobs[i].SNRb} 
+func CH( t *synstation.Trace,  i int) float64 { return float64(t.Mobs[i].Ch)} 
+func Div( t *synstation.Trace,  i int) float64 { return float64(t.Mobs[i].Diversity)} 
+
+func WriteDataToFile( method func (t *synstation.Trace, i int) float64 , m int, channel chan *synstation.Trace, file string )  { 
+
+	outF, err := os.Open(file+".mat", os.O_WRONLY, 0666)
 	fmt.Println(err)
-	outF.WriteString(fmt.Sprintln("# name: BERMat\n# type: matrix\n# rows: ", synstation.Duration, "\n# columns: ", synstation.M))
+	outF.WriteString(fmt.Sprintln("# name: ",file,"\n# type: matrix\n# rows: ", synstation.Duration, "\n# columns: ", m))
 
-	for t := range saveBER {
-		for i := 0; i < synstation.M; i++ {
-			outF.WriteString(fmt.Sprint(t.Mobs[i].BERtotal, " "))
+//	dataM:= make([]float64,m)
 
+	for t := range channel {
+		var s string
+		for i := 0; i < m; i++ {	
+		s += fmt.Sprintf("%1.2f ",method(t,i))
 		}
-		outF.WriteString("\n")
+
+		outF.WriteString(s +"\n")
 
 	}
 
+	
+	
+
 	outF.Close()
+
+	syncsavech <-1
+
+} 
+
+func StopSave(){
+	for i:= 0 ; i< len(saveData); i++ {
+		a:=saveData.At(i).(saveTraceItem)
+		a.Stop()
+	}
 }
 
+func sendTrace(t *synstation.Trace){
 
-func SaveMobBERMax() {
-
-	outF, err := os.Open("BERMax.m", os.O_WRONLY, 0666)
-	fmt.Println(err)
-	outF.WriteString(fmt.Sprintln("# name: BERMaxMat\n# type: matrix\n# rows: ", synstation.Duration, "\n# columns: ", synstation.M))
-
-	for t := range saveBERMax {
-
-		for i := 0; i < synstation.M; i++ {
-			outF.WriteString(fmt.Sprint(t.Mobs[i].MaxBER, " "))
-
-		}
-		outF.WriteString("\n")
-
+	for i:= 0 ; i< len(saveData); i++ {
+		a:=saveData.At(i).(saveTraceItem)
+		a.save <- t
 	}
-
-	outF.Close()
 }
 
