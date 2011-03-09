@@ -68,8 +68,6 @@ func (co *Connection) BitErrorRate(rx PhysReceiverInt) {
 }
 
 func (co *Connection) EvalRatio(rx PhysReceiverInt) float64 {
-	//_,SNR,_,_ := rx.EvalSignalSNR(co.E,co.E.GetCh())
-	//return co.SNR
 	return co.meanSNR.Get()
 }
 
@@ -79,7 +77,7 @@ func (co *Connection) EvalRatioConnect() float64 {
 
 func (co *Connection) EvalRatioDisconnect() float64 {
 	Ptot := co.E.BERT()
-	return Ptot * math.Log(Ptot/co.meanBER.Get())
+	return Ptot * math.Log(Ptot/co.GetLogMeanBER())
 }
 
 func CreateConnection(E EmitterInt, v float64) *Connection {
@@ -88,5 +86,9 @@ func CreateConnection(E EmitterInt, v float64) *Connection {
 	Conn.meanBER.Clear(v)
 	Conn.Status = 1
 	return Conn
+}
+
+func (co *Connection) GetLogMeanBER() float64 {
+	return math.Log10(co.meanBER.Get())
 }
 
