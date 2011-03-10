@@ -81,6 +81,12 @@ func (M *Mob) RunPhys() {
 // finnaly sents to syncchannel BER level
 func (M *Mob) FetchData() {
 
+	if (M.SBERtotal==0){ M.Outage++
+	}else{
+		M.Outage=0
+	}
+
+
 	M.BERtotal, M.Diversity, M.MaxBER, M.InstMaxBER = M.SBERtotal, M.SDiversity, M.SMaxBER, M.SInstMaxBER
 	M.SInstMaxBER, M.SBERtotal, M.SDiversity, M.SMaxBER = 0, 0, 0, 0
 

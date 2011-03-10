@@ -12,16 +12,14 @@ var saveData vector.Vector
 func init() {
 
 	syncsavech= make(chan int)
-
-	//saveData=new(vector.Vector)//make([]saveTraceItem,5)
-
+	
 	saveData.Push(CreateStart(MaxBER, synstation.M, "BERMax"))
 	saveData.Push(CreateStart(InstMaxBER, synstation.M, "InstMatBER"))
 	saveData.Push(CreateStart(BER, synstation.M, "BER"))
 	saveData.Push(CreateStart(SNR, synstation.M, "SNR"))
 	saveData.Push(CreateStart(CH, synstation.M, "CH"))
 	saveData.Push(CreateStart(DIV, synstation.M, "DIV"))
-	
+	saveData.Push(CreateStart(Outage, synstation.M, "Outage"))
 }
 
 type saveTraceItem struct{
@@ -46,14 +44,13 @@ func BER( t *synstation.Trace,  i int) float64 { return t.Mobs[i].BERtotal}
 func SNR( t *synstation.Trace,  i int) float64 { return t.Mobs[i].SNRb} 
 func CH( t *synstation.Trace,  i int) float64 { return float64(t.Mobs[i].Ch)} 
 func DIV( t *synstation.Trace,  i int) float64 { return float64(t.Mobs[i].Diversity)} 
+func Outage( t *synstation.Trace,  i int) float64 { return float64(t.Mobs[i].Outage)} 
 
 func WriteDataToFile( method func (t *synstation.Trace, i int) float64 , m int, channel chan *synstation.Trace, file string )  { 
 
 	outF, err := os.Open(file+".mat", os.O_WRONLY, 0666)
 	fmt.Println(err)
 	outF.WriteString(fmt.Sprintln("# name: ",file,"\n# type: matrix\n# rows: ", synstation.Duration, "\n# columns: ", m))
-
-//	dataM:= make([]float64,m)
 
 	for t := range channel {
 		var s string

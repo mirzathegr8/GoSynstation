@@ -16,6 +16,8 @@ type EmitterS struct {
 	MaxBER    float64
 	SNRb      float64
 	InstMaxBER  float64
+
+	Outage int
 	
 }
 
