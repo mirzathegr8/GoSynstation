@@ -10,6 +10,7 @@ import "fmt"
 import "rand"
 //import "sselib"
 
+const SizeES=10
 
 // Structure to hold interference level, and multilevel interference with overlaping channels calculation
 // as well as the best signal and its recieved power
@@ -17,14 +18,42 @@ type ChanReceiver struct {
 	Pint     float64 // to store total received power level including interference;
 	Pint1lvl float64 // to store received power_levels of emitters in channel without co-interference 
 
-	Signal EmitterInt
-
-	PrMax float64
-
+	Signal [SizeES]int
+	
 	meanPint MeanData
 }
 
-func (chR ChanReceiver) String() string { return fmt.Sprintf("{%f %f}", chR.Pint*1e15, chR.PrMax*1e15) }
+func (chR *ChanReceiver) Clear(){
+	for i:=range chR.Signal{
+		chR.Signal[i]=-1
+	}
+	chR.Pint=0
+	chR.Pint1lvl=0
+}
+
+func (chR *ChanReceiver) Push( S int, P float64, R *PhysReceiver){
+	var i=0
+	var j=0
+	for i=range chR.Signal{
+		if chR.Signal[i]<0{
+			chR.Signal[i]=S
+			return
+		}
+		if R.PP.GetPr(chR.Signal[i])<P{
+			break
+		}
+	}	
+	if i<SizeES{
+	for j=i+1; j<SizeES-1 ; j++{
+		if chR.Signal[j]<0 { break }
+		chR.Signal[j]=chR.Signal[j-1]
+	}
+	chR.Signal[i]=S
+	}
+
+}
+
+func (chR ChanReceiver) String() string { return fmt.Sprintf("{%f }", chR.Pint*1e15) }
 
 
 type PhysReceiverInt interface {
@@ -52,6 +81,8 @@ type PhysReceiverInt interface {
 	//evalInstantPr(E EmitterInt) float64
 
 	GenFastFading()
+
+	EvalChRSignalSNR(ch int,k int)(Rc *ChanReceiver, eval float64)
 }
 
 
@@ -98,10 +129,11 @@ func (r *PhysReceiver) EvalSignalConnection(ch int) (Rc *ChanReceiver, Eval, BER
 	Rc = &r.Channels[ch]
 	Eval = -100 //Eval is in [0 inf[, -100 means no signal
 
-	if Rc.Signal != nil {
-		_, BER, _, _ = r.EvalSignalBER(Rc.Signal, ch)
+	if Rc.Signal[0] >=0 {
+		E:= &Mobiles[Rc.Signal[0]].Emitter
+		_, BER, _, _ = r.EvalSignalBER(E, ch)
 		BER=math.Log10(BER)
-		Ptot := Rc.Signal.BERT() + BER
+		Ptot := E.BERT() + BER
 		Eval = Ptot * math.Log(Ptot/BER)
 	}
 
@@ -113,13 +145,34 @@ func (r *PhysReceiver) EvalBestSignalSNR(ch int) (Rc *ChanReceiver, Eval float64
 
 	Rc = &r.Channels[ch]
 	Eval = 0
-	//fmt.Println(Rc.Signal, " ")
-	if Rc.Signal != nil {
 
+	if Rc.Signal[0] >=0 {
+
+		PMax:=r.PP.GetPr(Rc.Signal[0])
 		if ch == 0 {
-			Eval = Rc.PrMax / 1e-15 //WNoise
+			Eval = PMax / 1e-15 //WNoise
 		} else {
-			Eval = Rc.PrMax / (Rc.Pint - Rc.PrMax + WNoise)
+			Eval = PMax / (Rc.Pint - PMax + WNoise)
+		}
+
+	}
+
+	return
+}
+
+
+func (r *PhysReceiver) EvalChRSignalSNR(ch int, k int) (Rc *ChanReceiver, Eval float64) {
+
+	Rc = &r.Channels[ch]
+	Eval = 0
+
+	if Rc.Signal[k] >=0 {
+
+		PMax:=r.PP.GetPr(Rc.Signal[k])
+		if ch == 0 {
+			Eval = PMax / 1e-15 //WNoise
+		} else {
+			Eval = PMax / (Rc.Pint - PMax + WNoise)
 		}
 
 	}
@@ -181,10 +234,9 @@ func (r *PhysReceiver) EvalSignalBER(e EmitterInt, ch int) (Rc *ChanReceiver, BE
 func (rx *PhysReceiver) measurePowerFromChannel(em EmitterInt) {
 
 	for i := 0; i < NCh; i++ {
-		rx.Channels[i].Pint1lvl = 0
-		rx.Channels[i].Signal = nil
+		rx.Channels[i].Pint1lvl = 0		
 		rx.Channels[i].Pint = 0
-		rx.Channels[i].PrMax = 0
+		rx.Channels[i].Clear()
 	}
 
 	var Ns = 0
@@ -199,11 +251,12 @@ func (rx *PhysReceiver) measurePowerFromChannel(em EmitterInt) {
 		//P2, _ := rx.evalSignalPr(&Mobiles[i], i)
 
 		ch := Mobiles[i].GetCh()
-		if P2 > rx.Channels[ch].PrMax {
-			rx.Channels[ch].Signal = &Mobiles[i]
-			rx.Channels[ch].PrMax = P2
-
-		}
+		
+		rx.Channels[ch].Push(i,P2,rx)
+		//if P2 > rx.Channels[ch].PrMax {
+		//	rx.Channels[ch].Signal = &Mobiles[i]
+		//	rx.Channels[ch].PrMax = P2
+		//}
 		rx.Channels[ch].Pint1lvl += P
 
 	}
@@ -214,18 +267,18 @@ func (rx *PhysReceiver) measurePowerFromChannel(em EmitterInt) {
 		//P2, _ := rx.evalSignalPr(&Mobiles[i], i)
 
 		ch := Mobiles[i].GetCh()
-		if P2 > rx.Channels[ch].PrMax {
-			rx.Channels[ch].Signal = &Mobiles[i]
-			rx.Channels[ch].PrMax = P
-
-		}
+		rx.Channels[ch].Push(i,P2,rx)
+		//if P2 > rx.Channels[ch].PrMax {
+		//	rx.Channels[ch].Signal = &Mobiles[i]
+		//	rx.Channels[ch].PrMax = P
+		//}
 		rx.Channels[ch].Pint1lvl += P
 
 	}
 
-	for i := 0; i < NChRes; i++ {
-		rx.Channels[i].Pint1lvl = rx.Channels[i].PrMax
-	}
+	//for i := 0; i < NChRes; i++ {
+	//	rx.Channels[i].Pint1lvl = rx.PP.GetPr(rx.Channels[i].Signal[0])
+	//}
 
 }
 
@@ -243,10 +296,10 @@ func (rx *PhysReceiver) MeasurePower(tx EmitterInt) {
 		rx.Channels[i].meanPint.Add(rx.Channels[i].Pint)
 	}
 
-	for i := 0; i < NChRes; i++ {
-		rx.Channels[i].Pint = rx.Channels[i].PrMax + WNoise //just a bit more noise 
-		rx.Channels[i].meanPint.Add(rx.Channels[i].Pint)
-	}
+	//for i := 0; i < NChRes; i++ {
+	//	rx.Channels[i].Pint = rx.Channels[i].PrMax + WNoise //just a bit more noise 
+	//	rx.Channels[i].meanPint.Add(rx.Channels[i].Pint)
+	//}
 
 }
 

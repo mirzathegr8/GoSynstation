@@ -58,7 +58,7 @@ func (dbs *DBS) RunPhys() {
 
 	dbs.R.MeasurePower(nil)
 
-	dbs.Clock = dbs.Rgen.Intn(3)
+	dbs.Clock = dbs.Rgen.Intn(10)
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
@@ -160,10 +160,11 @@ func (dbs *DBS) RunAgent() {
 		c := e.Value.(*Connection)
 
 		if c.GetCh() == 0 {
+			/*			
 			//check that the signal on the connecting channel is still the same 
 			// and that its power is still enough
 			Rc, Eval := dbs.R.EvalBestSignalSNR(0)
-			if c.GetE() != Rc.Signal {
+			if c.GetE().GetId() != Rc.Signal[0] {
 				dbs.disconnect(e)
 				sens_disconnect--
 				sens_lostconnect++
@@ -174,6 +175,8 @@ func (dbs *DBS) RunAgent() {
 					sens_lostconnect++
 				}
 			}
+			*/
+			//rc.GetEmitter.GetId()
 
 		}
 		// remove any connection that does not satify the threshold
@@ -189,6 +192,7 @@ func (dbs *DBS) RunAgent() {
 		dbs.channelHopping()
 	} else if dbs.Clock == 1 {
 
+var conn int
 		if dbs.Connec.Len() >= NConnec {
 			//disconnect
 			var disc *list.Element
@@ -215,18 +219,23 @@ func (dbs *DBS) RunAgent() {
 
 			//First try to connect unconnected mobiles
 
-			{
-				Rc, Eval := dbs.R.EvalBestSignalSNR(0)
+			for i,j := 0, NConnec - dbs.Connec.Len(); j > 0 && i<SizeES; j--  {
+				
+				//var i=0
+				Rc, Eval := dbs.R.EvalChRSignalSNR(0,i)
+				
 
-				if Rc.Signal != nil {
-					if !dbs.IsConnected(Rc.Signal) {
+				if Rc.Signal[i] >=0 {
+					if !dbs.IsConnected(&Mobiles[Rc.Signal[i]]) {
 						if 10*math.Log10(Eval) > SNRThresConnec {
-							dbs.connect(Rc.Signal, 0.001)
+							dbs.connect(&Mobiles[Rc.Signal[i]], 0.001)
+conn++
 							return // we are done connecting
 						}
 					}
 
 				}
+			i++
 			}
 
 			// if no unconnected mobiles got connected, find one to provide it with macrodiversity
@@ -248,14 +257,17 @@ func (dbs *DBS) RunAgent() {
 					}
 				}
 				if Rc != nil {
-					dbs.connect(Rc.Signal, 0.001)
+					dbs.connect(&Mobiles[Rc.Signal[0]], 0.001)
+ conn++
 				} else {
 					break
 				}
+
+	
 			}
 
 		}
-
+	
 	}
 
 }
@@ -426,6 +438,8 @@ func (dbs *DBS) channelHopping() {
 	//pour trier les canaux
 	dbs.RandomChan()
 
+	var stop=0
+
 	// find a mobile
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
@@ -452,8 +466,9 @@ func (dbs *DBS) channelHopping() {
 					}
 				}
 				if nch != 0 {
-					dbs.changeChannel(c, nch)
-					return
+					dbs.changeChannel(c, nch) 
+					stop++
+					if stop>5 {return}
 				}
 
 				// sort mobile connection for channel hopping

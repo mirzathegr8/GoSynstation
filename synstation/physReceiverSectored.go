@@ -58,16 +58,16 @@ func (r *PhysReceiverSectored) evalSignalPr(e EmitterInt, ch int) (Pr, K float64
 }
 
 func (r *PhysReceiverSectored) EvalBestSignalSNR(ch int) (Rc *ChanReceiver, SNR float64) {
-	/*var e [3]float64
+	var e [3]float64
 	var R [3]*ChanReceiver		
 
 	for i:=range e {
 		R[i],e[i] = r.R[i].EvalBestSignalSNR(ch)	
 	}
 	ir := findMax(e[:])
-	return R[ir],e[ir]*/
+	return R[ir],e[ir]
 
-	Rc = &r.R[0].Channels[ch]
+	/*Rc = &r.R[0].Channels[ch]
 	SNR = 0
 
 	if Rc.Signal != nil {
@@ -80,7 +80,21 @@ func (r *PhysReceiverSectored) EvalBestSignalSNR(ch int) (Rc *ChanReceiver, SNR 
 
 	}
 
-	return
+	return*/
+
+}
+
+
+func (r *PhysReceiverSectored) EvalChRSignalSNR(ch int, k int) (Rc *ChanReceiver, SNR float64) {
+	var e [3]float64
+	var R [3]*ChanReceiver		
+
+	for i:=range e {
+		R[i],e[i] = r.R[i].EvalChRSignalSNR(ch,k)	
+	}
+	ir := findMax(e[:])
+	return R[ir],e[ir]
+
 
 }
 
