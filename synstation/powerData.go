@@ -15,9 +15,6 @@ func (p *PowerData) CalculatePr(rx *PhysReceiver, FF FadingData ) {
 		fading, _ := rx.Fading(E)
 		p.pr[i] = fading * gain * E.GetPower()
 
-		//if E.GetCh() != 0 {
-		//	p.pr[i] *= FF.GetFastFading(i)
-		//}	
 	}
 }
 
