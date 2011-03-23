@@ -13,13 +13,14 @@ func init() {
 
 	syncsavech= make(chan int)
 	
-	saveData.Push(CreateStart(MaxBER, synstation.M, "BERMax"))
-	saveData.Push(CreateStart(InstMaxBER, synstation.M, "InstMatBER"))
-	saveData.Push(CreateStart(BER, synstation.M, "BER"))
-	saveData.Push(CreateStart(SNR, synstation.M, "SNR"))
-	saveData.Push(CreateStart(CH, synstation.M, "CH"))
-	saveData.Push(CreateStart(DIV, synstation.M, "DIV"))
-	saveData.Push(CreateStart(Outage, synstation.M, "Outage"))
+//	saveData.Push(CreateStart(MaxBER, synstation.M, "BERMax"))
+//	saveData.Push(CreateStart(InstMaxBER, synstation.M, "InstMatBER"))
+//	saveData.Push(CreateStart(BER, synstation.M, "BER"))
+//	saveData.Push(CreateStart(SNR, synstation.M, "SNR"))
+//	saveData.Push(CreateStart(CH, synstation.M, "CH"))
+//	saveData.Push(CreateStart(DIV, synstation.M, "DIV"))
+//	saveData.Push(CreateStart(Outage, synstation.M, "Outage"))
+//	saveData.Push(CreateStart(Ptxr, synstation.M, "Ptxr"))
 }
 
 type saveTraceItem struct{
@@ -45,6 +46,7 @@ func SNR( t *synstation.Trace,  i int) float64 { return t.Mobs[i].SNRb}
 func CH( t *synstation.Trace,  i int) float64 { return float64(t.Mobs[i].Ch)} 
 func DIV( t *synstation.Trace,  i int) float64 { return float64(t.Mobs[i].Diversity)} 
 func Outage( t *synstation.Trace,  i int) float64 { return float64(t.Mobs[i].Outage)} 
+func Ptxr( t *synstation.Trace,  i int) float64 { return float64(t.Mobs[i].Power)} 
 
 func WriteDataToFile( method func (t *synstation.Trace, i int) float64 , m int, channel chan *synstation.Trace, file string )  { 
 
