@@ -50,7 +50,7 @@ func (dbs *DBS) Init() {
 	SyncChannel <- 1
 }
 
-// Physics : evaluate SNRs at reciever, evaluate BER of connections
+// Physics : evaluate SNRs at receiver, evaluate BER of connections
 func (dbs *DBS) RunPhys() {
 
 	dbs.R.DoTracking(dbs.Connec)
@@ -154,7 +154,7 @@ func (dbs *DBS) RunAgent() {
 
 	defer syncThread()
 	// defer dbs.optimizePowerAllocationSimple()
-	//defer dbs.optimizePowerAllocation()
+	defer dbs.optimizePowerAllocation()
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
