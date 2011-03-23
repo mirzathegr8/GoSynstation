@@ -45,7 +45,7 @@ func (p Pos) Scalar(p2 Pos) float64 {
 
 
 func (p Pos) Normalise() Pos {
-	return p.Times(p.Len())
+	return p.Times(1/p.Len())
 }
 
 
@@ -116,6 +116,14 @@ func Abs(f float64) float64 {
 	}
 	return f
 }
+
+func Min(a,b float64) float64 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 
 func Sign(f float64) float64 {
 	switch {
