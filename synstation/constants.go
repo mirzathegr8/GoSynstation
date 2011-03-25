@@ -11,9 +11,9 @@ const D = 400  // numbers of DBS
 const L2 = 2 // modulation factor
 const L1 = 1
 
-var NCh = 45 // number of channels
+var NCh = 35 // number of channels
 // 10 0 11 .1 12 .2 19 .5 37 .75
-var roverlap = 0.0 // ratio of overlaping of two adjacent channels
+var roverlap = float64(0.0) // ratio of overlaping of two adjacent channels
 
 const WNoise = 1e-12 // White noise at reciever
 var NChRes = 5       //numbers of reserved channels, not used yet, but chan 0 must be reserved
@@ -27,7 +27,7 @@ var SNRThresChHop = float64(0)
 var MaxSpeed = float64(1.3889 / 50)
 
 
-var SetReceiverType = OMNI
+var SetReceiverType = BEAM
 
 //type ReceiverType int
 
