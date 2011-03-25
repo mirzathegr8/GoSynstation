@@ -45,7 +45,7 @@ func (dbs *DBS) Init() {
 	p.X = Rgen.Float64() * Field
 	p.Y = Rgen.Float64() * Field
 	dbs.Rgen = rand.New(rand.NewSource(Rgen.Int63()))
-	dbs.R.Init(p,dbs.Rgen)
+	dbs.R.Init(p, dbs.Rgen)
 
 	SyncChannel <- 1
 }
@@ -154,27 +154,26 @@ func (dbs *DBS) RunAgent() {
 
 	defer syncThread()
 	// defer dbs.optimizePowerAllocationSimple()
-	defer dbs.optimizePowerAllocation()
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
 
 		if c.GetCh() == 0 {
 			/*			
-			//check that the signal on the connecting channel is still the same 
-			// and that its power is still enough
-			Rc, Eval := dbs.R.EvalBestSignalSNR(0)
-			if c.GetE().GetId() != Rc.Signal[0] {
-				dbs.disconnect(e)
-				sens_disconnect--
-				sens_lostconnect++
-			} else {
-				if 10*math.Log10(Eval) < SNRThresConnec-2 {
+				//check that the signal on the connecting channel is still the same 
+				// and that its power is still enough
+				Rc, Eval := dbs.R.EvalBestSignalSNR(0)
+				if c.GetE().GetId() != Rc.Signal[0] {
 					dbs.disconnect(e)
 					sens_disconnect--
 					sens_lostconnect++
+				} else {
+					if 10*math.Log10(Eval) < SNRThresConnec-2 {
+						dbs.disconnect(e)
+						sens_disconnect--
+						sens_lostconnect++
+					}
 				}
-			}
 			*/
 			//rc.GetEmitter.GetId()
 
@@ -192,7 +191,7 @@ func (dbs *DBS) RunAgent() {
 		dbs.channelHopping()
 	} else if dbs.Clock == 1 {
 
-var conn int
+		var conn int
 		if dbs.Connec.Len() >= NConnec {
 			//disconnect
 			var disc *list.Element
@@ -219,23 +218,22 @@ var conn int
 
 			//First try to connect unconnected mobiles
 
-			for i,j := 0, NConnec - dbs.Connec.Len(); j > 0 && i<SizeES; j--  {
-				
-				//var i=0
-				Rc, Eval := dbs.R.EvalChRSignalSNR(0,i)
-				
+			for i, j := 0, NConnec-dbs.Connec.Len(); j > 0 && i < SizeES; j-- {
 
-				if Rc.Signal[i] >=0 {
+				//var i=0
+				Rc, Eval := dbs.R.EvalChRSignalSNR(0, i)
+
+				if Rc.Signal[i] >= 0 {
 					if !dbs.IsConnected(&Mobiles[Rc.Signal[i]]) {
 						if 10*math.Log10(Eval) > SNRThresConnec {
 							dbs.connect(&Mobiles[Rc.Signal[i]], 0.001)
-conn++
+							conn++
 							return // we are done connecting
 						}
 					}
 
 				}
-			i++
+				i++
 			}
 
 			// if no unconnected mobiles got connected, find one to provide it with macrodiversity
@@ -251,23 +249,25 @@ conn++
 						if r > max {
 							max = r
 							Rc = Rt
-				//	fmt.Println("attempt connect ",max,bb )
+							//	fmt.Println("attempt connect ",max,bb )
 							//BERe = e
 						}
 					}
 				}
 				if Rc != nil {
 					dbs.connect(&Mobiles[Rc.Signal[0]], 0.001)
- conn++
+					conn++
 				} else {
 					break
 				}
 
-	
 			}
 
 		}
-	
+
+	} else if dbs.Clock == 2 {
+		dbs.optimizePowerAllocation()
+
 	}
 
 }
@@ -298,7 +298,7 @@ func (dbs *DBS) channelHopping2() {
 					if !dbs.IsInUse(i) && i != c.E.GetCh() {
 
 						_, ber, snr, _ := dbs.R.EvalSignalBER(c.E, i)
-						ber=math.Log10(ber)
+						ber = math.Log10(ber)
 
 						if ber < math.Log10(BERThres/10) {
 							if snr > ratio {
@@ -438,7 +438,7 @@ func (dbs *DBS) channelHopping() {
 	//pour trier les canaux
 	dbs.RandomChan()
 
-	var stop=0
+	var stop = 0
 
 	// find a mobile
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
@@ -466,9 +466,11 @@ func (dbs *DBS) channelHopping() {
 					}
 				}
 				if nch != 0 {
-					dbs.changeChannel(c, nch) 
+					dbs.changeChannel(c, nch)
 					stop++
-					if stop>5 {return}
+					if stop > 5 {
+						return
+					}
 				}
 
 				// sort mobile connection for channel hopping
