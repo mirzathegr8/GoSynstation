@@ -47,7 +47,12 @@ func DrawReceptionField(dbs []synstation.DBS, name string) {
 
 				if geom.Abs(inField(x)-dbs[k].R.GetPos().X) < 1500 &&
 					geom.Abs(inField(y)-dbs[k].R.GetPos().Y) < 1500 {
-					p, _ := dbs[k].R.Fading(e)
+
+					//TODO need to change here the call to fading to a paralle
+					// call to GenFastFading 
+					// on many emitters, and read GetPr
+					//	p := dbs[k].R.Fading(e.Pos, e.Ch)
+					p := dbs[k].R.GetPr(0)
 					if p > Pr {
 						Pr = p
 					}
