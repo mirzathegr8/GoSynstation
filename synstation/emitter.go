@@ -8,17 +8,16 @@ import "math"
 // This struct stores flat data to be directly output for serialization, i.e. no pointers, no channels
 type EmitterS struct {
 	geom.Pos
-	Power     float64 // current emitted power
-	Ch        int     // current channel used
-	BERtotal  float64
-	Diversity int
-	Requested float64
-	MaxBER    float64
-	SNRb      float64
-	InstMaxBER  float64
+	Power      float64 // current emitted power
+	Ch         int     // current channel used
+	BERtotal   float64
+	Diversity  int
+	Requested  float64
+	MaxBER     float64
+	SNRb       float64
+	InstMaxBER float64
 
 	Outage int
-	
 }
 
 // EmitterS with additional registers for BER and diversity evaluation, 
@@ -27,13 +26,12 @@ type Emitter struct {
 	EmitterS
 
 	//data used during calculation runtime
-	SBERtotal  float64
-	SMaxBER    float64
-	SDiversity int
+	SBERtotal   float64
+	SMaxBER     float64
+	SDiversity  int
 	SInstMaxBER float64
 
 	MasterConnection *Connection
-
 
 	touch bool
 
@@ -52,7 +50,7 @@ type EmitterInt interface {
 	SetCh(c int)
 	PowerDelta(float64)
 	SetPower(float64)
-	GetPos() *geom.Pos
+	GetPos() geom.Pos
 	//	isdone() chan int
 	GetMasterConnec() *Connection
 	GetId() int
@@ -72,8 +70,8 @@ func (e *Emitter) GetMasterConnec() *Connection {
 	return e.MasterConnection
 }
 
-func (e *Emitter) GetPos() *geom.Pos {
-	return &e.Pos
+func (e *Emitter) GetPos() geom.Pos {
+	return e.Pos
 }
 
 func (e *Emitter) GetE() *Emitter {
@@ -95,7 +93,7 @@ func (e *Emitter) GetCh() int {
 
 // function called by connections to inform BER quality of a link to the emitter
 func (e *Emitter) AddConnection(c *Connection) {
-	lber:=c.GetLogMeanBER()
+	lber := c.GetLogMeanBER()
 	if lber < math.Log10(BERThres) {
 		e.SBERtotal += lber
 		e.SDiversity++
@@ -106,7 +104,7 @@ func (e *Emitter) AddConnection(c *Connection) {
 	if e.SMaxBER > lber { //evaluate which connection is the best and memorizes which will be masterconnection
 		e.MasterConnection = c
 		e.SMaxBER = lber
-		e.SInstMaxBER=math.Log10(c.BER)
+		e.SInstMaxBER = math.Log10(c.BER)
 		e.SNRb = c.SNR
 	}
 
@@ -139,7 +137,7 @@ func (M *Emitter) SetCh(nch int) {
 
 	//if M.touch == false {
 
-		SystemChan[nch].Change <- M
+	SystemChan[nch].Change <- M
 	//	M.touch = true
 	//}
 }

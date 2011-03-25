@@ -32,7 +32,7 @@ type ConnectionS struct {
 }
 
 func (c *ConnectionS) Copy(cc *Connection) {
-	c.A = *cc.E.GetPos()
+	c.A = cc.E.GetPos()
 	c.BER = cc.BER
 	c.Status = cc.Status
 }

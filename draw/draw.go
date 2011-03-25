@@ -245,7 +245,7 @@ func drawVoronoi(d *DataSave) {
 
 						if m2.Ch == Ch {
 
-							if m1.Pos.Distance(&m2.Pos) < 8000 {
+							if m1.Pos.Distance(m2.Pos) < 8000 {
 
 								//neighB.Push(m2)
 								l := new(geom.GeomLine)
@@ -292,7 +292,7 @@ func drawVoronoi(d *DataSave) {
 
 				for i := range Borders {
 					gl := Borders[i].(*geom.GeomLine)
-					d := m1.Pos.Distance(&gl.Org)
+					d := m1.Pos.Distance(gl.Org)
 					if d < max {
 						I = i
 						max = d
@@ -302,7 +302,7 @@ func drawVoronoi(d *DataSave) {
 				vOrg := Borders[I].(*geom.GeomLine).Org
 				max = float64(synstation.Field * 2.0)
 				for j := range Borders {
-					d := matP[I][j].Distance(&vOrg)
+					d := matP[I][j].Distance(vOrg)
 					if d < max {
 						J = j
 						max = d

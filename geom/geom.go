@@ -15,13 +15,13 @@ func (p *Pos) GetY() float32 {
 	return float32(p.Y)
 }
 
-func (p *Pos) Distance(p2 *Pos) float64 {
+func (p Pos) Distance(p2 Pos) float64 {
 	a := p.X - p2.X
 	b := p.Y - p2.Y
 	return math.Sqrt(a*a + b*b)
 }
 
-func (p *Pos) DistanceSquare(p2 *Pos) float64 {
+func (p Pos) DistanceSquare(p2 Pos) float64 {
 	a := p.X - p2.X
 	b := p.Y - p2.Y
 	return (a*a + b*b)
@@ -45,7 +45,7 @@ func (p Pos) Scalar(p2 Pos) float64 {
 
 
 func (p Pos) Normalise() Pos {
-	return p.Times(1/p.Len())
+	return p.Times(1 / p.Len())
 }
 
 
@@ -117,7 +117,7 @@ func Abs(f float64) float64 {
 	return f
 }
 
-func Min(a,b float64) float64 {
+func Min(a, b float64) float64 {
 	if a < b {
 		return a
 	}
