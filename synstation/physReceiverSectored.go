@@ -13,7 +13,7 @@ type PhysReceiverSectored struct {
 func (r *PhysReceiverSectored) Init(p geom.Pos, Rgen *rand.Rand) {
 	r.R = make([]PhysReceiver, 3)
 	for i := 0; i < 3; i++ {
-		r.R[i].Init(p,Rgen)
+		r.R[i].Init(p, Rgen)
 	}
 
 	r.R[0].Orientation[0] = -1
@@ -32,8 +32,8 @@ func (r *PhysReceiverSectored) SetPos(p geom.Pos) {
 		r.R[i].SetPos(p)
 	}
 }
-func (r *PhysReceiverSectored) GetPos() *geom.Pos {
-	return &r.R[0].Pos
+func (r *PhysReceiverSectored) GetPos() geom.Pos {
+	return r.R[0].Pos
 }
 
 
@@ -46,26 +46,15 @@ func (rx *PhysReceiverSectored) MeasurePower(tx EmitterInt) {
 }
 
 
-func (r *PhysReceiverSectored) evalSignalPr(e EmitterInt, ch int) (Pr, K float64) {
-	var p [3]float64
-	var k [3]float64
-
-	for i := range p {
-		p[i], k[i] = r.R[i].evalSignalPr(e, ch)
-	}
-	ir := findMax(p[:])
-	return p[ir], k[ir]
-}
-
 func (r *PhysReceiverSectored) EvalBestSignalSNR(ch int) (Rc *ChanReceiver, SNR float64) {
 	var e [3]float64
-	var R [3]*ChanReceiver		
+	var R [3]*ChanReceiver
 
-	for i:=range e {
-		R[i],e[i] = r.R[i].EvalBestSignalSNR(ch)	
+	for i := range e {
+		R[i], e[i] = r.R[i].EvalBestSignalSNR(ch)
 	}
 	ir := findMax(e[:])
-	return R[ir],e[ir]
+	return R[ir], e[ir]
 
 	/*Rc = &r.R[0].Channels[ch]
 	SNR = 0
@@ -87,14 +76,13 @@ func (r *PhysReceiverSectored) EvalBestSignalSNR(ch int) (Rc *ChanReceiver, SNR 
 
 func (r *PhysReceiverSectored) EvalChRSignalSNR(ch int, k int) (Rc *ChanReceiver, SNR float64) {
 	var e [3]float64
-	var R [3]*ChanReceiver		
+	var R [3]*ChanReceiver
 
-	for i:=range e {
-		R[i],e[i] = r.R[i].EvalChRSignalSNR(ch,k)	
+	for i := range e {
+		R[i], e[i] = r.R[i].EvalChRSignalSNR(ch, k)
 	}
 	ir := findMax(e[:])
-	return R[ir],e[ir]
-
+	return R[ir], e[ir]
 
 }
 
@@ -168,14 +156,6 @@ func (rx *PhysReceiverSectored) DoTracking(Connec *list.List) bool {
 	return false
 }
 
-func (rx *PhysReceiverSectored) ricePropagation(E EmitterInt) (fading float64, K float64) {
-	return rx.R[0].ricePropagation(E)
-}
-
-func (rx *PhysReceiverSectored) Fading(E EmitterInt) (fad, d float64) {
-	return rx.R[0].Fading(E)
-}
-
 
 func (rx *PhysReceiverSectored) EvalInstantBER(E EmitterInt) (Rc *ChanReceiver, BER, SNR, Pr float64) {
 	var R [3]*ChanReceiver
@@ -193,7 +173,19 @@ func (rx *PhysReceiverSectored) EvalInstantBER(E EmitterInt) (Rc *ChanReceiver, 
 
 func (rx *PhysReceiverSectored) GenFastFading() {
 	for i := range rx.R {
-		rx.R[i].FF.GenerateFading(rx.R[i].Rgen)
+		rx.R[i].GenFastFading()
 	}
+}
+
+
+func (r *PhysReceiverSectored) GetPr(mi int) float64 {
+
+	var b [3]float64
+
+	for i := range b {
+		b[i] = r.R[i].GetPr(mi)
+	}
+	ir := findMax(b[:])
+	return b[ir]
 }
 
