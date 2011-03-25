@@ -16,8 +16,6 @@ physReceiverSectored.go\
 powerC.go\
 trace.go\
 physReceiver.go\
-fastfading.go\
-powerData.go\
 meanStruct.go
 
 
