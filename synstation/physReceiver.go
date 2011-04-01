@@ -10,7 +10,7 @@ import "fmt"
 import "rand"
 //import "sselib"
 
-const SizeES = 5
+const SizeES = 10
 
 // Structure to hold interference level, and multilevel interference with overlaping channels calculation
 // as well as the best signal and its recieved power
@@ -96,6 +96,11 @@ type PhysReceiver struct {
 	ff_R        [M]float64 //stores received power with FF
 	pr          [M]float64 //stores received power
 	kk          [M]float64 //stores received power
+
+	filterAr [M]FilterInt //stores received power
+	filterBr [M]FilterInt //stores received power
+	filterAi [M]FilterInt //stores received power
+	filterBi [M]FilterInt //stores received power
 }
 
 func (r *PhysReceiver) Init(p geom.Pos, Rgen *rand.Rand) {
@@ -113,6 +118,32 @@ func (r *PhysReceiver) Init(p geom.Pos, Rgen *rand.Rand) {
 		r.shadow = new(shadowMap)
 	}
 	r.shadow.Init(corr_res, Rgen)
+
+	for i := range Mobiles {
+		xs := Mobiles[i].Speed[0]
+		ys := Mobiles[i].Speed[1]
+		Speed := math.Sqrt(xs*xs + ys*ys)
+		DopplerF := Speed * F / cel // 1000 samples per seconds speed already divided by 1000
+
+		if DopplerF < 0.001 { // the frequency is so low, a simple antena diversity will compensate for 
+
+			r.filterAr[i] = &PNF
+			r.filterAi[i] = &PNF
+			r.filterBr[i] = &PNF
+			r.filterBi[i] = &PNF
+
+		} else {
+
+			r.filterAr[i] = Butter(DopplerF)
+			r.filterAi[i] = Butter(DopplerF)
+
+			r.filterBr[i] = Cheby(10, DopplerF)
+			r.filterBi[i] = Cheby(10, DopplerF)
+
+		}
+
+	}
+
 }
 
 func (r *PhysReceiver) SetPos(p geom.Pos) {
@@ -416,7 +447,16 @@ func (rx *PhysReceiver) EvalInstantBER(E EmitterInt) (Rc *ChanReceiver, BER, SNR
 
 	} else {
 		Rc, SNR, Pr = rx.evalInstantSNR(E)
+
 		BER = L1 * math.Exp(-SNR/2/L2) / 2.0
+		if math.IsNaN(BER) || math.IsInf(BER, 0) || BER < 1e-40 {
+
+			if math.IsNaN(BER) || math.IsInf(BER, 0) {
+				fmt.Println(BER, SNR, Pr)
+			}
+			BER = 1e-40
+		}
+
 	}
 	return
 }
@@ -428,9 +468,8 @@ func (r *PhysReceiver) evalInstantSNR(E EmitterInt) (Rc *ChanReceiver, SNR, Pr f
 	Pr = r.ff_R[E.GetId()]
 
 	SNR = Pr / (Rc.Pint - Pr + WNoise)
-	if Pr == Rc.Pint {
-		SNR = 100
-	}
+
+	SNR = geom.Min(1000, SNR)
 
 	return
 
@@ -501,8 +540,12 @@ func (rx *PhysReceiver) GenFastFading() {
 		pr := fading * gain * E.Power
 
 		//Generate FastFading
-		a = rx.Rgen.NormFloat64() + K
+		a = rx.Rgen.NormFloat64()
 		b = rx.Rgen.NormFloat64()
+
+		a = rx.filterBr[i].nextValue(rx.filterAr[i].nextValue(a)) + K
+		b = rx.filterBi[i].nextValue(rx.filterAi[i].nextValue(b))
+
 		rx.ff_R[i] = math.Sqrt(a*a+b*b) * pr
 
 		//rx.ff_R[i] = pr
