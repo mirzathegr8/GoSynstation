@@ -3,7 +3,7 @@ package synstation
 
 const Field = 12000 //length in meters
 
-const Duration = 1000 // in iterations 
+const Duration = 2000 // in iterations 
 
 const M = 4000 //numbers of mobiles
 const D = 400  // numbers of DBS
@@ -15,7 +15,7 @@ var NCh = 35 // number of channels
 // 10 0 11 .1 12 .2 19 .5 37 .75
 var roverlap = float64(0.0) // ratio of overlaping of two adjacent channels
 
-const WNoise = 1e-12 // White noise at reciever
+const WNoise = 1e-11 // White noise at reciever
 var NChRes = 5       //numbers of reserved channels, not used yet, but chan 0 must be reserved
 const NConnec = 25   // numbers of connections per dbs
 
@@ -24,7 +24,7 @@ var SNRThresConnec = float64(35)
 
 var SNRThresChHop = float64(0)
 
-var MaxSpeed = float64(1.3889 / 50)
+var MaxSpeed = float64(15)
 
 
 var SetReceiverType = BEAM
@@ -37,7 +37,7 @@ const (
 	SECTORED
 )
 
-var SetShadowMap = NOSHADOW
+var SetShadowMap = SHADOWMAP
 
 //type ReceiverType int
 
