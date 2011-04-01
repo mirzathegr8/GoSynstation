@@ -1,9 +1,7 @@
-
 package synstation
 
 
-
-const meanN = 50
+const meanN = 100
 
 type MeanData struct {
 	sum   float64
@@ -39,6 +37,4 @@ func (m *MeanData) Clear(a float64) {
 	}
 	m.sum = a * meanN
 }
-
-
 
