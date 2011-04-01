@@ -24,6 +24,7 @@ func init() {
 	saveData.Push(CreateStart(DIV, synstation.M, "DIV"))
 	saveData.Push(CreateStart(Outage, synstation.M, "Outage"))
 	saveData.Push(CreateStart(Ptxr, synstation.M, "Ptxr"))
+	saveData.Push(CreateStart(PrMaster, synstation.M, "PrMaster"))
 
 }
 
@@ -52,45 +53,33 @@ func CH(t *synstation.Trace, i int) float64         { return float64(t.Mobs[i].C
 func DIV(t *synstation.Trace, i int) float64        { return float64(t.Mobs[i].Diversity) }
 func Outage(t *synstation.Trace, i int) float64     { return float64(t.Mobs[i].Outage) }
 func Ptxr(t *synstation.Trace, i int) float64       { return float64(t.Mobs[i].Power) }
+func PrMaster(t *synstation.Trace, i int) float64   { return float64(t.Mobs[i].PrMaster) }
 
 func WriteDataToFile(method func(t *synstation.Trace, i int) float64, m int, channel chan *synstation.Trace, file string) {
 
-	outF, err := os.Open(file+".mat", os.O_WRONLY, 0666)
-	fmt.Println(err)
-	outF.WriteString(fmt.Sprintln("# name: ", file, "\n# type: matrix\n# rows: ", synstation.Duration, "\n# columns: ", m))
+	outF, err := os.Open(file+".mat", os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return
+	}
+	defer outF.Close()
 
-	//fileChan := make(chan *os.File, 1)
-
-	//fileChan <- outF
+	_, err = outF.WriteString(fmt.Sprintln("# name: ", file, "\n# type: matrix\n# rows: ", synstation.Duration, "\n# columns: ", m))
+	if err != nil {
+		return // f.Close() will automatically be called now 
+	}
 
 	for t := range channel {
-
-		//nextChan := make(chan *os.File, 1)
-
-		//go func(fChan, nextChan chan *os.File, t *synstation.Trace) {
 
 		buffer := bytes.NewBufferString("")
 		for i := 0; i < m; i++ {
 			fmt.Fprint(buffer, method(t, i))
 			fmt.Fprint(buffer, " ")
 		}
-
-		//	outF := <-fChan
-		outF.WriteString(string(buffer.Bytes()))
-		//	nextChan <- outF
-		//	close(fChan)
-
-		//}(fileChan, nextChan, t)
-
-		//fileChan = nextChan
-
+		_, err = outF.WriteString(string(buffer.Bytes()))
+		if err != nil {
+			return // f.Close() will automatically be called now 
+		}
 	}
-
-	//<-fileChan
-
-	//close(fileChan)
-
-	outF.Close()
 
 	syncsavech <- 1
 
@@ -170,8 +159,11 @@ func sendTrace(t *synstation.Trace) {
 // to be called. FILENAME is used for error messages.
 func save_binary_data(method func(t *synstation.Trace, i int) float64, m int, channel chan *synstation.Trace, file string) {
 
-	os, err := os.Open(file+".mat", os.O_WRONLY, 0666)
-	fmt.Println(err)
+	os, err := os.Open(file+".mat", os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return
+	}
+	defer os.Close()
 
 	var bb []byte
 	bb = make([]byte, 4)
