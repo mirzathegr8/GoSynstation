@@ -89,6 +89,6 @@ func CreateConnection(E EmitterInt, v float64) *Connection {
 }
 
 func (co *Connection) GetLogMeanBER() float64 {
-	return math.Log10(co.meanBER.Get())
+	return math.Log10(co.meanBER.Get() + 1e-40) //prevent saturation
 }
 
