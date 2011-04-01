@@ -15,6 +15,7 @@ type EmitterS struct {
 	Requested  float64
 	MaxBER     float64
 	SNRb       float64
+	PrMaster   float64
 	InstMaxBER float64
 
 	Outage int
@@ -106,6 +107,7 @@ func (e *Emitter) AddConnection(c *Connection) {
 		e.SMaxBER = lber
 		e.SInstMaxBER = math.Log10(c.BER)
 		e.SNRb = c.SNR
+		e.PrMaster = c.Pr
 	}
 
 }
@@ -123,8 +125,8 @@ func (M *Emitter) SetPower(P float64) {
 	if P > 1.0 {
 		P = 1.0
 	}
-	if P < 0.001 {
-		P = 0.001
+	if P < 0.01 {
+		P = 0.01
 	}
 	M.Power = P
 }
