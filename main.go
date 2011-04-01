@@ -8,6 +8,7 @@ import "runtime"
 import "os"
 //import "math"
 //import "geom"
+import "time"
 
 
 // Data to save for output during simulation
@@ -95,24 +96,28 @@ func main() {
 
 	go printData() //launch thread to print output
 
-
+	var ttps int64
 
 	fmt.Println("Start Simulation")
 
 	for k := 0; k < s.Duration; k++ {
 
 		//	fmt.Println(" Channel 0 ", s.SystemChan[0].Emitters.Len())
+		tps := time.Nanoseconds()
 
 		for i := range s.Synstations {
 			go s.Synstations[i].RunPhys()
 		}
 
-		for i := range s.Mobiles {
-			go s.Mobiles[i].RunPhys()
-		}
+		//	for i := range s.Mobiles {
+		//		go s.Mobiles[i].RunPhys()
+		//	}
 
 		//synchronise here
-		s.Sync(s.D + s.M)
+		//	s.Sync(s.D + s.M)
+		s.Sync(s.D)
+
+		ttps += (time.Nanoseconds() - tps)
 
 		// physics is done, now launch Mobiles data work
 		for i := range s.Mobiles {
@@ -203,6 +208,7 @@ func main() {
 	close(s.SyncChannel)
 
 	StopSave()
+	fmt.Println(ttps)
 
 	//draw.Close()
 
@@ -210,7 +216,7 @@ func main() {
 
 func SaveToFile(Mobiles []s.Mob) {
 
-	outF, err := os.Open("out.m", os.O_WRONLY, 0666)
+	outF, err := os.Open("out.m", os.O_WRONLY|os.O_CREATE, 0666)
 
 	fmt.Println(err)
 
@@ -277,6 +283,12 @@ func SaveToFile(Mobiles []s.Mob) {
 	outF.WriteString(fmt.Sprintln("# name: YY\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
 	for i := 0; i < s.M; i++ {
 		outF.WriteString(fmt.Sprintln(Mobiles[i].Pos.Y, " "))
+
+	}
+
+	outF.WriteString(fmt.Sprintln("# name: Speed\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 2))
+	for i := 0; i < s.M; i++ {
+		outF.WriteString(fmt.Sprintln(Mobiles[i].Speed[0], Mobiles[i].Speed[1], " "))
 
 	}
 	outF.WriteString("\n")
