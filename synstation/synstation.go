@@ -58,7 +58,7 @@ func (dbs *DBS) RunPhys() {
 
 	dbs.R.MeasurePower(nil)
 
-	dbs.Clock = dbs.Rgen.Intn(10)
+	dbs.Clock = dbs.Rgen.Intn(20)
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
@@ -154,6 +154,7 @@ func (dbs *DBS) RunAgent() {
 
 	defer syncThread()
 	// defer dbs.optimizePowerAllocationSimple()
+	defer dbs.optimizePowerAllocation()
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
@@ -183,6 +184,7 @@ func (dbs *DBS) RunAgent() {
 			dbs.disconnect(e)
 			sens_disconnect--
 			sens_lostconnect++
+			fmt.Println("---------------Disconnect")
 		}
 
 	}
@@ -226,7 +228,7 @@ func (dbs *DBS) RunAgent() {
 				if Rc.Signal[i] >= 0 {
 					if !dbs.IsConnected(&Mobiles[Rc.Signal[i]]) {
 						if 10*math.Log10(Eval) > SNRThresConnec {
-							dbs.connect(&Mobiles[Rc.Signal[i]], 0.001)
+							dbs.connect(&Mobiles[Rc.Signal[i]], 0.01)
 							conn++
 							return // we are done connecting
 						}
@@ -255,7 +257,7 @@ func (dbs *DBS) RunAgent() {
 					}
 				}
 				if Rc != nil {
-					dbs.connect(&Mobiles[Rc.Signal[0]], 0.001)
+					dbs.connect(&Mobiles[Rc.Signal[0]], 0.01)
 					conn++
 				} else {
 					break
@@ -265,10 +267,10 @@ func (dbs *DBS) RunAgent() {
 
 		}
 
-	} else if dbs.Clock == 2 {
+	} /* else if dbs.Clock == 2 {
 		dbs.optimizePowerAllocation()
 
-	}
+	}*/
 
 }
 
@@ -563,6 +565,11 @@ func (dbs *DBS) optimizePowerAllocation() {
 				math.Pow(M.GetPower(), 1) *
 				geom.Sign(need-M.GetPower()) * alpha *
 				math.Pow(geom.Abs(need-M.GetPower()), 1.5)
+
+			if math.IsNaN(delta) {
+				fmt.Println("delta NAN", need, M.GetPower(), b, M.BERT())
+				delta = -1
+			}
 
 			if delta > 0 {
 				v := (1.0 - M.GetPower()) / 2.0
