@@ -25,7 +25,7 @@ var PNF PassNull
 type Filter struct {
 	a []float64
 	b []float64
-	z [3]float64
+	z []float64
 	//z2 [3]float64
 }
 
@@ -112,6 +112,7 @@ func Butter(W float64) (f *Filter) {
 	}
 	f.a = Sreal(poly(pole))
 
+	f.z = make([]float64, 3)
 	for i := range f.z {
 		f.z[i] = 1 //init stream to non null
 		//f.z2[i] = 1 //init stream to non null
@@ -206,6 +207,7 @@ func Cheby(Rp, W float64) (f *Filter) {
 	}
 	f.a = Sreal(poly(pole))
 
+	f.z = make([]float64, 3)
 	for i := range f.z {
 		f.z[i] = 1 //init stream to non null
 		//f.z2[i] = 1 //init stream to non null
@@ -228,5 +230,58 @@ func (f *Filter) PassNull() {
 		f.z[i] = 1 //init stream to non null
 		//f.z2[i] = 1 //init stream to non null
 	}
+}
+
+
+func MultFilter(f1, f2 *Filter) (fo *Filter) {
+
+	fo = new(Filter)
+	fo.a = conv(f1.a, f2.a)
+	fo.b = conv(f1.b, f2.b)
+	lz := len(fo.a)
+	if lz < len(fo.b) {
+		lz = len(fo.b)
+	}
+	fo.z = make([]float64, lz)
+
+	for i := range fo.z {
+		fo.z[i] = 1 //init stream to non null
+		//f.z2[i] = 1 //init stream to non null
+	}
+	return
+}
+
+func conv(a, b []float64) (y []float64) {
+
+	la := len(a)
+	lb := len(b)
+	ly := la + lb - 1
+
+	y = make([]float64, ly)
+
+	for i := 0; i < la; i++ {
+
+		for j := 0; j < lb; j++ {
+
+			y[i+j] += a[i] * b[j]
+
+		}
+	}
+	return
+}
+
+
+func (f *Filter) Copy() (fo *Filter) {
+
+	fo = new(Filter)
+	fo.a = f.a
+	fo.b = f.b
+	fo.z = make([]float64, len(f.z))
+
+	for i := range fo.z {
+		fo.z[i] = 1 //init stream to non null
+		//f.z2[i] = 1 //init stream to non null
+	}
+	return
 }
 
