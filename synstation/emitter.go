@@ -19,6 +19,8 @@ type EmitterS struct {
 	InstMaxBER float64
 
 	Outage int
+
+	ARB []int //allocated RB
 }
 
 // EmitterS with additional registers for BER and diversity evaluation, 
@@ -138,7 +140,7 @@ func (M *Emitter) SetCh(nch int) {
 	//	M.nch = nch
 
 	//if M.touch == false {
-
+	SystemChan[M.Ch].Remove <- M
 	SystemChan[nch].Change <- M
 	//	M.touch = true
 	//}
