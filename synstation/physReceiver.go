@@ -99,8 +99,8 @@ type PhysReceiver struct {
 
 	filterAr [M]FilterInt //stores received power
 	filterBr [M]FilterInt //stores received power
-	filterAi [M]FilterInt //stores received power
-	filterBi [M]FilterInt //stores received power
+	//filterAi [M]FilterInt //stores received power
+	//filterBi [M]FilterInt //stores received power
 }
 
 func (r *PhysReceiver) Init(p geom.Pos, Rgen *rand.Rand) {
@@ -128,17 +128,22 @@ func (r *PhysReceiver) Init(p geom.Pos, Rgen *rand.Rand) {
 		if DopplerF < 0.001 { // the frequency is so low, a simple antena diversity will compensate for 
 
 			r.filterAr[i] = &PNF
-			r.filterAi[i] = &PNF
+			//r.filterAi[i] = &PNF
 			r.filterBr[i] = &PNF
-			r.filterBi[i] = &PNF
+			//r.filterBi[i] = &PNF
 
 		} else {
+			A := Butter(DopplerF)
+			B := Butter(DopplerF)
+			C := MultFilter(A, B)
+			r.filterAr[i] = C
+			r.filterBr[i] = C.Copy()
 
-			r.filterAr[i] = Butter(DopplerF)
-			r.filterAi[i] = Butter(DopplerF)
+			//r.filterAr[i] = Butter(DopplerF)
+			//r.filterAi[i] = Butter(DopplerF)
 
-			r.filterBr[i] = Cheby(10, DopplerF)
-			r.filterBi[i] = Cheby(10, DopplerF)
+			//r.filterBr[i] = Cheby(10, DopplerF)
+			//r.filterBi[i] = Cheby(10, DopplerF)
 
 		}
 
@@ -449,13 +454,6 @@ func (rx *PhysReceiver) EvalInstantBER(E EmitterInt) (Rc *ChanReceiver, BER, SNR
 		Rc, SNR, Pr = rx.evalInstantSNR(E)
 
 		BER = L1 * math.Exp(-SNR/2/L2) / 2.0
-		if math.IsNaN(BER) || math.IsInf(BER, 0) || BER < 1e-40 {
-
-			if math.IsNaN(BER) || math.IsInf(BER, 0) {
-				fmt.Println(BER, SNR, Pr)
-			}
-			BER = 1e-40
-		}
 
 	}
 	return
@@ -469,7 +467,10 @@ func (r *PhysReceiver) evalInstantSNR(E EmitterInt) (Rc *ChanReceiver, SNR, Pr f
 
 	SNR = Pr / (Rc.Pint - Pr + WNoise)
 
-	SNR = geom.Min(1000, SNR)
+	if SNR > 4000 {
+		SNR = 4000
+	}
+	//SNR = geom.Min(1000, SNR)
 
 	return
 
@@ -543,8 +544,11 @@ func (rx *PhysReceiver) GenFastFading() {
 		a = rx.Rgen.NormFloat64()
 		b = rx.Rgen.NormFloat64()
 
-		a = rx.filterBr[i].nextValue(rx.filterAr[i].nextValue(a)) + K
-		b = rx.filterBi[i].nextValue(rx.filterAi[i].nextValue(b))
+		//a = rx.filterBr[i].nextValue(rx.filterAr[i].nextValue(a)) + K
+		//b = rx.filterBi[i].nextValue(rx.filterAi[i].nextValue(b))
+
+		a = rx.filterAr[i].nextValue(a) + K
+		b = rx.filterBr[i].nextValue(b)
 
 		rx.ff_R[i] = math.Sqrt(a*a+b*b) * pr
 
