@@ -4,12 +4,13 @@ import "container/list"
 //import "fmt"
 
 type channel struct {
-	i        int         //id of channel
-	Emitters *list.List  //list of mobiles in channels
-	coIntC   []coIntChan //set of interfering channels and factors
+	i        int        //id of channel
+	Emitters *list.List //list of mobiles in channels
+
+	coIntC []coIntChan //set of interfering channels and factors
 
 	Change chan EmitterInt // channel to inform change of emitter
-//	Remove chan EmitterInt // channel to inform change of emitter
+	Remove chan EmitterInt // channel to inform change of emitter
 
 	added, removed int //counter
 
@@ -21,7 +22,7 @@ func (c *channel) Init(i int) {
 	c.i = i
 	c.Emitters = list.New()
 	c.Change = make(chan EmitterInt, M+10)
-//	c.Remove = make(chan EmitterInt, M+10)
+	c.Remove = make(chan EmitterInt, M+10)
 
 	//c.done = make(chan int)
 
@@ -65,7 +66,8 @@ func (ch *channel) ChangeChan() {
 		if tx != nil {
 			tx._setCh(ch.i)
 			//ch.addToChan(tx)
-			//ch.added++
+			ch.Emitters.PushBack(tx)
+			ch.added++
 
 		} else {
 			break
@@ -79,42 +81,39 @@ func (ch *channel) ChangeChan() {
 
 }
 
-//func (ch *channel) RemoveChan() {
-//
-//	/*for true {
-//		tx := <-ch.Remove
-//		if tx != nil {
-//			if ch.i == 0 {
-//				//	fmt.Println(" remove 0 ", tx.GetId())
-//			}
-//			ch.remove(tx)
-//			ch.removed++
-//		} else {
-//			break
-//		}
-//		if ch.i != 0 {
-//			countm++
-//		}
-//	}*/
-//
-//	SyncChannel <- 1
-//
-//}
-//
+func (ch *channel) RemoveChan() {
+
+	for true {
+		tx := <-ch.Remove
+		if tx != nil {
+			ch.remove(tx)
+			ch.removed++
+		} else {
+			break
+		}
+		if ch.i != 0 {
+			countm++
+		}
+	}
+
+	SyncChannel <- 1
+
+}
+
 
 func ChannelHop() {
 
 	countp = 0
 	countm = 0
 
-//	for i := range SystemChan {
-//		SystemChan[i].Remove <- nil
-//		go SystemChan[i].RemoveChan()
-//
-//	}
-//	for i := 0; i < NCh; i++ {
-//		_ = <-SyncChannel
-//	}
+	for i := range SystemChan {
+		SystemChan[i].Remove <- nil
+		go SystemChan[i].RemoveChan()
+
+	}
+	for i := 0; i < NCh; i++ {
+		_ = <-SyncChannel
+	}
 
 	for i := range SystemChan {
 		SystemChan[i].Change <- nil
