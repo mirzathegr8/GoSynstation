@@ -2,7 +2,7 @@ package synstation
 
 //import c "cmath"
 import "math"
-//import "fmt"
+import "rand"
 
 const F = 900 * 10e6 //fréquence du canal en Hz
 
@@ -11,6 +11,9 @@ const cel = 3 * 10e8 //vitesse de propagation en m/s
 
 type FilterInt interface {
 	nextValue(input float64) (output float64)
+	InitRandom(Rgen *rand.Rand)
+	InitZ(z []float64)
+	Copy() FilterInt
 }
 
 
@@ -19,6 +22,13 @@ type PassNull struct{}
 func (p *PassNull) nextValue(input float64) (output float64) {
 	return 1.0
 }
+func (p *PassNull) InitRandom(Rgen *rand.Rand) {}
+func (f *PassNull) InitZ(z []float64)          {}
+
+func (p *PassNull) Copy() (fo FilterInt) {
+	return p
+}
+
 
 var PNF PassNull
 
@@ -26,11 +36,10 @@ type Filter struct {
 	a []float64
 	b []float64
 	z []float64
-	//z2 [3]float64
 }
 
 func (f *Filter) nextValue(input float64) (output float64) {
-	f.z[0] = input * f.a[0]
+	f.z[0] = input //* f.a[0]
 	for i := 1; i < len(f.a); i++ {
 		f.z[0] -= f.a[i] * f.z[i]
 	}
@@ -41,27 +50,24 @@ func (f *Filter) nextValue(input float64) (output float64) {
 		f.z[i] = f.z[i-1]
 	}
 
-	/*for i := len(f.z) - 1; i > 0; i-- {
-		f.z[i] = f.z[i-1]
+	return
+}
+
+
+func (f *Filter) InitRandom(Rgen *rand.Rand) {
+	for i := 0; i < len(f.z); i++ {
+		f.z[i] = Rgen.NormFloat64()
 	}
 
-	for i := len(f.z2) - 1; i > 0; i-- {
-		f.z2[i] = f.z2[i-1]
+	return
+}
+
+
+func (f *Filter) InitZ(z []float64) {
+
+	for i := 0; i < len(f.z) && i < len(z); i++ {
+		f.z[i] = z[i]
 	}
-
-	f.z[0] = input
-
-	for i := 0; i < len(f.a); i++ {
-		output += f.a[i] * f.z[i]
-	}
-
-	for i := 1; i < len(f.b); i++ {
-		output -= f.b[i] * f.z2[i]
-	}
-
-	f.z2[0] = output*/
-
-	//fmt.Println(f.z, f.z2)
 
 	return
 }
@@ -214,7 +220,7 @@ func Cheby(Rp, W float64) (f *Filter) {
 	}
 
 	for j := range f.b {
-		f.b[j] *= math.Sqrt(2.6 / W) //scale input to compensate for output power
+		f.b[j] /= math.Sqrt(W * 0.3166) //scale input to compensate for output power
 
 	}
 
@@ -271,9 +277,9 @@ func conv(a, b []float64) (y []float64) {
 }
 
 
-func (f *Filter) Copy() (fo *Filter) {
+func (f *Filter) Copy() (fb FilterInt) {
 
-	fo = new(Filter)
+	fo := new(Filter)
 	fo.a = f.a
 	fo.b = f.b
 	fo.z = make([]float64, len(f.z))
@@ -282,6 +288,6 @@ func (f *Filter) Copy() (fo *Filter) {
 		fo.z[i] = 1 //init stream to non null
 		//f.z2[i] = 1 //init stream to non null
 	}
-	return
+	return fo
 }
 
