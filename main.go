@@ -9,6 +9,7 @@ import "os"
 //import "math"
 //import "geom"
 import "time"
+//import "bytes"
 
 
 // Data to save for output during simulation
@@ -100,6 +101,10 @@ func main() {
 
 	fmt.Println("Start Simulation")
 
+	//fadingF, err := os.Open("fading.mat", os.O_WRONLY|os.O_CREATE, 0666)
+	//fmt.Println(err)
+	//fadingF.WriteString(fmt.Sprintln("# name: fading\n# type: matrix\n# rows: ", s.Duration, "\n# columns: ", s.NCh))
+
 	for k := 0; k < s.Duration; k++ {
 
 		//	fmt.Println(" Channel 0 ", s.SystemChan[0].Emitters.Len())
@@ -163,11 +168,37 @@ func main() {
 
 		outD.k = float64(k)
 		if k%10 == 0 {
-			outChannel <- outD //sent data to print to  stdout
+			outChannel <- outD //sent data to print to  stdout			
 		}
+
+		if k%200 == 0 {
+			runtime.GC()
+		}
+
 		t := s.CreateTrace(s.Mobiles[:], s.Synstations[:], k)
 		//draw.Draw(t)
 		sendTrace(t)
+
+		/*if s.Mobiles[10].MasterConnection != nil {
+			ffR := s.Mobiles[10].MasterConnection.GetffR()
+			buffer := bytes.NewBufferString("")
+			for _, a := range ffR {
+				fmt.Fprint(buffer, a)
+				fmt.Fprint(buffer, " ")
+			}
+			fadingF.WriteString(string(buffer.Bytes()))
+
+		} else {
+
+			buffer := bytes.NewBufferString("")
+			for i := 0; i < s.NCh; i++ {
+				fmt.Fprint(buffer, float64(0.0))
+				fmt.Fprint(buffer, " ")
+			}
+			fadingF.WriteString(string(buffer.Bytes()))
+		}
+
+		fadingF.WriteString("\n")*/
 
 		//Run DBS Agent, and sync
 		for i := range s.Synstations {
