@@ -157,20 +157,6 @@ func (rx *PhysReceiverSectored) DoTracking(Connec *list.List) bool {
 }
 
 
-func (rx *PhysReceiverSectored) EvalInstantBER(E EmitterInt) (Rc *ChanReceiver, BER, SNR, Pr float64) {
-	var R [3]*ChanReceiver
-	var b [3]float64
-	var s [3]float64
-	var p [3]float64
-
-	for i := range b {
-		R[i], b[i], s[i], p[i] = rx.R[i].EvalInstantBER(E)
-	}
-	ir := findMin(b[:])
-	return R[ir], b[ir], s[ir], p[ir]
-}
-
-
 func (rx *PhysReceiverSectored) GenFastFading() {
 	for i := range rx.R {
 		rx.R[i].GenFastFading()
@@ -178,14 +164,15 @@ func (rx *PhysReceiverSectored) GenFastFading() {
 }
 
 
-func (r *PhysReceiverSectored) GetPr(mi int) float64 {
+func (r *PhysReceiverSectored) GetPrK(mi, ch int) (p, k float64, Rc *ChanReceiver) {
 
 	var b [3]float64
 
 	for i := range b {
-		b[i] = r.R[i].GetPr(mi)
+		b[i] = r.R[i].Channels[ch].pr[mi]
 	}
 	ir := findMax(b[:])
-	return b[ir]
+	return b[ir], r.R[ir].Channels[ch].kk[mi], &r.R[ir].Channels[ch]
+
 }
 
