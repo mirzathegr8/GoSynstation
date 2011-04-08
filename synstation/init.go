@@ -11,6 +11,9 @@ var SyncChannel chan float64
 var Synstations [D]DBS
 var Mobiles [M]Mob
 
+
+var CoherenceFilter FilterInt
+
 func init() {
 
 	SyncChannel = make(chan float64, 100000)
@@ -54,7 +57,6 @@ func init() {
 		}
 	}
 
-
 	/*d:=0
 	nD := int(math.Sqrt(synstation.D))
 	for i:=0;i< nD ;i++{
@@ -69,6 +71,13 @@ func init() {
 	for i := range Mobiles {
 		Mobiles[i].Init(i)
 	}
+
+	// Here we define the Coherence bandwith as a ratio of the total bandwith (20MHz)
+	corrF := float64(.2)
+	// we use that to create a filter used to generates inputs to the doppler filters for each signals	
+	A := Butter(corrF)
+	B := Cheby(10, corrF)
+	CoherenceFilter = MultFilter(A, B)
 
 }
 
@@ -86,7 +95,7 @@ func Sync(k int) {
 	}
 }
 
-func Init(){
+func Init() {
 
 	for i := range Synstations {
 		go Synstations[i].Init()
