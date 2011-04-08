@@ -9,7 +9,6 @@ import "math"
 // it also is an agent and has an internal clock
 type Mob struct {
 	Emitter
-	Speed [2]float64
 	//R    PhysReceiver
 	Rgen  *rand.Rand
 	clock int
@@ -21,13 +20,14 @@ func (M *Mob) Init(i int) {
 	M.Id = i
 	M.Rgen = rand.New(rand.NewSource(Rgen.Int63()))
 
-	M.Requested = -4.0
+	M.Requested = -7.0
 
 	M.X = M.Rgen.Float64() * Field
 	M.Y = M.Rgen.Float64() * Field
 	M.Power = 1
 
-	M.Ch = 0
+	M.ARB.Resize(1, 1)
+	M.ARB.Set(0, 0) //Ch = 0
 
 	SystemChan[0].Change <- &M.Emitter
 
@@ -96,7 +96,7 @@ func (M *Mob) FetchData() {
 
 	M.move()
 
-	if M.BERtotal == 0 && M.Ch != 0 {
+	if M.BERtotal == 0 && M.ARB[0] != 0 {
 		M.MasterConnection = nil
 		M.Power = 1
 		M.SetCh(0)
@@ -104,7 +104,7 @@ func (M *Mob) FetchData() {
 		M.MasterConnection.Status = 0 // we are master
 	}
 
-	if M.Ch == 0 {
+	if M.ARB[0] == 0 {
 		SyncChannel <- 0.0
 	} else {
 		SyncChannel <- M.BERtotal
