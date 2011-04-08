@@ -49,7 +49,7 @@ func MaxBER(t *synstation.Trace, i int) float64     { return t.Mobs[i].MaxBER }
 func InstMaxBER(t *synstation.Trace, i int) float64 { return t.Mobs[i].InstMaxBER }
 func BER(t *synstation.Trace, i int) float64        { return t.Mobs[i].BERtotal }
 func SNR(t *synstation.Trace, i int) float64        { return t.Mobs[i].SNRb }
-func CH(t *synstation.Trace, i int) float64         { return float64(t.Mobs[i].Ch) }
+func CH(t *synstation.Trace, i int) float64         { return float64(t.Mobs[i].ARB[0]) }
 func DIV(t *synstation.Trace, i int) float64        { return float64(t.Mobs[i].Diversity) }
 func Outage(t *synstation.Trace, i int) float64     { return float64(t.Mobs[i].Outage) }
 func Ptxr(t *synstation.Trace, i int) float64       { return float64(t.Mobs[i].Power) }
