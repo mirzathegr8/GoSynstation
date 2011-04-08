@@ -27,10 +27,17 @@ type DBS struct {
 	Rgen   *rand.Rand
 
 	RndCh []int
+
+	ConnectionBank vector.Vector
 }
 
 
 func (dbs *DBS) Init() {
+
+	for i := 0; i < NConnec; i++ {
+		dbs.ConnectionBank.Push(new(Connection))
+	}
+
 	switch SetReceiverType {
 	case OMNI, BEAM:
 		dbs.R = new(PhysReceiver)
@@ -112,6 +119,7 @@ func (dbs *DBS) RandomChan() {
 
 func (dbs *DBS) disconnect(e *list.Element) {
 	dbs.Connec.Remove(e)
+	dbs.ConnectionBank.Push(e.Value.(*Connection))
 	sens_disconnect++
 }
 
@@ -129,9 +137,11 @@ func (dbs *DBS) IsInUse(i int) bool { //
 
 
 func (dbs *DBS) connect(e EmitterInt, m float64) {
-	//fmt.Println(dbs.R.GetPos(), " connect ", e.GetPos(), " ", e.GetCh())
-
-	Conn := CreateConnection(e, m)
+	//Connection instance are now created once and reused for memory consumption purpose
+	// so the Garbage Collector needs not to lots of otherwise unessary work
+	Conn := dbs.ConnectionBank.Pop().(*Connection)
+	// these connection instance of course need to be initialized
+	Conn.InitConnection(e, m, dbs.Rgen)
 	dbs.Connec.PushBack(Conn)
 	sens_connect++
 }
@@ -154,7 +164,7 @@ func (dbs *DBS) RunAgent() {
 
 	defer syncThread()
 	// defer dbs.optimizePowerAllocationSimple()
-	defer dbs.optimizePowerAllocation()
+	//defer dbs.optimizePowerAllocation()
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
@@ -184,7 +194,7 @@ func (dbs *DBS) RunAgent() {
 			dbs.disconnect(e)
 			sens_disconnect--
 			sens_lostconnect++
-			fmt.Println("---------------Disconnect")
+			//fmt.Println("---------------Disconnect")
 		}
 
 	}
@@ -267,10 +277,10 @@ func (dbs *DBS) RunAgent() {
 
 		}
 
-	} /* else if dbs.Clock == 2 {
+	} else if dbs.Clock == 2 {
 		dbs.optimizePowerAllocation()
 
-	}*/
+	}
 
 }
 
