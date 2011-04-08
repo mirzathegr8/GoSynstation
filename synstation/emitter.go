@@ -3,13 +3,14 @@ package synstation
 
 import "geom"
 import "math"
+import "container/vector"
 
 
 // This struct stores flat data to be directly output for serialization, i.e. no pointers, no channels
 type EmitterS struct {
 	geom.Pos
-	Power      float64 // current emitted power
-	Ch         int     // current channel used
+	Power float64 // current emitted power
+	//Ch         int     // current channel used
 	BERtotal   float64
 	Diversity  int
 	Requested  float64
@@ -20,7 +21,7 @@ type EmitterS struct {
 
 	Outage int
 
-	ARB []int //allocated RB
+	ARB vector.IntVector //allocated RB
 }
 
 // EmitterS with additional registers for BER and diversity evaluation, 
@@ -39,6 +40,8 @@ type Emitter struct {
 	touch bool
 
 	Id int
+
+	Speed [2]float64
 }
 
 
@@ -58,11 +61,17 @@ type EmitterInt interface {
 	GetMasterConnec() *Connection
 	GetId() int
 	_setCh(i int)
+	GetSpeed() float64
+}
+
+func (e *Emitter) GetSpeed() float64 {
+	return math.Sqrt(e.Speed[0]*e.Speed[0] + e.Speed[1]*e.Speed[1])
 }
 
 func (e *Emitter) _setCh(i int) {
-	e.Ch = i
+	//e.Ch = i
 	e.touch = false
+	e.ARB.Set(0, i)
 }
 
 func (e *Emitter) GetId() int {
@@ -86,7 +95,7 @@ func (e *Emitter) GetPower() float64 {
 }
 
 func (e *Emitter) GetCh() int {
-	return e.Ch
+	return e.ARB[0] //Ch
 }
 
 // channel used by channels change thread to inform emitter that channel hop has been applied
@@ -140,7 +149,7 @@ func (M *Emitter) SetCh(nch int) {
 	//	M.nch = nch
 
 	//if M.touch == false {
-	SystemChan[M.Ch].Remove <- M
+	SystemChan[M.ARB[0]].Remove <- M
 	SystemChan[nch].Change <- M
 	//	M.touch = true
 	//}
