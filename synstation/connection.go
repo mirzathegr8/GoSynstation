@@ -32,10 +32,12 @@ type Connection struct {
 	Rgen *rand.Rand
 
 	initz [2][NCh]float64 //generation of random number per RB	
+
+	//BERrb   [NCh]float64 //stores results BER
 }
 
 // for output to save
-func (c *Connection) GetffR() []float64 {
+func (c *Connection) GetInstantSNIR() []float64 {
 	return c.ff_R[:]
 }
 
@@ -60,13 +62,13 @@ type ConnecType interface {
 	GetE() EmitterInt
 	GetPr() float64
 	EvalRatio(rx PhysReceiverInt) float64
-	GetCh() int
 	GetSNR() float64
 
-	EvalInstantBER(E EmitterInt, rx PhysReceiverInt) (Rc *ChanReceiver, BER, SNR, Pr float64)
+	GetInstantSNIR() []float64
+
+	//EvalInstantBER(E EmitterInt, rx PhysReceiverInt) (Rate, BER, SNR, Pr float64)
 }
 
-func (co *Connection) GetCh() int       { return co.E.GetCh() }
 func (co *Connection) GetE() EmitterInt { return co.E }
 func (co *Connection) GetPr() float64   { return co.Pr }
 func (co *Connection) GetSNR() float64  { return co.SNR }
@@ -74,11 +76,7 @@ func (co *Connection) GetSNR() float64  { return co.SNR }
 
 func (co *Connection) BitErrorRate(rx PhysReceiverInt) {
 
-	_, co.BER, co.SNR, co.Pr = co.EvalInstantBER(co.GetE(), rx)
-
-	co.meanPr.Add(co.Pr)
-	co.meanBER.Add(co.BER)
-	co.meanSNR.Add(co.SNR)
+	co.evalInstantBER(co.GetE(), rx)
 
 	co.Status = 1 //let mobile set master state		
 	co.E.AddConnection(co)
@@ -168,56 +166,71 @@ func (co *Connection) GetLogMeanBER() float64 {
 
 
 //This function is only called once per iteration, so it is where the FF value is generated
-func (c *Connection) EvalInstantBER(E EmitterInt, rx PhysReceiverInt) (Rc *ChanReceiver, BER, SNR, Pr float64) {
+func (c *Connection) evalInstantBER(E EmitterInt, rx PhysReceiverInt) {
 
-	if E.GetCh() == 0 {
-		Rc, BER, SNR, Pr = rx.EvalSignalBER(E, 0)
+	ARB := E.GetARB()
 
-	} else {
-		var K float64
-		Pr, K, Rc = rx.GetPrK(E.GetId(), E.GetCh())
+	if E.IsSetARB(0) {
+		_, c.BER, c.SNR, c.Pr = rx.EvalSignalBER(E, 0)
 
-		//c.filterF.InitRandom(c.Rgen) // = c.Rgen.NormFloat64()
-		//pass some values to decorelate
-		for i := 0; i < 50; i++ {
-			c.filterF.nextValue(c.Rgen.NormFloat64())
-		}
-
-		for i := 0; i < NCh; i++ {
-			c.initz[0][i] = c.filterF.nextValue(c.Rgen.NormFloat64())
-		}
-		//c.filterF.InitRandom(c.Rgen) // = c.Rgen.NormFloat64()
-		//pass some values to decorelate
-		for i := 0; i < 50; i++ {
-			c.filterF.nextValue(c.Rgen.NormFloat64())
-		}
-
-		for i := 0; i < NCh; i++ {
-			c.initz[1][i] = c.filterF.nextValue(c.Rgen.NormFloat64())
-		}
-
-		for i := 0; i < NCh; i++ {
-			a := c.filterAr[i].nextValue(c.initz[0][i]) + K
-			b := c.filterBr[i].nextValue(c.initz[1][i])
-			c.ff_R[i] = math.Sqrt(a*a + b*b)
-		}
-
-		//fmt.Println(c.initz[0])
-
-		SNR = 0
-
-		//at this moment the 0.0789 is to normalise the c.ff_R ratio to have a Rayleigh of sigma=1
-
-		SNR = c.ff_R[E.GetCh()] * 0.0789 * Pr / (Rc.Pint - Pr + WNoise)
-
-		Pr = Pr * c.ff_R[E.GetCh()] * 0.0789
-
-		if SNR > 4000 {
-			SNR = 4000
-		}
-
-		BER = L1 * math.Exp(-SNR/2/L2) / 2.0
+		c.meanBER.Add(c.BER)
+		c.meanSNR.Add(c.SNR)
+		c.meanPr.Add(c.Pr)
+		return
 	}
+
+	for rb, use := range ARB {
+		if use {
+			var K float64
+			Pr, K, Rc := rx.GetPrK(E.GetId(), rb)
+
+			//Generate DopplerFading
+			//pass some values to decorelate
+			for i := 0; i < 50; i++ {
+				c.filterF.nextValue(c.Rgen.NormFloat64())
+			}
+
+			for i := 0; i < NCh; i++ {
+				c.initz[0][i] = c.filterF.nextValue(c.Rgen.NormFloat64())
+			}
+			//pass some values to decorelate
+			for i := 0; i < 50; i++ {
+				c.filterF.nextValue(c.Rgen.NormFloat64())
+			}
+
+			for i := 0; i < NCh; i++ {
+				c.initz[1][i] = c.filterF.nextValue(c.Rgen.NormFloat64())
+			}
+
+			for i := 0; i < NCh; i++ {
+				a := c.filterAr[i].nextValue(c.initz[0][i]) + K
+				b := c.filterBr[i].nextValue(c.initz[1][i])
+				c.ff_R[i] = math.Sqrt(a*a + b*b)
+			}
+
+			c.ff_R[rb] *= Pr * 0.0789 //* .8
+			//at this moment the 0.0789 is to normalise the c.ff_R ratio to have a Rayleigh of sigma=1
+
+			c.Pr = c.ff_R[rb] // to save data to file
+
+			c.SNR = c.ff_R[rb] / (Rc.Pint - Pr + WNoise)
+
+			/*if c.SNR > 4000 {
+				c.SNR = 4000
+			}*/
+
+			c.ff_R[rb] = c.SNR
+
+			BER := L1 * math.Exp(-c.SNR/2/L2) / 2.0
+
+			c.meanBER.Add(BER)
+			c.meanPr.Add(Pr)
+			c.meanSNR.Add(c.SNR)
+
+			//c.BERrb[rb]=BER
+		}
+	}
+
 	return
 }
 
