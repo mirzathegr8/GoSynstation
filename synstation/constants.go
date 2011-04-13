@@ -1,33 +1,36 @@
 package synstation
 
 
-const Field = 12000 //length in meters
+const Field = 6000 //length in meters
 
 const Duration = 2000 // in iterations 
 
-const M = 4000 //numbers of mobiles
-const D = 400  // numbers of DBS
+const M = 1000 //numbers of mobiles
+const D = 100  // numbers of DBS
 
 const L2 = 2 // modulation factor
 const L1 = 1
 
-var NCh = 35 // number of channels
+const NCh = 35 // number of channels
+
 // 10 0 11 .1 12 .2 19 .5 37 .75
-var roverlap = float64(0.0) // ratio of overlaping of two adjacent channels
+const roverlap = float64(0.0) // ratio of overlaping of two adjacent channels
 
-const WNoise = 1e-11 // White noise at reciever
-var NChRes = 5       //numbers of reserved channels, not used yet, but chan 0 must be reserved
-const NConnec = 25   // numbers of connections per dbs
+const WNoise = 7.45e-17 // White noise at reciever
+const NChRes = 5        //numbers of reserved channels, not used yet, but chan 0 must be reserved
+const NConnec = 25      // numbers of connections per dbs
 
-var BERThres = float64(0.8)
-var SNRThresConnec = float64(35)
+const BERThres = float64(0.3)
+const SNRThresConnec = float64(35)
 
-var SNRThresChHop = float64(0)
+const SNRThresChHop = float64(0)
 
-var MaxSpeed = float64(15)
+const MaxSpeed = float64(15)
+
+const EnodeBClock = 15
 
 
-var SetReceiverType = BEAM
+const SetReceiverType = BEAM
 
 //type ReceiverType int
 
@@ -37,7 +40,7 @@ const (
 	SECTORED
 )
 
-var SetShadowMap = SHADOWMAP
+const SetShadowMap = NOSHADOW
 
 //type ReceiverType int
 
@@ -54,10 +57,24 @@ const mval = 0.1
 const maplength = 1500
 const mapsize = 600
 
-var FastFading = MONTECARLO
+const FastFading = MONTECARLO
 
 const (
 	MEANEVAL = iota
 	MONTECARLO
+)
+
+const DiversityType = MRC
+
+const (
+	SELECTION = iota
+	MRC
+)
+
+const PowerControl = AGENTPC
+
+const (
+	NOPC = iota
+	AGENTPC
 )
 
