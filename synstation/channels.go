@@ -87,6 +87,7 @@ func (ch *channel) RemoveChan() {
 		tx := <-ch.Remove
 		if tx != nil {
 			ch.remove(tx)
+			tx._unsetCh(ch.i)
 			ch.removed++
 		} else {
 			break
