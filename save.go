@@ -1,6 +1,6 @@
 package main
 
-import "synstation"
+import s "synstation"
 import "os"
 import "fmt"
 import "container/vector"
@@ -16,25 +16,26 @@ func init() {
 
 	syncsavech = make(chan int)
 
-	saveData.Push(CreateStart(MaxBER, synstation.M, "BERMax"))
-	saveData.Push(CreateStart(InstMaxBER, synstation.M, "InstMatBER"))
-	saveData.Push(CreateStart(BER, synstation.M, "BER"))
-	saveData.Push(CreateStart(SNR, synstation.M, "SNR"))
-	saveData.Push(CreateStart(CH, synstation.M, "CH"))
-	saveData.Push(CreateStart(DIV, synstation.M, "DIV"))
-	saveData.Push(CreateStart(Outage, synstation.M, "Outage"))
-	saveData.Push(CreateStart(Ptxr, synstation.M, "Ptxr"))
-	saveData.Push(CreateStart(PrMaster, synstation.M, "PrMaster"))
+	saveData.Push(CreateStart(MaxBER, s.M, "BERMax"))
+	saveData.Push(CreateStart(InstMaxBER, s.M, "InstMatBER"))
+	saveData.Push(CreateStart(BER, s.M, "BER"))
+	saveData.Push(CreateStart(SNR, s.M, "SNR"))
+	saveData.Push(CreateStart(CH, s.M, "CH"))
+	saveData.Push(CreateStart(DIV, s.M, "DIV"))
+	saveData.Push(CreateStart(Outage, s.M, "Outage"))
+	saveData.Push(CreateStart(Ptxr, s.M, "Ptxr"))
+	saveData.Push(CreateStart(PrMaster, s.M, "PrMaster"))
+	saveData.Push(CreateStart(TransferRate, s.M, "TransferRate"))
 
 }
 
 type saveTraceItem struct {
-	save chan *synstation.Trace
+	save chan *s.Trace
 }
 
-func CreateStart(method func(t *synstation.Trace, i int) float64, m int, file string) saveTraceItem {
+func CreateStart(method func(t *s.Trace, i int) float64, m int, file string) saveTraceItem {
 	var a saveTraceItem
-	a.save = make(chan *synstation.Trace, 1000)
+	a.save = make(chan *s.Trace, 1000)
 	//go WriteDataToFile(method, m, a.save, file)
 	go save_binary_data(method, m, a.save, file)
 	return a
@@ -45,17 +46,19 @@ func (s *saveTraceItem) Stop() {
 	<-syncsavech
 }
 
-func MaxBER(t *synstation.Trace, i int) float64     { return t.Mobs[i].MaxBER }
-func InstMaxBER(t *synstation.Trace, i int) float64 { return t.Mobs[i].InstMaxBER }
-func BER(t *synstation.Trace, i int) float64        { return t.Mobs[i].BERtotal }
-func SNR(t *synstation.Trace, i int) float64        { return t.Mobs[i].SNRb }
-func CH(t *synstation.Trace, i int) float64         { return float64(t.Mobs[i].ARB[0]) }
-func DIV(t *synstation.Trace, i int) float64        { return float64(t.Mobs[i].Diversity) }
-func Outage(t *synstation.Trace, i int) float64     { return float64(t.Mobs[i].Outage) }
-func Ptxr(t *synstation.Trace, i int) float64       { return float64(t.Mobs[i].Power) }
-func PrMaster(t *synstation.Trace, i int) float64   { return float64(t.Mobs[i].PrMaster) }
+func MaxBER(t *s.Trace, i int) float64       { return t.Mobs[i].MaxBER }
+func InstMaxBER(t *s.Trace, i int) float64   { return t.Mobs[i].InstMaxBER }
+func BER(t *s.Trace, i int) float64          { return t.Mobs[i].BERtotal }
+func SNR(t *s.Trace, i int) float64          { return t.Mobs[i].SNRb }
+func CH(t *s.Trace, i int) float64           { return float64(t.Mobs[i].GetFirstRB()) }
+func DIV(t *s.Trace, i int) float64          { return float64(t.Mobs[i].Diversity) }
+func Outage(t *s.Trace, i int) float64       { return float64(t.Mobs[i].Outage) }
+func Ptxr(t *s.Trace, i int) float64         { return float64(t.Mobs[i].Power) }
+func PrMaster(t *s.Trace, i int) float64     { return float64(t.Mobs[i].PrMaster) }
+func TransferRate(t *s.Trace, i int) float64 { return float64(t.Mobs[i].TransferRate) }
 
-func WriteDataToFile(method func(t *synstation.Trace, i int) float64, m int, channel chan *synstation.Trace, file string) {
+
+func WriteDataToFile(method func(t *s.Trace, i int) float64, m int, channel chan *s.Trace, file string) {
 
 	outF, err := os.Open(file+".mat", os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
@@ -63,7 +66,7 @@ func WriteDataToFile(method func(t *synstation.Trace, i int) float64, m int, cha
 	}
 	defer outF.Close()
 
-	_, err = outF.WriteString(fmt.Sprintln("# name: ", file, "\n# type: matrix\n# rows: ", synstation.Duration, "\n# columns: ", m))
+	_, err = outF.WriteString(fmt.Sprintln("# name: ", file, "\n# type: matrix\n# rows: ", s.Duration, "\n# columns: ", m))
 	if err != nil {
 		return // f.Close() will automatically be called now 
 	}
@@ -92,7 +95,7 @@ func StopSave() {
 	}
 }
 
-func sendTrace(t *synstation.Trace) {
+func sendTrace(t *s.Trace) {
 
 	for i := 0; i < len(saveData); i++ {
 		a := saveData.At(i).(saveTraceItem)
@@ -157,7 +160,7 @@ func sendTrace(t *synstation.Trace) {
 // Except for "data type" equal 5 that requires special treatment, these
 // old style "data type" value also cause the specific load/save functions
 // to be called. FILENAME is used for error messages.
-func save_binary_data(method func(t *synstation.Trace, i int) float64, m int, channel chan *synstation.Trace, file string) {
+func save_binary_data(method func(t *s.Trace, i int) float64, m int, channel chan *s.Trace, file string) {
 
 	os, err := os.Open(file+".mat", os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
@@ -185,7 +188,7 @@ func save_binary_data(method func(t *synstation.Trace, i int) float64, m int, ch
 	binary.LittleEndian.PutUint32(bb, uint32(m))
 	os.Write(bb)
 
-	binary.LittleEndian.PutUint32(bb, uint32(synstation.Duration))
+	binary.LittleEndian.PutUint32(bb, uint32(s.Duration))
 	os.Write(bb)
 
 	bb[0] = 6
@@ -213,6 +216,90 @@ func save_binary_data(method func(t *synstation.Trace, i int) float64, m int, ch
 	os.Close()
 
 	syncsavech <- 1
+
+}
+
+
+func SaveToFile(Mobiles []s.Mob) {
+
+	outF, err := os.Open("out.m", os.O_WRONLY|os.O_CREATE, 0666)
+
+	fmt.Println(err)
+
+	outF.WriteString(fmt.Sprintln("# name: Ptxr\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
+	for i := 0; i < s.M; i++ {
+		outF.WriteString(fmt.Sprintln(Mobiles[i].Power, " "))
+
+	}
+	outF.WriteString("\n")
+
+	outF.WriteString(fmt.Sprintln("# name: Pr\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
+	for i := 0; i < s.M; i++ {
+		if Mobiles[i].GetMasterConnec() != nil {
+			outF.WriteString(fmt.Sprintln(Mobiles[i].GetMasterConnec().Pr, " "))
+		} else {
+			outF.WriteString(fmt.Sprintln(-1, " "))
+		}
+
+	}
+	outF.WriteString("\n")
+
+	outF.WriteString(fmt.Sprintln("# name: Div\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
+	for i := 0; i < s.M; i++ {
+		outF.WriteString(fmt.Sprintln(Mobiles[i].Diversity, " "))
+
+	}
+	outF.WriteString("\n")
+
+	outF.WriteString(fmt.Sprintln("# name: BERt\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
+	for i := 0; i < s.M; i++ {
+		outF.WriteString(fmt.Sprintln(Mobiles[i].BERtotal, " "))
+
+	}
+	outF.WriteString("\n")
+
+	outF.WriteString(fmt.Sprintln("# name: MaxSNR\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
+	for i := 0; i < s.M; i++ {
+		outF.WriteString(fmt.Sprintln(Mobiles[i].SNRb, " "))
+
+	}
+	outF.WriteString("\n")
+
+	outF.WriteString(fmt.Sprintln("# name: MaxBER\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
+	for i := 0; i < s.M; i++ {
+		outF.WriteString(fmt.Sprintln(Mobiles[i].MaxBER, " "))
+
+	}
+	outF.WriteString("\n")
+
+	outF.WriteString(fmt.Sprintln("# name: Ch\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
+	for i := 0; i < s.M; i++ {
+		outF.WriteString(fmt.Sprintln(Mobiles[i].GetFirstRB(), " "))
+
+	}
+	outF.WriteString("\n")
+
+	outF.WriteString(fmt.Sprintln("# name: XX\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
+	for i := 0; i < s.M; i++ {
+		outF.WriteString(fmt.Sprintln(Mobiles[i].Pos.X, " "))
+
+	}
+	outF.WriteString("\n")
+
+	outF.WriteString(fmt.Sprintln("# name: YY\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
+	for i := 0; i < s.M; i++ {
+		outF.WriteString(fmt.Sprintln(Mobiles[i].Pos.Y, " "))
+
+	}
+
+	outF.WriteString(fmt.Sprintln("# name: Speed\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 2))
+	for i := 0; i < s.M; i++ {
+		outF.WriteString(fmt.Sprintln(Mobiles[i].Speed[0], Mobiles[i].Speed[1], " "))
+
+	}
+	outF.WriteString("\n")
+
+	outF.Close()
 
 }
 
