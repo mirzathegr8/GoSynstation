@@ -3,7 +3,6 @@ package synstation
 
 import "geom"
 import "math"
-import "container/vector"
 
 
 // This struct stores flat data to be directly output for serialization, i.e. no pointers, no channels
@@ -21,7 +20,8 @@ type EmitterS struct {
 
 	Outage int
 
-	ARB vector.IntVector //allocated RB
+	ARB          [NCh]bool //allocated RB
+	TransferRate float64
 }
 
 // EmitterS with additional registers for BER and diversity evaluation, 
@@ -34,6 +34,9 @@ type Emitter struct {
 	SMaxBER     float64
 	SDiversity  int
 	SInstMaxBER float64
+
+	SBERrb [NCh]float64
+	SSNRrb [NCh]float64
 
 	MasterConnection *Connection
 
@@ -52,8 +55,14 @@ type EmitterInt interface {
 	Req() float64
 	GetE() *Emitter
 	GetPower() float64
-	GetCh() int
-	SetCh(c int)
+
+	GetARB() []bool
+	SetARB(i int)
+	UnSetARB(i int)
+	IsSetARB(i int) bool
+	GetFirstRB() int
+	ReSetARB()
+
 	PowerDelta(float64)
 	SetPower(float64)
 	GetPos() geom.Pos
@@ -61,6 +70,7 @@ type EmitterInt interface {
 	GetMasterConnec() *Connection
 	GetId() int
 	_setCh(i int)
+	_unsetCh(i int)
 	GetSpeed() float64
 }
 
@@ -69,10 +79,51 @@ func (e *Emitter) GetSpeed() float64 {
 }
 
 func (e *Emitter) _setCh(i int) {
-	//e.Ch = i
-	e.touch = false
-	e.ARB.Set(0, i)
+	e.ARB[i] = true
 }
+
+func (e *Emitter) _unsetCh(i int) {
+	e.ARB[i] = false
+}
+
+
+func (e *Emitter) GetARB() []bool {
+	return e.ARB[:]
+}
+
+func (e *Emitter) IsSetARB(i int) bool {
+	return e.ARB[i]
+}
+
+func (e *EmitterS) GetFirstRB() int {
+	for i, use := range e.ARB {
+		if use {
+			return i
+		}
+	}
+	return -1
+}
+
+func (e *Emitter) SetARB(i int) {
+	if !e.ARB[i] {
+		SystemChan[i].Change <- e
+	}
+}
+
+func (e *Emitter) UnSetARB(i int) {
+	if e.ARB[i] {
+		SystemChan[i].Remove <- e
+	}
+}
+
+func (e *Emitter) ReSetARB() {
+	for i := 1; i < NCh; i++ {
+		e.UnSetARB(i)
+	}
+	e.SetARB(0)
+
+}
+
 
 func (e *Emitter) GetId() int {
 	return e.Id
@@ -94,9 +145,6 @@ func (e *Emitter) GetPower() float64 {
 	return e.Power
 }
 
-func (e *Emitter) GetCh() int {
-	return e.ARB[0] //Ch
-}
 
 // channel used by channels change thread to inform emitter that channel hop has been applied
 /*func (e *Emitter) isdone() chan int {
@@ -105,6 +153,7 @@ func (e *Emitter) GetCh() int {
 
 // function called by connections to inform BER quality of a link to the emitter
 func (e *Emitter) AddConnection(c *Connection) {
+
 	lber := c.GetLogMeanBER()
 	if lber < math.Log10(BERThres) {
 		e.SBERtotal += lber
@@ -116,11 +165,30 @@ func (e *Emitter) AddConnection(c *Connection) {
 	if e.SMaxBER > lber { //evaluate which connection is the best and memorizes which will be masterconnection
 		e.MasterConnection = c
 		e.SMaxBER = lber
-		e.SInstMaxBER = math.Log10(c.BER)
+		e.SInstMaxBER = math.Log10(c.BER + 1e-40)
 		e.SNRb = c.SNR
 		e.PrMaster = c.Pr
+
+		//for test with selection diversity
+
+		if DiversityType == SELECTION {
+			for rb, use := range e.ARB {
+				if use {
+					e.SSNRrb[rb] = c.ff_R[rb]
+				}
+			}
+		}
+
 	}
 
+	// for maximal RC
+	if DiversityType == MRC {
+		for rb, use := range e.ARB {
+			if use {
+				e.SSNRrb[rb] += c.ff_R[rb]
+			}
+		}
+	}
 }
 
 
@@ -131,7 +199,6 @@ func (M *Emitter) PowerDelta(delta float64) {
 	M.SetPower(M.Power + delta)
 }
 
-
 func (M *Emitter) SetPower(P float64) {
 	if P > 1.0 {
 		P = 1.0
@@ -140,18 +207,5 @@ func (M *Emitter) SetPower(P float64) {
 		P = 0.01
 	}
 	M.Power = P
-}
-
-// only function that should be called to hop channel
-// synchronizes lists
-func (M *Emitter) SetCh(nch int) {
-
-	//	M.nch = nch
-
-	//if M.touch == false {
-	SystemChan[M.ARB[0]].Remove <- M
-	SystemChan[nch].Change <- M
-	//	M.touch = true
-	//}
 }
 
