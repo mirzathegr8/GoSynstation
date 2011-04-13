@@ -5,7 +5,6 @@ import "fmt"
 import s "synstation"
 import "runtime"
 //import "draw"
-import "os"
 //import "math"
 //import "geom"
 import "time"
@@ -105,6 +104,86 @@ func main() {
 	//fmt.Println(err)
 	//fadingF.WriteString(fmt.Sprintln("# name: fading\n# type: matrix\n# rows: ", s.Duration, "\n# columns: ", s.NCh))
 
+
+	s.ChannelHop()
+
+	// precondition
+
+	for k := -1000; k < 0; k++ {
+
+		tps := time.Nanoseconds()
+
+		for i := range s.Synstations {
+			go s.Synstations[i].RunPhys()
+		}
+
+		//	for i := range s.Mobiles {
+		//		go s.Mobiles[i].RunPhys()
+		//	}
+
+		//synchronise here
+		//	s.Sync(s.D + s.M)
+		s.Sync(s.D)
+
+		ttps += (time.Nanoseconds() - tps)
+
+		// physics is done, now launch Mobiles data work
+		for i := range s.Mobiles {
+			go s.Mobiles[i].FetchData()
+		}
+
+		//here we synchronise threads and fetch data for ouput at the same time
+		outD.connected, outD.BER1, outD.BER2, outD.BER3 = 0, 0, 0, 0
+
+		n = 0
+		for v := range s.SyncChannel {
+			n++
+
+			//fmt.Print(s," ")	
+			switch {
+			case v < -3:
+				outD.BER1++
+				fallthrough
+			case v < -2:
+				outD.BER2++
+				fallthrough
+			case v < -1:
+				outD.BER3++
+				fallthrough
+			case v < -0.01:
+				outD.connected++
+			}
+			if n >= s.M {
+				break
+			}
+
+		}
+
+		//geting a bit more data
+		outD.d_connec = float64(s.GetConnect())
+		outD.d_discon = float64(s.GetDisConnect())
+		outD.Diversity = float64(s.GetDiversity()) / float64(s.M)
+		outD.lost = float64(s.SystemChan[0].GetAdded())
+		outD.d_lost = float64(s.GetLostConnect())
+		outD.HopCount = float64(s.GetHopCount())
+
+		outD.k = float64(k)
+		if k%10 == 0 {
+			outChannel <- outD //sent data to print to  stdout			
+		}
+
+		//Run DBS Agent, and sync
+		for i := range s.Synstations {
+			go s.Synstations[i].RunAgent()
+		}
+
+		//sync
+		s.Sync(s.D)
+		s.ChannelHop()
+
+	}
+
+	// simu
 	for k := 0; k < s.Duration; k++ {
 
 		//	fmt.Println(" Channel 0 ", s.SystemChan[0].Emitters.Len())
@@ -242,89 +321,6 @@ func main() {
 	fmt.Println(ttps)
 
 	//draw.Close()
-
-}
-
-func SaveToFile(Mobiles []s.Mob) {
-
-	outF, err := os.Open("out.m", os.O_WRONLY|os.O_CREATE, 0666)
-
-	fmt.Println(err)
-
-	outF.WriteString(fmt.Sprintln("# name: Ptxr\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
-	for i := 0; i < s.M; i++ {
-		outF.WriteString(fmt.Sprintln(Mobiles[i].Power, " "))
-
-	}
-	outF.WriteString("\n")
-
-	outF.WriteString(fmt.Sprintln("# name: Pr\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
-	for i := 0; i < s.M; i++ {
-		if Mobiles[i].GetMasterConnec() != nil {
-			outF.WriteString(fmt.Sprintln(Mobiles[i].GetMasterConnec().Pr, " "))
-		} else {
-			outF.WriteString(fmt.Sprintln(-1, " "))
-		}
-
-	}
-	outF.WriteString("\n")
-
-	outF.WriteString(fmt.Sprintln("# name: Div\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
-	for i := 0; i < s.M; i++ {
-		outF.WriteString(fmt.Sprintln(Mobiles[i].Diversity, " "))
-
-	}
-	outF.WriteString("\n")
-
-	outF.WriteString(fmt.Sprintln("# name: BERt\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
-	for i := 0; i < s.M; i++ {
-		outF.WriteString(fmt.Sprintln(Mobiles[i].BERtotal, " "))
-
-	}
-	outF.WriteString("\n")
-
-	outF.WriteString(fmt.Sprintln("# name: MaxSNR\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
-	for i := 0; i < s.M; i++ {
-		outF.WriteString(fmt.Sprintln(Mobiles[i].SNRb, " "))
-
-	}
-	outF.WriteString("\n")
-
-	outF.WriteString(fmt.Sprintln("# name: MaxBER\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
-	for i := 0; i < s.M; i++ {
-		outF.WriteString(fmt.Sprintln(Mobiles[i].MaxBER, " "))
-
-	}
-	outF.WriteString("\n")
-
-	outF.WriteString(fmt.Sprintln("# name: Ch\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
-	for i := 0; i < s.M; i++ {
-		outF.WriteString(fmt.Sprintln(Mobiles[i].GetCh(), " "))
-
-	}
-	outF.WriteString("\n")
-
-	outF.WriteString(fmt.Sprintln("# name: XX\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
-	for i := 0; i < s.M; i++ {
-		outF.WriteString(fmt.Sprintln(Mobiles[i].Pos.X, " "))
-
-	}
-	outF.WriteString("\n")
-
-	outF.WriteString(fmt.Sprintln("# name: YY\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
-	for i := 0; i < s.M; i++ {
-		outF.WriteString(fmt.Sprintln(Mobiles[i].Pos.Y, " "))
-
-	}
-
-	outF.WriteString(fmt.Sprintln("# name: Speed\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 2))
-	for i := 0; i < s.M; i++ {
-		outF.WriteString(fmt.Sprintln(Mobiles[i].Speed[0], Mobiles[i].Speed[1], " "))
-
-	}
-	outF.WriteString("\n")
-
-	outF.Close()
 
 }
 
