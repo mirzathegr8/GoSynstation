@@ -26,6 +26,7 @@ type Connection struct {
 	filterAr [NCh]FilterInt //stores received power
 	filterBr [NCh]FilterInt //stores received power
 	ff_R     [NCh]float64   //stores received power with FF
+	SNRrb    [NCh]float64   //stores received power with FF
 
 	filterF FilterInt //stores received power
 
@@ -106,9 +107,9 @@ func (Conn *Connection) InitConnection(E EmitterInt, v float64, Rgen *rand.Rand)
 	Conn.Rgen = Rgen
 
 	Speed := E.GetSpeed()
-	DopplerF := Speed * F / cel // 1000 samples per seconds speed already divided by 1000
+	DopplerF := Speed * F / cel // 1000 samples per seconds speed already divided by 1000 for RB TTI
 
-	if DopplerF < 0.002 { // the frequency is so low, a simple antena diversity will compensate for 
+	if DopplerF < 0.002 { // the frequency is so low, a simple antena diversity will compensate for 	
 		for i := 0; i < NCh; i++ {
 			Conn.filterAr[i] = &PNF
 			Conn.filterBr[i] = &PNF
@@ -179,55 +180,58 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx PhysReceiverInt) {
 		return
 	}
 
+	//Generate DopplerFading
+	//pass some values to decorelate
+	for i := 0; i < 50; i++ {
+		c.filterF.nextValue(c.Rgen.NormFloat64())
+	}
+
+	for i := 0; i < NCh; i++ {
+		c.initz[0][i] = c.filterF.nextValue(c.Rgen.NormFloat64())
+	}
+	//pass some values to decorelate
+	for i := 0; i < 50; i++ {
+		c.filterF.nextValue(c.Rgen.NormFloat64())
+	}
+
+	for i := 0; i < NCh; i++ {
+		c.initz[1][i] = c.filterF.nextValue(c.Rgen.NormFloat64())
+	}
+
+	K := rx.GetK(E.GetId())
+
+	for rb := 0; rb < NCh; rb++ {
+		a := c.filterAr[rb].nextValue(c.initz[0][rb]) + K
+		b := c.filterBr[rb].nextValue(c.initz[1][rb])
+		c.ff_R[rb] = (a*a + b*b) / 2 /// 2141
+	}
+
 	for rb, use := range ARB {
+
 		if use {
-			var K float64
-			Pr, K, Rc := rx.GetPrK(E.GetId(), rb)
 
-			//Generate DopplerFading
-			//pass some values to decorelate
-			for i := 0; i < 50; i++ {
-				c.filterF.nextValue(c.Rgen.NormFloat64())
-			}
+			Pr, Rc := rx.GetPr(E.GetId(), rb)
 
-			for i := 0; i < NCh; i++ {
-				c.initz[0][i] = c.filterF.nextValue(c.Rgen.NormFloat64())
-			}
-			//pass some values to decorelate
-			for i := 0; i < 50; i++ {
-				c.filterF.nextValue(c.Rgen.NormFloat64())
-			}
-
-			for i := 0; i < NCh; i++ {
-				c.initz[1][i] = c.filterF.nextValue(c.Rgen.NormFloat64())
-			}
-
-			for i := 0; i < NCh; i++ {
-				a := c.filterAr[i].nextValue(c.initz[0][i]) + K
-				b := c.filterBr[i].nextValue(c.initz[1][i])
-				c.ff_R[i] = math.Sqrt(a*a + b*b)
-			}
-
-			c.ff_R[rb] *= Pr * 0.0789 //* .8
+			//c.ff_R[rb] *= Pr
 			//at this moment the 0.0789 is to normalise the c.ff_R ratio to have a Rayleigh of sigma=1
 
-			c.Pr = c.ff_R[rb] // to save data to file
+			c.Pr = Pr // to save data to file
 
-			c.SNR = c.ff_R[rb] / (Rc.Pint - Pr + WNoise)
+			c.SNRrb[rb] = Pr * c.ff_R[rb] / (Rc.Pint - Pr + WNoise)
 
 			/*if c.SNR > 4000 {
 				c.SNR = 4000
 			}*/
 
-			c.ff_R[rb] = c.SNR
+			//c.ff_R[rb] = c.SNR
 
-			BER := L1 * math.Exp(-c.SNR/2/L2) / 2.0
+			BER := L1 * math.Exp(-c.SNRrb[rb]/2/L2) / 2.0
 
 			c.meanBER.Add(BER)
 			c.meanPr.Add(Pr)
 			c.meanSNR.Add(c.SNR)
 
-			//c.BERrb[rb]=BER
+			c.SNR = c.SNRrb[rb]
 		}
 	}
 
