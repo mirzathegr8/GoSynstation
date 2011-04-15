@@ -21,10 +21,7 @@ type ChanReceiver struct {
 
 	Signal [SizeES]int
 
-	//meanPint MeanData
-
 	pr [M]float64 //stores received power
-	kk [M]float64 //stores received power
 
 }
 
@@ -81,7 +78,8 @@ type PhysReceiverInt interface {
 
 	EvalChRSignalSNR(rb int, k int) (Rc *ChanReceiver, eval float64)
 
-	GetPrK(i, rb int) (p, k float64, Rc *ChanReceiver)
+	GetPr(i, rb int) (p float64, Rc *ChanReceiver)
+	GetK(i int) (p float64)
 }
 
 
@@ -93,6 +91,8 @@ type PhysReceiver struct {
 	Orientation []float64 //angle of orientation for beamforming for each channel -1 indicates no beamforming
 	shadow      shadowMapInt
 	Rgen        *rand.Rand
+
+	kk [M]float64 //stores received power
 }
 
 func (r *PhysReceiver) Init(p geom.Pos, Rgen *rand.Rand) {
@@ -183,15 +183,14 @@ func (r *PhysReceiver) EvalSignalSNR(e EmitterInt, rb int) (Rc *ChanReceiver, SN
 
 	Rc = &r.Channels[rb]
 	SNR = 0
+	K = r.kk[e.GetId()]
 
 	if e.IsSetARB(rb) {
 		Pr = Rc.pr[e.GetId()]
-		K = Rc.kk[e.GetId()]
 
 	} else { //we supose we will get the same power out of the other channel (fading aside)
 		RcO := &r.Channels[e.GetFirstRB()]
 		Pr = RcO.pr[e.GetId()]
-		K = RcO.kk[e.GetId()]
 	}
 	switch {
 	case rb == 0: //this channel is the obsever channel to follow Mobiles while they are not assigned a channel
@@ -455,6 +454,8 @@ func (rx *PhysReceiver) GenFastFading() {
 		d *= d
 		fading := rx.shadow.evalShadowFading(p) / d * E.Power
 
+		rx.kk[i] = K
+
 		for rb, use := range E.ARB { // eval power received over each assigned RB
 			// Watch out, here we only eval the powers for these RB and we do not set to 0 the other RB
 			// such that  in interference evaluation we must only add eval powers (pr[i]) of RB included in E.ARB vector
@@ -497,7 +498,6 @@ func (rx *PhysReceiver) GenFastFading() {
 				pr := fading * gain
 
 				rx.Channels[rb].pr[i] = pr
-				rx.Channels[rb].kk[i] = K
 
 			}
 		}
@@ -505,10 +505,14 @@ func (rx *PhysReceiver) GenFastFading() {
 
 }
 
-func (rx PhysReceiver) GetPrK(i, rb int) (p, k float64, Rc *ChanReceiver) {
+func (rx PhysReceiver) GetK(i int) (k float64) {
+	k = rx.kk[i]
+	return
+}
+
+func (rx PhysReceiver) GetPr(i, rb int) (p float64, Rc *ChanReceiver) {
 	Rc = &rx.Channels[rb]
 	p = Rc.pr[i]
-	k = Rc.kk[i]
 	return
 }
 
