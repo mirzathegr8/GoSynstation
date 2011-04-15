@@ -4,7 +4,7 @@ package synstation
 import "math"
 import "rand"
 
-const F = 900 * 10e6 //fréquence du canal en Hz
+const F = 1400 * 10e6 //fréquence du canal en Hz
 
 const cel = 3 * 10e8 //vitesse de propagation en m/s
 
@@ -20,7 +20,7 @@ type FilterInt interface {
 type PassNull struct{}
 
 func (p *PassNull) nextValue(input float64) (output float64) {
-	return 1.0
+	return 1 // to compensate  
 }
 func (p *PassNull) InitRandom(Rgen *rand.Rand) {}
 func (f *PassNull) InitZ(z []float64)          {}
@@ -126,7 +126,7 @@ func Butter(W float64) (f *Filter) {
 
 	//adjust gain
 	for j := range f.b {
-		f.b[j] *= math.Sqrt(1 / W) //scale input to compensate for lowpass and have same output power as input
+		f.b[j] *= math.Sqrt(1/W) * .96 //scale input to compensate for lowpass and have same output power as input
 	}
 
 	return
@@ -220,7 +220,8 @@ func Cheby(Rp, W float64) (f *Filter) {
 	}
 
 	for j := range f.b {
-		f.b[j] /= math.Sqrt(W * 0.3166) //scale input to compensate for output power
+		//f.b[j] /= math.Sqrt(W * 0.3166) //scale input to compensate for output power
+		f.b[j] *= 1.9494 //scale input to compensate for output power
 
 	}
 
