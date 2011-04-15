@@ -187,7 +187,7 @@ func (dbs *DBS) checkLinkViability() {
 
 		if c.E.IsSetARB(0) {
 
-			Pr, _, _ := dbs.R.GetPrK(c.E.GetId(), 0)
+			Pr, _ := dbs.R.GetPr(c.E.GetId(), 0)
 
 			if 10*math.Log10(Pr/WNoise) < SNRThresConnec-2 {
 				dbs.disconnect(e)
