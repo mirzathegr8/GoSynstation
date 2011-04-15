@@ -174,7 +174,7 @@ func (e *Emitter) AddConnection(c *Connection) {
 		if DiversityType == SELECTION {
 			for rb, use := range e.ARB {
 				if use {
-					e.SSNRrb[rb] = c.ff_R[rb]
+					e.SSNRrb[rb] = c.SNRrb[rb]
 				}
 			}
 		}
@@ -185,7 +185,7 @@ func (e *Emitter) AddConnection(c *Connection) {
 	if DiversityType == MRC {
 		for rb, use := range e.ARB {
 			if use {
-				e.SSNRrb[rb] += c.ff_R[rb]
+				e.SSNRrb[rb] += c.SNRrb[rb]
 			}
 		}
 	}
