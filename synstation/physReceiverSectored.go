@@ -164,7 +164,7 @@ func (rx *PhysReceiverSectored) GenFastFading() {
 }
 
 
-func (r *PhysReceiverSectored) GetPrK(mi, ch int) (p, k float64, Rc *ChanReceiver) {
+func (r *PhysReceiverSectored) GetPr(mi, ch int) (p float64, Rc *ChanReceiver) {
 
 	var b [3]float64
 
@@ -172,7 +172,20 @@ func (r *PhysReceiverSectored) GetPrK(mi, ch int) (p, k float64, Rc *ChanReceive
 		b[i] = r.R[i].Channels[ch].pr[mi]
 	}
 	ir := findMax(b[:])
-	return b[ir], r.R[ir].Channels[ch].kk[mi], &r.R[ir].Channels[ch]
+	return b[ir], &r.R[ir].Channels[ch]
+
+}
+
+
+func (r *PhysReceiverSectored) GetK(mi int) (k float64) {
+
+	/*var b [3]float64
+	for i := range b {
+		b[i] = r.R[i].Channels[ch].pr[mi]
+	}
+	ir := findMax(b[:])*/
+	// TODO, figuree out if AOA of line of sight is a problem here or not
+	return r.R[0].kk[mi]
 
 }
 
