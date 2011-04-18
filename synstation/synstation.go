@@ -60,10 +60,7 @@ func (dbs *DBS) Init() {
 // Physics : evaluate SNRs at receiver, evaluate BER of connections
 func (dbs *DBS) RunPhys() {
 
-	dbs.R.DoTracking(dbs.Connec)
-	dbs.R.GenFastFading()
-
-	dbs.R.MeasurePower(nil)
+	dbs.R.Compute(dbs.Connec)
 
 	dbs.Clock = dbs.Rgen.Intn(EnodeBClock)
 
@@ -76,6 +73,9 @@ func (dbs *DBS) RunPhys() {
 	SyncChannel <- 1
 }
 
+func (dbs *DBS) FetchData() {
+	SyncChannel <- 1
+}
 
 // Sorts channels in random order
 func (dbs *DBS) RandomChan() {
@@ -158,11 +158,8 @@ func (dbs *DBS) IsConnected(tx EmitterInt) bool {
 
 }
 
-func syncThread() { SyncChannel <- 1 }
 
 func (dbs *DBS) RunAgent() {
-
-	defer syncThread()
 
 	dbs.checkLinkViability()
 
@@ -178,6 +175,8 @@ func (dbs *DBS) RunAgent() {
 		}
 		//dbs.optimizePowerAllocationSimple()
 	}
+
+	SyncChannel <- 1.0
 
 }
 
@@ -569,7 +568,7 @@ func (dbs *DBS) optimizePowerAllocation() {
 
 			b = M.BERT() / M.Req()
 			//b = M.BERT() / M.Req()/meanPtotPd;
-			b = b * 1.5
+			b = b //* 1.5
 			alpha = 1.0
 			need = 2.0*math.Exp(-b)*(b+1.0) - 1.0
 			delta = math.Pow(geom.Abs(need), 1) *
