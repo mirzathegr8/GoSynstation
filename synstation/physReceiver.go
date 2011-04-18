@@ -1,30 +1,27 @@
 package synstation
 
-// #include "math.h"
-//import "C"
-
 import "math"
 import "geom"
 import "container/list"
 import "fmt"
 import "rand"
-//import "sselib"
 
+// number of signal id saved in the list of the ChanReceiver
 const SizeES = 10
 
-// Structure to hold interference level, and multilevel interference with overlaping channels calculation
-// as well as the best signal and its recieved power
+// Structure to hold interference level for a RB, and multilevel interference with overlaping channels calculation
+// as well as a list of ordered strongest signal received 
 type ChanReceiver struct {
 	Pint     float64 // to store total received power level including interference;
 	Pint1lvl float64 // to store received power_levels of emitters in channel without co-interference 
 
-
-	Signal [SizeES]int
+	Signal [SizeES]int // used to store ordered list of ids of most important emitters interfering in this RB
 
 	pr [M]float64 //stores received power
-
 }
 
+//This function is called to reset the list of received signals
+//and the sum of powerlevel received on the RB
 func (chR *ChanReceiver) Clear() {
 	for i := range chR.Signal {
 		chR.Signal[i] = -1
@@ -33,6 +30,8 @@ func (chR *ChanReceiver) Clear() {
 	chR.Pint1lvl = 0
 }
 
+//This function is called by the interference evaluation while summing the received power,
+// in order to save the ordered list of the strongest received powers
 func (chR *ChanReceiver) Push(S int, P float64, R *PhysReceiver) {
 	var i = 0
 	var j = 0
@@ -57,26 +56,31 @@ func (chR *ChanReceiver) Push(S int, P float64, R *PhysReceiver) {
 
 }
 
+// Simple output to print the value of interference on the RB
 func (chR ChanReceiver) String() string { return fmt.Sprintf("{%f }", chR.Pint*1e15) }
 
 
+// The Receiver interface, 
 type PhysReceiverInt interface {
+
+	// Initialise data in the receiver, tell it its position in space, 
+	//	and provide it with a random number generator
 	Init(p geom.Pos, r *rand.Rand)
+
+	// The following function are used to evalueate link qualities or potential link qualities
 	EvalSignalConnection(rb int) (*ChanReceiver, float64, float64)
 	EvalBestSignalSNR(rb int) (Rc *ChanReceiver, eval float64)
 	EvalSignalBER(e EmitterInt, rb int) (Rc *ChanReceiver, BER, SNR, Pr float64)
 	EvalSignalSNR(e EmitterInt, rb int) (Rc *ChanReceiver, SNR, Pr, K float64)
+	EvalChRSignalSNR(rb int, k int) (Rc *ChanReceiver, eval float64)
 
-	MeasurePower(tx EmitterInt)
+	// This is the main function to launch the calculation of interfernce (tracking/beam/received power),
+	// and save some information on interferer
+	Compute(Connec *list.List)
 
+	//Getters/Setters	
 	SetPos(p geom.Pos)
 	GetPos() geom.Pos
-
-	DoTracking(Connec *list.List) bool
-
-	GenFastFading()
-
-	EvalChRSignalSNR(rb int, k int) (Rc *ChanReceiver, eval float64)
 
 	GetPr(i, rb int) (p float64, Rc *ChanReceiver)
 	GetK(i int) (p float64)
@@ -95,6 +99,13 @@ type PhysReceiver struct {
 	kk [M]float64 //stores received power
 }
 
+
+// Initialise the receiver:
+//	set the position in space
+//	set the Random number generator which will be given by the object containing the receiver,
+//		so that the randomnumber generator is only called from the same go-routine
+//	Create the ChanReceiver objects for each resource blocks
+//	
 func (r *PhysReceiver) Init(p geom.Pos, Rgen *rand.Rand) {
 	r.Pos = p
 	r.Rgen = Rgen
@@ -113,6 +124,8 @@ func (r *PhysReceiver) Init(p geom.Pos, Rgen *rand.Rand) {
 
 }
 
+
+// Getters/Setters
 func (r *PhysReceiver) SetPos(p geom.Pos) {
 	r.Pos = p
 }
@@ -222,79 +235,10 @@ func (r *PhysReceiver) EvalSignalBER(e EmitterInt, rb int) (Rc *ChanReceiver, BE
 }
 
 
-// first level interference calculation for all channels. internal function
-func (rx *PhysReceiver) measurePowerFromChannel(em EmitterInt) {
+func (rx *PhysReceiver) Compute(Connec *list.List) {
 
-	for i := 0; i < NCh; i++ {
-		rx.Channels[i].Clear()
-	}
-
-	/*var Ns = 0
-	if em != nil {
-		Ns = em.GetId()
-	} else {
-		Ns = -1
-	}*/
-
-	/*for i := 0; i < Ns; i++ {
-		for rb, use := range Mobiles[i].ARB {
-			if use {
-				chR := &rx.Channels[rb]
-				chR.Pint1lvl += chR.pr[i]
-				chR.Push(i, chR.pr[i], rx)
-			}
-		}
-	}*/
-
-	/*for i := Ns + 1; i < M; i++ {
-		for rb, use := range Mobiles[i].ARB {
-			if use {
-				chR := &rx.Channels[rb]
-				chR.Push(i, chR.pr[i], rx)
-				chR.Pint1lvl += chR.pr[i]
-			}
-		}
-	}*/
-
-	for i := 0; i < NCh; i++ {
-
-		chR := &rx.Channels[i]
-
-		for e := SystemChan[i].Emitters.Front(); e != nil; e = e.Next() {
-			c := e.Value.(EmitterInt)
-			m := c.GetId()
-			chR.Pint1lvl += chR.pr[m]
-			chR.Push(m, chR.pr[m], rx)
-
-		}
-
-	}
-
-}
-
-// Evaluates interference for all channels with overlapping effect,
-// channel 0 is considered to have no interference as traffic is suppose to only hold minimal signalization 
-func (rx *PhysReceiver) MeasurePower(tx EmitterInt) {
-
-	rx.measurePowerFromChannel(tx)
-
-	for i := 0; i < NCh; i++ {
-		rx.Channels[i].Pint = rx.Channels[i].Pint1lvl
-		for _, coc := range SystemChan[i].coIntC {
-			rx.Channels[i].Pint += coc.factor * rx.Channels[coc.c].Pint1lvl
-		}
-		//	rx.Channels[i].meanPint.Add(rx.Channels[i].Pint)
-	}
-
-}
-
-
-func (rx *PhysReceiver) SlowFading(E geom.Pos) (c float64) {
-	return rx.shadow.evalShadowFading(E.Minus(rx.Pos))
-}
-
-func (rx *PhysReceiver) DoTracking(Connec *list.List) bool {
-
+	//*********************************
+	//Tracking per RB of all active connections
 	if SetReceiverType == BEAM {
 		for i := 0; i < len(rx.Orientation); i++ {
 			rx.Orientation[i] = -1
@@ -312,10 +256,112 @@ func (rx *PhysReceiver) DoTracking(Connec *list.List) bool {
 				}
 			}
 		}
-		return true
+
 	}
 
-	return false
+	//*********************************
+	//Evaluate recevied power
+	for i := 0; i < M; i++ {
+
+		E := &Mobiles[i]
+
+		// inline minus
+		p := geom.Pos{E.X - rx.X, E.Y - rx.Y}
+		//Calculate Distance, Fading parameter K, and Fading
+		//d := rx.DistanceSquare(Mobiles[i].Pos)
+
+
+		d := (p.X*p.X + p.Y*p.Y)
+		d += 2
+		K := 1 / d
+		d *= d
+		fading := rx.shadow.evalShadowFading(p) / d * E.Power
+
+		rx.kk[i] = K
+
+		for rb, use := range E.ARB { // eval power received over each assigned RB
+			// Watch out, here we only eval the powers for these RB and we do not set to 0 the other RB
+			// such that  in interference evaluation we must only add eval 
+			// powers (pr[i]) of RB included in E.ARB vector
+
+			if use {
+
+				// Evaluate Beam Gain
+				gain := float64(1)
+				if rx.Orientation[rb] >= 0 && rb > 0 {
+
+					theta := math.Atan2(p.Y, p.X)
+
+					if theta < 0 {
+						theta += PI2
+					}
+					theta -= rx.Orientation[rb]
+
+					if theta > math.Pi {
+						theta -= PI2
+					} else if theta < -math.Pi {
+						theta += PI2
+					}
+
+					if theta < 0.05 && theta > -0.05 {
+						gain = 10
+					} else {
+						theta /= 1.1345
+						g := 12 * theta * theta
+						if g > 20 {
+							g = 20
+						}
+						gain = math.Pow(10, (-g+10)/10)
+					}
+
+				}
+
+				pr := fading * gain
+
+				rx.Channels[rb].pr[i] = pr
+
+			}
+		}
+	}
+
+	//**************************
+	// Evaluates interference for all channels with overlapping effect,
+	// channel 0 is considered to have no interference as traffic is suppose to only hold minimal signalization 
+
+	for i := 0; i < NCh; i++ {
+		rx.Channels[i].Clear()
+	}
+
+	for i := 0; i < NCh; i++ {
+
+		chR := &rx.Channels[i]
+
+		for e := SystemChan[i].Emitters.Front(); e != nil; e = e.Next() {
+			c := e.Value.(EmitterInt)
+			m := c.GetId()
+			chR.Pint1lvl += chR.pr[m]
+			chR.Push(m, chR.pr[m], rx)
+
+		}
+
+	}
+
+	for i := 0; i < NCh; i++ {
+		rx.Channels[i].Pint = rx.Channels[i].Pint1lvl
+		for _, coc := range SystemChan[i].coIntC {
+			rx.Channels[i].Pint += coc.factor * rx.Channels[coc.c].Pint1lvl
+		}
+	}
+
+}
+
+
+//Slow Fading Generation
+//
+//
+
+func (rx *PhysReceiver) SlowFading(E geom.Pos) (c float64) {
+	return rx.shadow.evalShadowFading(E.Minus(rx.Pos))
 }
 
 
@@ -436,74 +482,6 @@ func (s *shadowMap) evalShadowFadingDirect(d geom.Pos) float64 {
 
 const PI2 = 2 * math.Pi
 
-func (rx *PhysReceiver) GenFastFading() {
-
-	for i := 0; i < M; i++ {
-
-		E := &Mobiles[i]
-
-		// inline minus
-		p := geom.Pos{E.X - rx.X, E.Y - rx.Y}
-		//Calculate Distance, Fading parameter K, and Fading
-		//d := rx.DistanceSquare(Mobiles[i].Pos)
-
-
-		d := (p.X*p.X + p.Y*p.Y)
-		d += 2
-		K := 1 / d
-		d *= d
-		fading := rx.shadow.evalShadowFading(p) / d * E.Power
-
-		rx.kk[i] = K
-
-		for rb, use := range E.ARB { // eval power received over each assigned RB
-			// Watch out, here we only eval the powers for these RB and we do not set to 0 the other RB
-			// such that  in interference evaluation we must only add eval powers (pr[i]) of RB included in E.ARB vector
-
-
-			if use {
-
-				// Evaluate Beam Gain
-
-
-				gain := float64(1)
-				if rx.Orientation[rb] >= 0 && rb > 0 {
-
-					theta := math.Atan2(p.Y, p.X)
-
-					if theta < 0 {
-						theta += PI2
-					}
-					theta -= rx.Orientation[rb]
-
-					if theta > math.Pi {
-						theta -= PI2
-					} else if theta < -math.Pi {
-						theta += PI2
-					}
-
-					if theta < 0.05 && theta > -0.05 {
-						gain = 10
-					} else {
-						theta /= 1.1345
-						g := 12 * theta * theta
-						if g > 20 {
-							g = 20
-						}
-						gain = math.Pow(10, (-g+10)/10)
-					}
-
-				}
-
-				pr := fading * gain
-
-				rx.Channels[rb].pr[i] = pr
-
-			}
-		}
-	}
-
-}
 
 func (rx PhysReceiver) GetK(i int) (k float64) {
 	k = rx.kk[i]
