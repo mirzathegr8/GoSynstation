@@ -17,7 +17,8 @@ powerC.go\
 trace.go\
 physReceiver.go\
 meanStruct.go\
-FadingGen.go
+FadingGen.go\
+agent.go
 
 
 include $(GOROOT)/src/Make.pkg
