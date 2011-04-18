@@ -52,7 +52,7 @@ func DrawReceptionField(dbs []synstation.DBS, name string) {
 					// call to GenFastFading 
 					// on many emitters, and read GetPr
 					//	p := dbs[k].R.Fading(e.Pos, e.Ch)
-					p := dbs[k].R.GetPr(0)
+					p, _ := dbs[k].R.GetPr(0, 0)
 					if p > Pr {
 						Pr = p
 					}

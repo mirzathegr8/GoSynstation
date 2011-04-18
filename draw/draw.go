@@ -126,7 +126,7 @@ func drawP(d *DataSave) {
 
 		var r, g, b, v float32
 
-		if p.BERtotal < synstation.BERThres && p.Ch > 0 {
+		if p.BERtotal < synstation.BERThres && !p.IsSetARB(0) {
 			/*	r = 1.0
 				g = 0.0
 				b = 0.0
@@ -193,7 +193,7 @@ func drawChan(d *DataSave) {
 
 		p := &d.t.Mobs[i]
 
-		if p.Ch == 0 || p.BERtotal > synstation.BERThres { // >= synstation.NCh-5{
+		if p.IsSetARB(0) || p.BERtotal > synstation.BERThres { // >= synstation.NCh-5{
 
 			d.cv.SetColor(r, g, b, 0.2)
 
@@ -232,7 +232,7 @@ func drawVoronoi(d *DataSave) {
 
 			m1 := &d.t.Mobs[m]
 
-			if m1.Ch == Ch {
+			if m1.IsSetARB(Ch) {
 
 				d.cv.SetColor(0, 0, 0, 1)
 				neighB = neighB[0:0]
@@ -243,7 +243,7 @@ func drawVoronoi(d *DataSave) {
 					if j != m {
 						m2 := &d.t.Mobs[j]
 
-						if m2.Ch == Ch {
+						if m2.IsSetARB(Ch) {
 
 							if m1.Pos.Distance(m2.Pos) < 8000 {
 
