@@ -87,11 +87,11 @@ func (e *Emitter) _unsetCh(i int) {
 }
 
 
-func (e *Emitter) GetARB() []bool {
+func (e *EmitterS) GetARB() []bool {
 	return e.ARB[:]
 }
 
-func (e *Emitter) IsSetARB(i int) bool {
+func (e *EmitterS) IsSetARB(i int) bool {
 	return e.ARB[i]
 }
 
@@ -203,9 +203,74 @@ func (M *Emitter) SetPower(P float64) {
 	if P > 1.0 {
 		P = 1.0
 	}
-	if P < 0.01 {
-		P = 0.01
+	if P < 0.001 {
+		P = 0.001
 	}
 	M.Power = P
+}
+
+
+// this function saves Resets temporary variable after saving the Emitter's connection status
+//	and selects the master connection 
+// 	reset power and channel if all connections losts
+// finnaly sents to syncchannel BER level
+func (M *Emitter) FetchData() {
+
+	M.BERtotal, M.Diversity, M.MaxBER, M.InstMaxBER = M.SBERtotal, M.SDiversity, M.SMaxBER, M.SInstMaxBER
+	M.SInstMaxBER, M.SBERtotal, M.SDiversity, M.SMaxBER = 0, 0, 0, 0
+
+	M.TransferRate = 0
+
+	M.Outage++
+	for rb := 1; rb < NCh; rb++ {
+		if M.IsSetARB(rb) {
+			/*M.SBERrb[rb] = 0
+			pe := L1 * math.Exp(-M.SSNRrb[rb]/2/L2) / 2.0
+			for i := 0; i < 10; i++ {
+				M.SBERrb[rb] += math.Pow(1-pe, 1024-float64(i)) *
+					math.Pow(pe, float64(i)) * factorial[i]
+			}
+			M.SBERrb[rb] = 1 - M.SBERrb[rb]*/
+
+			//M.meanBERInstTot.Add(M.SSNRrb[rb]) //for now as we use only 1 rb
+
+			/*if M.Diversity > 0 {
+				M.TransferRate = L1/2.0*math.Exp(-M.SSNRrb[rb]/2/L2) + 1e-40
+			} else {
+				M.TransferRate = 1
+
+			}*/
+
+			M.TransferRate += 80 * math.Log2(1+M.SSNRrb[rb])
+
+			if 100 < M.TransferRate {
+
+				M.Outage = 0
+
+			} else {
+
+				M.TransferRate = 0
+
+			}
+
+		}
+		M.SSNRrb[rb] = 0
+	}
+
+	if M.BERtotal == 0 && !M.IsSetARB(0) {
+		M.MasterConnection = nil
+		M.Power = 1
+		M.ReSetARB()
+	} else if M.MasterConnection != nil {
+		M.MasterConnection.Status = 0 // we are master
+	}
+
+	if M.IsSetARB(0) {
+		SyncChannel <- 0.0
+
+	} else {
+		SyncChannel <- M.BERtotal
+	}
+
 }
 
