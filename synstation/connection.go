@@ -129,7 +129,9 @@ func (Conn *Connection) InitConnection(E EmitterInt, v float64, Rgen *rand.Rand)
 		}
 
 		// initalize filters : sent some values to prevent having empty values z^-n in filters 
-		for l := 0; l < 50; l++ {
+		// 2.5/DopplerF gives a good number of itterations to decorelate initial null variables
+		// and set the channel to a steady state
+		for l := 0; l < int(2.5/DopplerF); l++ {
 			for i := 0; i < 50; i++ {
 				Conn.filterF.nextValue(Conn.Rgen.NormFloat64())
 			}
@@ -203,7 +205,7 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx PhysReceiverInt) {
 	for rb := 0; rb < NCh; rb++ {
 		a := c.filterAr[rb].nextValue(c.initz[0][rb]) + K
 		b := c.filterBr[rb].nextValue(c.initz[1][rb])
-		c.ff_R[rb] = (a*a + b*b) / 2 /// 2141
+		c.ff_R[rb] = (a*a + b*b) / 2
 	}
 
 	for rb, use := range ARB {
@@ -212,19 +214,9 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx PhysReceiverInt) {
 
 			Pr, Rc := rx.GetPr(E.GetId(), rb)
 
-			//c.ff_R[rb] *= Pr
-			//at this moment the 0.0789 is to normalise the c.ff_R ratio to have a Rayleigh of sigma=1
-
 			c.Pr = Pr // to save data to file
 
 			c.SNRrb[rb] = Pr * c.ff_R[rb] / (Rc.Pint - Pr + WNoise)
-
-			/*if c.SNR > 4000 {
-				c.SNR = 4000
-			}*/
-
-			//c.ff_R[rb] = c.SNR
-
 			BER := L1 * math.Exp(-c.SNRrb[rb]/2/L2) / 2.0
 
 			c.meanBER.Add(BER)
