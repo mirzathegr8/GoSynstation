@@ -222,7 +222,7 @@ func save_binary_data(method func(t *s.Trace, i int) float64, m int, channel cha
 
 func SaveToFile(Mobiles []s.Mob) {
 
-	outF, err := os.Open("out.m", os.O_WRONLY|os.O_CREATE, 0666)
+	outF, err := os.Open("out.mat", os.O_WRONLY|os.O_CREATE, 0666)
 
 	fmt.Println(err)
 
@@ -300,6 +300,40 @@ func SaveToFile(Mobiles []s.Mob) {
 	outF.WriteString("\n")
 
 	outF.Close()
+
+}
+
+
+func fadingSave() {
+
+	fadingF, err := os.Open("fading.mat", os.O_WRONLY|os.O_CREATE, 0666)
+	fmt.Println(err)
+	fadingF.WriteString(fmt.Sprintln("# name: fading\n# type: matrix\n# rows: ", s.Duration, "\n# columns: ", s.NCh))
+
+	/////////TODO split in goroutine 
+
+	if s.Mobiles[35].MasterConnection != nil {
+		ffR := s.Mobiles[35].MasterConnection.GetInstantSNIR()
+		buffer := bytes.NewBufferString("")
+		for _, a := range ffR {
+			fmt.Fprint(buffer, a)
+			fmt.Fprint(buffer, " ")
+		}
+		fadingF.WriteString(string(buffer.Bytes()))
+
+	} else {
+
+		buffer := bytes.NewBufferString("")
+		for i := 0; i < s.NCh; i++ {
+			fmt.Fprint(buffer, float64(0.0))
+			fmt.Fprint(buffer, " ")
+		}
+		fadingF.WriteString(string(buffer.Bytes()))
+	}
+
+	fadingF.WriteString("\n")
+
+	fadingF.Close()
 
 }
 
