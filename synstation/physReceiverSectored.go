@@ -36,16 +36,6 @@ func (r *PhysReceiverSectored) GetPos() geom.Pos {
 	return r.R[0].Pos
 }
 
-
-// Evaluates interference for all channels with overlapping effect,
-// channel 0 is considered to have no interference as traffic is suppose to only hold minimal signalization 
-func (rx *PhysReceiverSectored) MeasurePower(tx EmitterInt) {
-	for i := 0; i < 3; i++ {
-		rx.R[i].MeasurePower(tx)
-	}
-}
-
-
 func (r *PhysReceiverSectored) EvalBestSignalSNR(ch int) (Rc *ChanReceiver, SNR float64) {
 	var e [3]float64
 	var R [3]*ChanReceiver
@@ -55,21 +45,6 @@ func (r *PhysReceiverSectored) EvalBestSignalSNR(ch int) (Rc *ChanReceiver, SNR 
 	}
 	ir := findMax(e[:])
 	return R[ir], e[ir]
-
-	/*Rc = &r.R[0].Channels[ch]
-	SNR = 0
-
-	if Rc.Signal != nil {
-
-		if ch == 0 {
-			SNR = Rc.PrMax / 1e-15 //WNoise
-		} else {
-			SNR = Rc.PrMax / (Rc.Pint - Rc.PrMax + WNoise)
-		}
-
-	}
-
-	return*/
 
 }
 
@@ -152,14 +127,9 @@ func findMin(arr []float64) int {
 }
 
 
-func (rx *PhysReceiverSectored) DoTracking(Connec *list.List) bool {
-	return false
-}
-
-
-func (rx *PhysReceiverSectored) GenFastFading() {
+func (rx *PhysReceiverSectored) Compute(Connec *list.List) {
 	for i := range rx.R {
-		rx.R[i].GenFastFading()
+		rx.R[i].Compute(Connec)
 	}
 }
 
