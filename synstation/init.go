@@ -11,6 +11,7 @@ var SyncChannel chan float64
 var Synstations [D]DBS
 var Mobiles [M]Mob
 
+var Agents [D + M]Agent
 
 var CoherenceFilter FilterInt
 
@@ -19,6 +20,13 @@ func init() {
 	SyncChannel = make(chan float64, 100000)
 	Rgen = rand.New(rand.NewSource(123813541954235))
 	Rgen2 = rand.New(rand.NewSource(12384235))
+
+	for i := range Mobiles {
+		Agents[i] = &Mobiles[i]
+	}
+	for i := range Synstations {
+		Agents[i+M] = &Synstations[i]
+	}
 
 	// create channels
 	SystemChan = make([]*channel, NCh)
@@ -89,11 +97,6 @@ var Rgen2 *rand.Rand //one used to init shadow maps
 //different rndvar are used to ensure repeatability of position with or without shadow maps
 
 
-func Sync(k int) {
-	for n := 0; n < k; n++ {
-		<-SyncChannel
-	}
-}
 
 func Init() {
 
@@ -102,6 +105,8 @@ func Init() {
 	}
 	//sync
 	Sync(D)
+
+	ChannelHop() //Set Mobile's initial channel
 
 }
 
