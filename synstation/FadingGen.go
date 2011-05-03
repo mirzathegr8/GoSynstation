@@ -11,6 +11,7 @@ const cel = 3 * 10e8 //vitesse de propagation en m/s
 
 type FilterInt interface {
 	nextValue(input float64) (output float64)
+	nextValues(input []float64) []float64
 	InitRandom(Rgen *rand.Rand)
 	InitZ(z []float64)
 	Copy() FilterInt
@@ -22,6 +23,10 @@ type PassNull struct{}
 func (p *PassNull) nextValue(input float64) (output float64) {
 	return 1 // to compensate  
 }
+func (p *PassNull) nextValues(input []float64) []float64 {
+	return input
+}
+
 func (p *PassNull) InitRandom(Rgen *rand.Rand) {}
 func (f *PassNull) InitZ(z []float64)          {}
 
@@ -51,6 +56,24 @@ func (f *Filter) nextValue(input float64) (output float64) {
 	}
 
 	return
+}
+
+
+func (f *Filter) nextValues(Input []float64) []float64 {
+
+	for k, input := range Input {
+		f.z[0] = input //* f.a[0]
+		for i := 1; i < len(f.a); i++ {
+			f.z[0] -= f.a[i] * f.z[i]
+		}
+		for i := 0; i < len(f.b); i++ {
+			Input[k] += f.b[i] * f.z[i]
+		}
+		for i := len(f.z) - 1; i > 0; i-- {
+			f.z[i] = f.z[i-1]
+		}
+	}
+	return Input
 }
 
 
