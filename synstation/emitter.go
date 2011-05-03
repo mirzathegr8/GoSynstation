@@ -9,7 +9,7 @@ import "math"
 type EmitterS struct {
 	geom.Pos
 	Power float64 // current emitted power
-	//Ch         int     // current channel used
+
 	BERtotal   float64
 	Diversity  int
 	Requested  float64
@@ -37,6 +37,7 @@ type Emitter struct {
 
 	SBERrb [NCh]float64
 	SSNRrb [NCh]float64
+	SNRrb  [NCh]float64
 
 	MasterConnection *Connection
 
@@ -45,6 +46,8 @@ type Emitter struct {
 	Id int
 
 	Speed [2]float64
+
+	meanTR MeanData
 }
 
 
@@ -62,6 +65,7 @@ type EmitterInt interface {
 	IsSetARB(i int) bool
 	GetFirstRB() int
 	ReSetARB()
+	GetNumARB() int
 
 	PowerDelta(float64)
 	SetPower(float64)
@@ -72,7 +76,20 @@ type EmitterInt interface {
 	_setCh(i int)
 	_unsetCh(i int)
 	GetSpeed() float64
+
+	GetSNRrb(rb int) float64
+
+	GetMeanTR() float64
 }
+
+func (e *Emitter) GetMeanTR() float64 {
+	return e.meanTR.Get()
+}
+
+func (e *Emitter) GetSNRrb(rb int) float64 {
+	return e.SNRrb[rb]
+}
+
 
 func (e *Emitter) GetSpeed() float64 {
 	return math.Sqrt(e.Speed[0]*e.Speed[0] + e.Speed[1]*e.Speed[1])
@@ -124,6 +141,14 @@ func (e *Emitter) ReSetARB() {
 
 }
 
+func (e *EmitterS) GetNumARB() (n int) {
+	for i := 0; i < NCh; i++ {
+		if e.ARB[i] {
+			n++
+		}
+	}
+	return
+}
 
 func (e *Emitter) GetId() int {
 	return e.Id
@@ -146,11 +171,6 @@ func (e *Emitter) GetPower() float64 {
 }
 
 
-// channel used by channels change thread to inform emitter that channel hop has been applied
-/*func (e *Emitter) isdone() chan int {
-	return e.done
-}*/
-
 // function called by connections to inform BER quality of a link to the emitter
 func (e *Emitter) AddConnection(c *Connection) {
 
@@ -172,10 +192,10 @@ func (e *Emitter) AddConnection(c *Connection) {
 		//for test with selection diversity
 
 		if DiversityType == SELECTION {
-			for rb, use := range e.ARB {
-				if use {
-					e.SSNRrb[rb] = c.SNRrb[rb]
-				}
+			for rb := range e.ARB {
+				//if use {
+				e.SSNRrb[rb] = c.SNRrb[rb]
+				//}
 			}
 		}
 
@@ -183,10 +203,10 @@ func (e *Emitter) AddConnection(c *Connection) {
 
 	// for maximal RC
 	if DiversityType == MRC {
-		for rb, use := range e.ARB {
-			if use {
-				e.SSNRrb[rb] += c.SNRrb[rb]
-			}
+		for rb := range e.ARB {
+			//if use {
+			e.SSNRrb[rb] += c.SNRrb[rb]
+			//}
 		}
 	}
 }
@@ -223,6 +243,7 @@ func (M *Emitter) FetchData() {
 
 	M.Outage++
 	for rb := 1; rb < NCh; rb++ {
+
 		if M.IsSetARB(rb) {
 			/*M.SBERrb[rb] = 0
 			pe := L1 * math.Exp(-M.SSNRrb[rb]/2/L2) / 2.0
@@ -241,32 +262,44 @@ func (M *Emitter) FetchData() {
 
 			}*/
 
-			M.TransferRate += 80 * math.Log2(1+M.SSNRrb[rb])
+			TransferRate := 80 * math.Log2(1+M.SSNRrb[rb])
 
-			if 100 < M.TransferRate {
+			if 100 < TransferRate {
 
 				M.Outage = 0
+				if TransferRate > 10000 {
+					TransferRate = 10000
+				}
 
 			} else {
 
-				M.TransferRate = 0
+				TransferRate = 0
 
 			}
 
+			M.TransferRate += TransferRate
+
 		}
-		M.SSNRrb[rb] = 0
+		M.SNRrb[rb], M.SSNRrb[rb] = M.SSNRrb[rb], 0
 	}
 
-	if M.BERtotal == 0 && !M.IsSetARB(0) {
+	M.meanTR.Add(M.TransferRate)
+
+	if M.BERtotal == 0 && !M.IsSetARB(0) || M.MasterConnection == nil {
 		M.MasterConnection = nil
 		M.Power = 1
-		M.ReSetARB()
+		M.ReSetARB() //That probably could run in conflicts. have to modify unset/setarb to only send one copy of emitter in channel if called multiple times
 	} else if M.MasterConnection != nil {
 		M.MasterConnection.Status = 0 // we are master
 	}
 
 	if M.IsSetARB(0) {
-		SyncChannel <- 0.0
+
+		if M.BERtotal == 0 {
+			SyncChannel <- 0.0 //not even listened to
+		} else {
+			SyncChannel <- 1 //listen to but not connected
+		}
 
 	} else {
 		SyncChannel <- M.BERtotal
