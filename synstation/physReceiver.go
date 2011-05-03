@@ -7,7 +7,7 @@ import "fmt"
 import "rand"
 
 // number of signal id saved in the list of the ChanReceiver
-const SizeES = 10
+const SizeES = 2
 
 // Structure to hold interference level for a RB, and multilevel interference with overlaping channels calculation
 // as well as a list of ordered strongest signal received 
@@ -84,6 +84,9 @@ type PhysReceiverInt interface {
 
 	GetPr(i, rb int) (p float64, Rc *ChanReceiver)
 	GetK(i int) (p float64)
+	GetPrBase(i int) (p float64)
+
+	GetPhysReceiver(i int) *PhysReceiver
 }
 
 
@@ -97,6 +100,7 @@ type PhysReceiver struct {
 	Rgen        *rand.Rand
 
 	kk [M]float64 //stores received power
+	pr [M]float64 //stores base level received power
 }
 
 
@@ -202,8 +206,10 @@ func (r *PhysReceiver) EvalSignalSNR(e EmitterInt, rb int) (Rc *ChanReceiver, SN
 		Pr = Rc.pr[e.GetId()]
 
 	} else { //we supose we will get the same power out of the other channel (fading aside)
-		RcO := &r.Channels[e.GetFirstRB()]
-		Pr = RcO.pr[e.GetId()]
+		//RcO := &r.Channels[e.GetFirstRB()]
+		//Pr = RcO.pr[e.GetId()]
+		Pr = r.pr[e.GetId()]
+
 	}
 	switch {
 	case rb == 0: //this channel is the obsever channel to follow Mobiles while they are not assigned a channel
@@ -275,9 +281,11 @@ func (rx *PhysReceiver) Compute(Connec *list.List) {
 		d += 2
 		K := 1 / d
 		d *= d
-		fading := rx.shadow.evalShadowFading(p) / d * E.Power
 
 		rx.kk[i] = K
+		rx.pr[i] = rx.shadow.evalShadowFading(p) / d * E.Power
+
+		prRB := rx.pr[i] / float64(E.GetNumARB())
 
 		for rb, use := range E.ARB { // eval power received over each assigned RB
 			// Watch out, here we only eval the powers for these RB and we do not set to 0 the other RB
@@ -316,9 +324,7 @@ func (rx *PhysReceiver) Compute(Connec *list.List) {
 
 				}
 
-				pr := fading * gain
-
-				rx.Channels[rb].pr[i] = pr
+				rx.Channels[rb].pr[i] = prRB * gain
 
 			}
 		}
@@ -483,8 +489,14 @@ func (s *shadowMap) evalShadowFadingDirect(d geom.Pos) float64 {
 const PI2 = 2 * math.Pi
 
 
+//Returns K value and base level received power (used for estimating potential on other channels)
 func (rx PhysReceiver) GetK(i int) (k float64) {
 	k = rx.kk[i]
+	return
+}
+
+func (rx PhysReceiver) GetPrBase(i int) (p float64) {
+	p = rx.pr[i]
 	return
 }
 
@@ -492,5 +504,9 @@ func (rx PhysReceiver) GetPr(i, rb int) (p float64, Rc *ChanReceiver) {
 	Rc = &rx.Channels[rb]
 	p = Rc.pr[i]
 	return
+}
+
+func (r *PhysReceiver) GetPhysReceiver(i int) *PhysReceiver {
+	return r
 }
 
