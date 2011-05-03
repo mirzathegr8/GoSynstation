@@ -66,7 +66,7 @@ func (dbs *DBS) RunPhys() {
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
-		c.BitErrorRate(dbs.R)
+		c.BitErrorRate(dbs.R.GetPhysReceiver(c.GetE().GetId()), dbs)
 
 	}
 
@@ -165,8 +165,11 @@ func (dbs *DBS) RunAgent() {
 
 	if dbs.Clock == 0 {
 
-		dbs.channelHopping()
-		//dbs.ARBScheduler()
+		if BWallocation == CHHOPPING {
+			dbs.channelHopping()
+		} else {
+			dbs.ARBScheduler()
+		}
 
 		dbs.connectionAgent()
 
@@ -566,11 +569,14 @@ func (dbs *DBS) optimizePowerAllocation() {
 
 			var b, need, delta, alpha float64
 
-			b = M.BERT() / M.Req()
-			//b = M.BERT() / M.Req()/meanPtotPd;
-			b = b //* 1.5
+			b = M.BERT() / M.Req() // meanPtotPd
+			//b = M.BERT() / M.Req() / meanPtotPd
+			b = b * 1.5
 			alpha = 1.0
 			need = 2.0*math.Exp(-b)*(b+1.0) - 1.0
+
+			//need = .5 - math.Atan(5*(b-1))/math.Pi
+
 			delta = math.Pow(geom.Abs(need), 1) *
 				math.Pow(M.GetPower(), 1) *
 				geom.Sign(need-M.GetPower()) * alpha *
@@ -640,16 +646,127 @@ func (dbs *DBS) optimizePowerAllocationSimple() {
 
 }
 
-/*
+
+//Minimum Area-Difference to the Envelope
+
+
 func (dbs *DBS) ARBScheduler() {
 
-	for i, e := 0, dbs.Connec.Front(); e != nil; e = e.Next() {
+	var Metric [NConnec][NCh]float64
+
+	//var MobilesID [NConnec]int
+
+	// Eval Metric for all connections
+	for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
+
 		c := e.Value.(*Connection)
+		E := c.GetE()
 
 		if c.Status == 0 {
 
-			i++
+			for rb := 1; rb < NCh; rb++ {
 
+				var snrrb float64
+				if DiversityType == SELECTION {
+					snrrb = c.SNRrb[rb]
+				} else {
+					snrrb = E.GetSNRrb(rb)
+				}
+
+				m := 80 * math.Log2(1+snrrb)
+				m_m := c.GetE().GetMeanTR()
+
+				if m > 100 && m_m < 100000026000 {
+					Metric[i][rb] = math.Log2(m + 1)
+					b := (m_m + 1)
+					if b > 1 {
+						Metric[i][rb] /= b
+					}
+
+					//Metric[i][rb] = m / c.GetE().GetMeanTR())
+					//Metric[i][rb] = math.Log2(math.Log2(1 + c.ff_R[rb])) //* c.GetE().Req() / c.GetE().BERT()
+				} else {
+					Metric[i][rb] = 0
+				}
+
+			}
+
+		}
+
+	}
+
+	//fmt.Println(Metric)
+
+	//Assign RB for master connections
+
+	var AL [NCh]int
+
+	var NumAss [NConnec]int
+
+	//First assign RB to best Metric
+	for rb := 1; rb < NCh; rb++ {
+		AL[rb] = -1
+		for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
+			c := e.Value.(*Connection)
+			if c.Status == 0 {
+				if Metric[i][rb] > 0.001 {
+					if AL[rb] < 0 {
+						AL[rb] = i
+					} else if Metric[i][rb] > Metric[AL[rb]][rb] {
+						AL[rb] = i
+					}
+				}
+			}
+		}
+		if AL[rb] >= 0 {
+			NumAss[AL[rb]]++ //this emitter will have one more assigned RB
+			for rb2 := 1; rb2 < NCh; rb2++ {
+				Metric[AL[rb]][rb2] *= float64(NumAss[AL[rb]]) / float64(NumAss[AL[rb]]+1)
+			}
+		}
+	}
+	//do not allocate RB for which capacity is too low // interference management
+	/*for rb := 0; rb < NCh; rb++ {
+		if Metric[AL[rb]][rb] < math.Log2(80) {
+			AL[rb] = -1
+		}
+
+	}*/
+
+	//Allocate RB effectivelly
+
+	AL[0] = -1 // connect all
+	for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
+		c := e.Value.(*Connection)
+		E := c.GetE()
+		if c.Status == 0 {
+			if E.IsSetARB(0) {
+				E.UnSetARB(0)
+			}
+
+		}
+	}
+	for rb := 1; rb < NCh; rb++ {
+		if AL[rb] >= 0 {
+			for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
+				c := e.Value.(*Connection)
+				E := c.GetE()
+
+				if c.Status == 0 {
+
+					if E.IsSetARB(rb) {
+						if AL[rb] != i {
+							E.UnSetARB(rb)
+						}
+					} else {
+						if AL[rb] == i {
+							E.SetARB(rb)
+							Hopcount++
+
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -704,5 +821,4 @@ func (v vectorFloat64) mean() float64 {
 	}
 	return a
 }
-*/
 
