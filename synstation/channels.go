@@ -13,8 +13,6 @@ type channel struct {
 	Remove chan EmitterInt // channel to inform change of emitter
 
 	added, removed int //counter
-
-	//done chan int
 }
 
 
@@ -23,8 +21,6 @@ func (c *channel) Init(i int) {
 	c.Emitters = list.New()
 	c.Change = make(chan EmitterInt, M+10)
 	c.Remove = make(chan EmitterInt, M+10)
-
-	//c.done = make(chan int)
 
 }
 
@@ -56,9 +52,16 @@ func (ch *channel) remove(er EmitterInt) {
 
 }
 
+// counters to know how many mobiles where added / removed from RB
 var countp, countm int
 
-func (ch *channel) ChangeChan() {
+// counters to observe how many mobiles or added or removed from a channel
+// usefull for channel 0 to know how many mobiles where disconnected
+func (ch *channel) GetAdded() int   { a := ch.added; ch.added = 0; return a }
+func (ch *channel) GetRemoved() int { a := ch.removed; ch.removed = 0; return a }
+
+
+func (ch *channel) AddToChan() {
 
 	for true {
 
@@ -118,18 +121,12 @@ func ChannelHop() {
 
 	for i := range SystemChan {
 		SystemChan[i].Change <- nil
-		go SystemChan[i].ChangeChan()
+		go SystemChan[i].AddToChan()
 
 	}
 	for i := 0; i < NCh; i++ {
 		_ = <-SyncChannel
 	}
 
-	//fmt.Println(" Count ", countp, countm)
-
 }
-// counters to observe how many mobiles or added or removed from a channel
-// usefull for channel 0 to know how many mobiles where disconnected
-func (ch *channel) GetAdded() int   { a := ch.added; ch.added = 0; return a }
-func (ch *channel) GetRemoved() int { a := ch.removed; ch.removed = 0; return a }
 
