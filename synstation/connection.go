@@ -34,7 +34,6 @@ type Connection struct {
 
 	initz [2][NCh]float64 //generation of random number per RB	
 
-	//BERrb   [NCh]float64 //stores results BER
 }
 
 // for output to save
@@ -57,7 +56,7 @@ func (c *ConnectionS) Copy(cc *Connection) {
 }
 
 type ConnecType interface {
-	BitErrorRate(rx PhysReceiverInt)
+	BitErrorRate(rx *PhysReceiver, dbs *DBS)
 	EvalRatioConnect() float64
 	EvalRatioDisconnect() float64
 	GetE() EmitterInt
@@ -66,8 +65,6 @@ type ConnecType interface {
 	GetSNR() float64
 
 	GetInstantSNIR() []float64
-
-	//EvalInstantBER(E EmitterInt, rx PhysReceiverInt) (Rate, BER, SNR, Pr float64)
 }
 
 func (co *Connection) GetE() EmitterInt { return co.E }
@@ -75,9 +72,9 @@ func (co *Connection) GetPr() float64   { return co.Pr }
 func (co *Connection) GetSNR() float64  { return co.SNR }
 
 
-func (co *Connection) BitErrorRate(rx PhysReceiverInt) {
+func (co *Connection) BitErrorRate(rx *PhysReceiver, dbs *DBS) {
 
-	co.evalInstantBER(co.GetE(), rx)
+	co.evalInstantBER(co.GetE(), rx, dbs)
 
 	co.Status = 1 //let mobile set master state		
 	co.E.AddConnection(co)
@@ -129,25 +126,27 @@ func (Conn *Connection) InitConnection(E EmitterInt, v float64, Rgen *rand.Rand)
 		}
 
 		// initalize filters : sent some values to prevent having empty values z^-n in filters 
-		// 2.5/DopplerF gives a good number of itterations to decorelate initial null variables
-		// and set the channel to a steady state
-		for l := 0; l < int(2.5/DopplerF); l++ {
-			for i := 0; i < 50; i++ {
+		// 1.5/DopplerF gives a good number of itterations to decorelate initial null variables
+		// and set the channel to a steady state		
+
+		for l := 0; l < int(1.5/DopplerF); l++ {
+
+			// for speed optimization, decorelation samples or not used, it makes little difference 
+			/*for i := 0; i < 50; i++ {
 				Conn.filterF.nextValue(Conn.Rgen.NormFloat64())
-			}
-			for i := 0; i < NCh; i++ {
-				Conn.initz[0][i] = Conn.filterF.nextValue(Conn.Rgen.NormFloat64())
-			}
-			for i := 0; i < 50; i++ {
-				Conn.filterF.nextValue(Conn.Rgen.NormFloat64())
-			}
-			for i := 0; i < NCh; i++ {
-				Conn.initz[1][i] = Conn.filterF.nextValue(Conn.Rgen.NormFloat64())
-			}
+			}*/
 
 			for i := 0; i < NCh; i++ {
-				Conn.filterAr[i].nextValue(Conn.initz[0][i])
-				Conn.filterBr[i].nextValue(Conn.initz[1][i])
+				Conn.filterAr[i].nextValue(Conn.filterF.nextValue(Conn.Rgen.NormFloat64()))
+			}
+
+			// for speed optimization, decorelation samples or not used, it makes little difference 
+			/*for i := 0; i < 50; i++ {
+				Conn.filterF.nextValue(Conn.Rgen.NormFloat64())
+			}*/
+
+			for i := 0; i < NCh; i++ {
+				Conn.filterAr[i].nextValue(Conn.filterF.nextValue(Conn.Rgen.NormFloat64()))
 			}
 
 		}
@@ -169,9 +168,11 @@ func (co *Connection) GetLogMeanBER() float64 {
 
 
 //This function is only called once per iteration, so it is where the FF value is generated
-func (c *Connection) evalInstantBER(E EmitterInt, rx PhysReceiverInt) {
+func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 
 	ARB := E.GetARB()
+
+	c.SNR = 0 //reset
 
 	if E.IsSetARB(0) {
 		_, c.BER, c.SNR, c.Pr = rx.EvalSignalBER(E, 0)
@@ -182,6 +183,8 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx PhysReceiverInt) {
 		return
 	}
 
+	K := rx.GetK(E.GetId())
+
 	//Generate DopplerFading
 	//pass some values to decorelate
 	for i := 0; i < 50; i++ {
@@ -191,6 +194,7 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx PhysReceiverInt) {
 	for i := 0; i < NCh; i++ {
 		c.initz[0][i] = c.filterF.nextValue(c.Rgen.NormFloat64())
 	}
+
 	//pass some values to decorelate
 	for i := 0; i < 50; i++ {
 		c.filterF.nextValue(c.Rgen.NormFloat64())
@@ -200,31 +204,82 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx PhysReceiverInt) {
 		c.initz[1][i] = c.filterF.nextValue(c.Rgen.NormFloat64())
 	}
 
-	K := rx.GetK(E.GetId())
-
 	for rb := 0; rb < NCh; rb++ {
 		a := c.filterAr[rb].nextValue(c.initz[0][rb]) + K
 		b := c.filterBr[rb].nextValue(c.initz[1][rb])
-		c.ff_R[rb] = (a*a + b*b) / 2
+		c.ff_R[rb] = (a*a + b*b) / (2 + K*K)
 	}
+
+	/*for rb := 0; rb < NCh; rb++ {
+		//a := c.filterAr[rb].nextValue(c.initz[0][rb]) + K
+		b := c.filterBr[rb].nextValue(c.filterF.nextValue(c.Rgen.NormFloat64()))
+		c.ff_R[rb] = (c.ff_R[rb] + b*b) / (2 + K*K)
+	}
+	*/
+	/*for rb := 0; rb < NCh; rb++ {
+		a := c.filterAr[rb].nextValue(c.filterF.nextValue(c.Rgen.NormFloat64())) + K
+		//b := c.filterBr[rb].nextValue(c.initz[1][rb])
+		c.ff_R[rb] = a * a
+	}*/
+
+	var touch bool
+
+	prbase := rx.pr[E.GetId()]
+
+	//RcBase := rx.GetRcBase(E.GetId())
 
 	for rb, use := range ARB {
 
+		Rc := &rx.Channels[rb]
+
 		if use {
 
-			Pr, Rc := rx.GetPr(E.GetId(), rb)
+			//Pr, Rc := rx.GetPr(E.GetId(), rb)
+
+			Pr := Rc.pr[E.GetId()]
 
 			c.Pr = Pr // to save data to file
 
 			c.SNRrb[rb] = Pr * c.ff_R[rb] / (Rc.Pint - Pr + WNoise)
 			BER := L1 * math.Exp(-c.SNRrb[rb]/2/L2) / 2.0
 
-			c.meanBER.Add(BER)
 			c.meanPr.Add(Pr)
-			c.meanSNR.Add(c.SNR)
+			c.meanSNR.Add(c.SNRrb[rb])
+			c.meanBER.Add(BER)
+			c.SNR += c.SNRrb[rb]
 
-			c.SNR = c.SNRrb[rb]
+			touch = true
+		} else {
+
+			//In case not using the RB, we eval the SNR on this rb using the base power level
+			// that is the power received if not using beam forming
+			// TODO, evaluate what would happen if estimating Pr with 10db gain for beam forming
+			// thing is however, we can not evaluate interference with different beam shape
+			// maybe we can suppose *estimate* interference of Pint*size_beam/360 with +10dB
+			//_, Rc := rx.GetPr(E.GetId(), rb)
+
+			/*if !dbs.IsInUse(rb) && SetReceiverType == BEAM { //!dbs.IsInUse(rb) if orientation < 0, not in use
+				c.SNRrb[rb] = 10 * prbase * c.ff_R[rb] / (3.333*Rc.Pint + WNoise)
+			} else { // else in use
+				c.SNRrb[rb] = 10 * prbase * c.ff_R[rb] / (Rc.Pint - Rc.pr[Rc.Signal[0]]/2 + WNoise) // else it is in use
+				// and we can suppose that the first signal is listened too and of course will not be emitting on this RB 						anymore if it is assigned to the current mobiles
+			}*/
+
+			c.SNRrb[rb] = prbase * c.ff_R[rb] / (Rc.Pint + WNoise)
+
+			if SetReceiverType == BEAM {
+				c.SNRrb[rb] *= 3
+			}
+
+			//c.SNRrb[rb] =  10* prbase * c.ff_R[rb] / (3*Rc.Pint + WNoise)
+
 		}
+	}
+	if !touch { // add null to mean BER
+		c.meanPr.Add(0)
+		c.meanSNR.Add(0)
+		c.SNR = 0
+		c.meanBER.Add(0)
 	}
 
 	return
