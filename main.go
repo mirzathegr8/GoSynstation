@@ -15,10 +15,7 @@ var outDs outputData // one to sum and take mean over simulation
 
 func main() {
 
-	runtime.GOMAXPROCS(14)
-
-	// initialize var
-	outChannel = make(chan outputData, 8000)
+	runtime.GOMAXPROCS(8)
 
 	s.Init()
 
@@ -31,12 +28,14 @@ func main() {
 	fmt.Println("Start Simulation")
 
 	// precondition
-	for k = -1000; k < 0; k++ {
+	for k = -200; k < 0; k++ {
 		s.GoRunPhys()
 		s.GoFetchData()
 		readDataAndPrintToStd(false)
 		s.GoRunAgent()
 		s.ChannelHop()
+
+		//s.PowerC(s.Synstations[:]) //centralized PowerAllocation
 	}
 
 	// simu
@@ -46,6 +45,8 @@ func main() {
 		readDataAndPrintToStd(true)
 		s.GoRunAgent()
 		s.ChannelHop()
+
+		//s.PowerC(s.Synstations[:]) // centralized PowerAllocation
 	}
 
 	// Print some status data
@@ -79,7 +80,7 @@ func main() {
 
 func readDataAndPrintToStd(save bool) {
 
-	outD.connected, outD.BER1, outD.BER2, outD.BER3 = 0, 0, 0, 0
+	outD.listened, outD.connected, outD.BER1, outD.BER2, outD.BER3 = 0, 0, 0, 0, 0
 
 	n := 0
 	for v := range s.SyncChannel {
@@ -98,6 +99,9 @@ func readDataAndPrintToStd(save bool) {
 			fallthrough
 		case v < -0.01:
 			outD.connected++
+			fallthrough
+		case v != 0:
+			outD.listened++
 		}
 		if n >= s.M {
 			break
@@ -113,8 +117,6 @@ func readDataAndPrintToStd(save bool) {
 	outD.d_lost = float64(s.GetLostConnect())
 	outD.HopCount = float64(s.GetHopCount())
 
-	outDs.Add(&outD)
-
 	outD.k = float64(k)
 	if k%10 == 0 {
 		outChannel <- outD //sent data to print to  stdout			
@@ -125,6 +127,7 @@ func readDataAndPrintToStd(save bool) {
 	}*/
 
 	if save {
+		outDs.Add(&outD)
 		t := s.CreateTrace(s.Mobiles[:], s.Synstations[:], k)
 		//draw.Draw(t)
 		sendTrace(t)
