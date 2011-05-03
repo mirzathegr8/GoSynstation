@@ -159,3 +159,30 @@ func (r *PhysReceiverSectored) GetK(mi int) (k float64) {
 
 }
 
+//TODO
+func (r *PhysReceiverSectored) GetPrBase(mi int) (k float64) {
+
+	/*var b [3]float64
+	for i := range b {
+		b[i] = r.R[i].Channels[ch].pr[mi]
+	}
+	ir := findMax(b[:])*/
+	// TODO, figuree out if AOA of line of sight is a problem here or not
+	return r.R[0].pr[mi]
+
+}
+
+
+func (r *PhysReceiverSectored) GetPhysReceiver(mi int) *PhysReceiver {
+	var b [3]float64
+	ch := Mobiles[mi].GetFirstRB()
+	if ch < 0 {
+		ch = 0
+	}
+	for i := range b {
+		b[i] = r.R[i].Channels[ch].pr[mi]
+	}
+	ir := findMax(b[:])
+	return &r.R[ir]
+}
+
