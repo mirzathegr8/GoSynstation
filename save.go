@@ -10,6 +10,8 @@ import "unsafe"
 
 var syncsavech chan int
 
+var fadingChan chan int
+
 var saveData vector.Vector
 
 func init() {
@@ -26,6 +28,10 @@ func init() {
 	saveData.Push(CreateStart(Ptxr, s.M, "Ptxr"))
 	saveData.Push(CreateStart(PrMaster, s.M, "PrMaster"))
 	saveData.Push(CreateStart(TransferRate, s.M, "TransferRate"))
+	saveData.Push(CreateStart(NumARB, s.M, "NumARB"))
+
+	fadingChan = make(chan int)
+	go fadingSave(fadingChan)
 
 }
 
@@ -56,6 +62,7 @@ func Outage(t *s.Trace, i int) float64       { return float64(t.Mobs[i].Outage) 
 func Ptxr(t *s.Trace, i int) float64         { return float64(t.Mobs[i].Power) }
 func PrMaster(t *s.Trace, i int) float64     { return float64(t.Mobs[i].PrMaster) }
 func TransferRate(t *s.Trace, i int) float64 { return float64(t.Mobs[i].TransferRate) }
+func NumARB(t *s.Trace, i int) float64       { return float64(t.Mobs[i].GetNumARB()) }
 
 
 func WriteDataToFile(method func(t *s.Trace, i int) float64, m int, channel chan *s.Trace, file string) {
@@ -93,6 +100,8 @@ func StopSave() {
 		a := saveData.At(i).(saveTraceItem)
 		a.Stop()
 	}
+
+	close(fadingChan)
 }
 
 func sendTrace(t *s.Trace) {
@@ -101,6 +110,11 @@ func sendTrace(t *s.Trace) {
 		a := saveData.At(i).(saveTraceItem)
 		a.save <- t
 	}
+
+	//
+	fadingChan <- 1
+	<-fadingChan
+
 }
 
 
@@ -162,6 +176,7 @@ func sendTrace(t *s.Trace) {
 // to be called. FILENAME is used for error messages.
 func save_binary_data(method func(t *s.Trace, i int) float64, m int, channel chan *s.Trace, file string) {
 
+	os.Remove(file + ".mat")
 	os, err := os.Open(file+".mat", os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return
@@ -304,34 +319,37 @@ func SaveToFile(Mobiles []s.Mob) {
 }
 
 
-func fadingSave() {
+func fadingSave(c chan int) {
 
+	os.Remove("fading.mat")
 	fadingF, err := os.Open("fading.mat", os.O_WRONLY|os.O_CREATE, 0666)
 	fmt.Println(err)
 	fadingF.WriteString(fmt.Sprintln("# name: fading\n# type: matrix\n# rows: ", s.Duration, "\n# columns: ", s.NCh))
 
-	/////////TODO split in goroutine 
+	for _ = range c {
 
-	if s.Mobiles[35].MasterConnection != nil {
-		ffR := s.Mobiles[35].MasterConnection.GetInstantSNIR()
-		buffer := bytes.NewBufferString("")
-		for _, a := range ffR {
-			fmt.Fprint(buffer, a)
-			fmt.Fprint(buffer, " ")
+		if s.Mobiles[35].MasterConnection != nil {
+			ffR := s.Mobiles[35].MasterConnection.GetInstantSNIR()
+			buffer := bytes.NewBufferString("")
+			for _, a := range ffR {
+				fmt.Fprint(buffer, a)
+				fmt.Fprint(buffer, " ")
+			}
+			fadingF.WriteString(string(buffer.Bytes()))
+
+		} else {
+
+			buffer := bytes.NewBufferString("")
+			for i := 0; i < s.NCh; i++ {
+				fmt.Fprint(buffer, float64(0.0))
+				fmt.Fprint(buffer, " ")
+			}
+			fadingF.WriteString(string(buffer.Bytes()))
 		}
-		fadingF.WriteString(string(buffer.Bytes()))
 
-	} else {
-
-		buffer := bytes.NewBufferString("")
-		for i := 0; i < s.NCh; i++ {
-			fmt.Fprint(buffer, float64(0.0))
-			fmt.Fprint(buffer, " ")
-		}
-		fadingF.WriteString(string(buffer.Bytes()))
+		fadingF.WriteString("\n")
+		c <- 1
 	}
-
-	fadingF.WriteString("\n")
 
 	fadingF.Close()
 
