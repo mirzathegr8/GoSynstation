@@ -259,19 +259,23 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 			//_, Rc := rx.GetPr(E.GetId(), rb)
 
 			/*if !dbs.IsInUse(rb) && SetReceiverType == BEAM { //!dbs.IsInUse(rb) if orientation < 0, not in use
-				c.SNRrb[rb] = 10 * prbase * c.ff_R[rb] / (3.333*Rc.Pint + WNoise)
+				c.SNRrb[rb] = 9 * prbase * c.ff_R[rb] / (3.333*Rc.Pint + WNoise)
 			} else { // else in use
-				c.SNRrb[rb] = 10 * prbase * c.ff_R[rb] / (Rc.Pint - Rc.pr[Rc.Signal[0]]/2 + WNoise) // else it is in use
+
+				c.SNRrb[rb] = 9 * prbase * c.ff_R[rb] / (1.5*(Rc.Pint) + WNoise) // else it is in use
 				// and we can suppose that the first signal is listened too and of course will not be emitting on this RB 						anymore if it is assigned to the current mobiles
 			}*/
 
 			c.SNRrb[rb] = prbase * c.ff_R[rb] / (Rc.Pint + WNoise)
-
-			if SetReceiverType == BEAM {
-				c.SNRrb[rb] *= 3
+			div := E.GetNumARB()
+			if div > 1 {
+				c.SNRrb[rb] /= float64(div)
 			}
 
-			//c.SNRrb[rb] =  10* prbase * c.ff_R[rb] / (3*Rc.Pint + WNoise)
+			//if SetReceiverType == BEAM && !dbs.IsInUse(rb) {
+			c.SNRrb[rb] *= 0.8 //}
+
+			//c.SNRrb[rb] = 10 * prbase * c.ff_R[rb] / (3*Rc.Pint + WNoise)
 
 		}
 	}
