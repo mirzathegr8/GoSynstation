@@ -18,7 +18,8 @@ trace.go\
 physReceiver.go\
 meanStruct.go\
 FadingGen.go\
-agent.go
+agent.go\
+RBSchedule2.go
 
 
 include $(GOROOT)/src/Make.pkg
