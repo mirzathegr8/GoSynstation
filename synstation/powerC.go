@@ -54,7 +54,9 @@ func powerch(ch int, dbsA []DBS, maxMob int) {
 					P[i] += Gij[i][j]
 				}
 			}
-			P[i] = 1.0 / P[i]
+			if P[i] > 0 {
+				P[i] = 1.0 / P[i]
+			}
 		}
 
 		for m := 0; m < 20; m++ {
