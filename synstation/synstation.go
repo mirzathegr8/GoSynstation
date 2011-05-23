@@ -168,7 +168,8 @@ func (dbs *DBS) RunAgent() {
 		if BWallocation == CHHOPPING {
 			dbs.channelHopping()
 		} else {
-			dbs.ARBScheduler()
+			//dbs.ARBScheduler()
+			ARBScheduler2(dbs, dbs.Rgen)
 		}
 
 		dbs.connectionAgent()
@@ -673,7 +674,7 @@ func (dbs *DBS) ARBScheduler() {
 					snrrb = E.GetSNRrb(rb)
 				}
 
-				m := 80 * math.Log2(1+snrrb)
+				m := EffectiveBW * math.Log2(1+snrrb)
 				m_m := c.GetE().GetMeanTR()
 
 				if m > 100 && m_m < 100000026000 {
@@ -785,15 +786,16 @@ func (v vectorFloat64) Swap(i, j int) {
 	v.i[i], v.i[j] = v.i[j], v.i[i]
 }
 
-func (v vectorFloat64) max() (a float64, i int) {
-	if len(v.f) > 0 {
-		a = v.f[0]
+
+func max(v []float64) (a float64, i int) {
+	if len(v) > 0 {
+		a = v[0]
 		i = 0
 	}
-	for j := 1; j < len(v.f); j++ {
-		if v.f[j] > a {
+	for j := 1; j < len(v); j++ {
+		if v[j] > a {
 			i = j
-			a = v.f[j]
+			a = v[j]
 		}
 	}
 	return
