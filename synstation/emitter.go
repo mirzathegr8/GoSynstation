@@ -175,39 +175,40 @@ func (e *Emitter) GetPower() float64 {
 func (e *Emitter) AddConnection(c *Connection) {
 
 	lber := c.GetLogMeanBER()
-	if lber < math.Log10(BERThres) {
+	if lber <= math.Log10(BERThres) {
 		e.SBERtotal += lber
 		e.SDiversity++
 		c.Status = 1 //we set the status as slave, as master status will be set after all connections data has been recieved
 		num_con++
-	}
 
-	if e.SMaxBER > lber { //evaluate which connection is the best and memorizes which will be masterconnection
-		e.MasterConnection = c
-		e.SMaxBER = lber
-		e.SInstMaxBER = math.Log10(c.BER + 1e-40)
-		e.SNRb = c.SNR
-		e.PrMaster = c.Pr
+		if e.SMaxBER > lber { //evaluate which connection is the best and memorizes which will be masterconnection
+			e.MasterConnection = c
+			e.SMaxBER = lber
+			e.SInstMaxBER = math.Log10(c.BER + 1e-40)
+			e.SNRb = c.SNR
+			e.PrMaster = c.Pr
 
-		//for test with selection diversity
+			//for test with selection diversity
 
-		if DiversityType == SELECTION {
+			if DiversityType == SELECTION {
+				for rb := range e.ARB {
+					//if use {
+					e.SSNRrb[rb] = c.SNRrb[rb]
+					//}
+				}
+			}
+
+		}
+
+		// for maximal RC
+		if DiversityType == MRC {
 			for rb := range e.ARB {
 				//if use {
-				e.SSNRrb[rb] = c.SNRrb[rb]
+				e.SSNRrb[rb] += c.SNRrb[rb]
 				//}
 			}
 		}
 
-	}
-
-	// for maximal RC
-	if DiversityType == MRC {
-		for rb := range e.ARB {
-			//if use {
-			e.SSNRrb[rb] += c.SNRrb[rb]
-			//}
-		}
 	}
 }
 
@@ -262,7 +263,7 @@ func (M *Emitter) FetchData() {
 
 			}*/
 
-			TransferRate := 80 * math.Log2(1+M.SSNRrb[rb])
+			TransferRate := EffectiveBW * math.Log2(1+M.SSNRrb[rb])
 
 			if 100 < TransferRate {
 
