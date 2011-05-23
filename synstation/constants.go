@@ -5,13 +5,13 @@ const Field = 6000 //length in meters
 
 const Duration = 2000 // in iterations 
 
-const M = 500 //numbers of mobiles
-const D = 80  // numbers of DBS
+const M = 1000 //numbers of mobiles
+const D = 100  // numbers of DBS
 
 const L2 = 2 // modulation factor
 const L1 = 1
 
-const NCh = 100 // number of channels
+const NCh = 30 // number of channels
 
 // 10 0 11 .1 12 .2 19 .5 37 .75
 const roverlap = float64(0.0) // ratio of overlaping of two adjacent channels
@@ -64,7 +64,7 @@ const (
 	MONTECARLO
 )
 
-const DiversityType = SELECTION
+const DiversityType = MRC
 
 const (
 	SELECTION = iota
@@ -78,10 +78,12 @@ const (
 	AGENTPC
 )
 
-const BWallocation = ARBSCHEDUL
+const BWallocation = CHHOPPING
 
 const (
 	CHHOPPING = iota
 	ARBSCHEDUL
 )
+
+const EffectiveBW = 320
 
