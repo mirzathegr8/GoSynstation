@@ -129,21 +129,21 @@ func (Conn *Connection) InitConnection(E EmitterInt, v float64, Rgen *rand.Rand)
 		// 1.5/DopplerF gives a good number of itterations to decorelate initial null variables
 		// and set the channel to a steady state		
 
-		for l := 0; l < int(1.5/DopplerF); l++ {
+		for l := 0; l < int(2.5/DopplerF); l++ {
 
 			// for speed optimization, decorelation samples or not used, it makes little difference 
-			/*for i := 0; i < 50; i++ {
+			for i := 0; i < 50; i++ {
 				Conn.filterF.nextValue(Conn.Rgen.NormFloat64())
-			}*/
+			}
 
 			for i := 0; i < NCh; i++ {
 				Conn.filterAr[i].nextValue(Conn.filterF.nextValue(Conn.Rgen.NormFloat64()))
 			}
 
 			// for speed optimization, decorelation samples or not used, it makes little difference 
-			/*for i := 0; i < 50; i++ {
+			for i := 0; i < 50; i++ {
 				Conn.filterF.nextValue(Conn.Rgen.NormFloat64())
-			}*/
+			}
 
 			for i := 0; i < NCh; i++ {
 				Conn.filterAr[i].nextValue(Conn.filterF.nextValue(Conn.Rgen.NormFloat64()))
