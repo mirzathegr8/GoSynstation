@@ -165,12 +165,14 @@ func (dbs *DBS) RunAgent() {
 
 	if dbs.Clock == 0 {
 
-		if BWallocation == CHHOPPING {
-			dbs.channelHopping()
-		} else {
-			//dbs.ARBScheduler()
-			ARBScheduler2(dbs, dbs.Rgen)
-		}
+		//if BWallocation == CHHOPPING {
+		//	dbs.channelHopping()
+		//} else {
+		//dbs.ARBScheduler()
+		//ARBScheduler2(dbs, dbs.Rgen)
+
+		ARBSchedulFunc(dbs, dbs.Rgen)
+		//}
 
 		dbs.connectionAgent()
 
@@ -445,7 +447,7 @@ func (dbs *DBS) connectionAgent() {
 //}
 //
 
-func (dbs *DBS) channelHopping() {
+func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 
 	//pour trier les connections actives
 	var MobileList vector.Vector
@@ -651,11 +653,28 @@ func (dbs *DBS) optimizePowerAllocationSimple() {
 //Minimum Area-Difference to the Envelope
 
 
-func (dbs *DBS) ARBScheduler() {
+func ARBScheduler(dbs *DBS, Rgen *rand.Rand) {
 
 	var Metric [NConnec][NCh]float64
 
 	//var MobilesID [NConnec]int
+
+	var meanMeanCapa float64
+	var maxMeanCapa float64
+
+	for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
+
+		c := e.Value.(*Connection)
+
+		m_m := c.GetE().GetMeanTR()
+		meanMeanCapa += m_m
+		if maxMeanCapa < m_m {
+			maxMeanCapa = m_m
+		}
+
+	}
+	meanMeanCapa /= float64(dbs.Connec.Len())
+	meanMeanCapa += 0.1
 
 	// Eval Metric for all connections
 	for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
@@ -664,6 +683,8 @@ func (dbs *DBS) ARBScheduler() {
 		E := c.GetE()
 
 		if c.Status == 0 {
+
+			m_m := c.GetE().GetMeanTR()
 
 			for rb := 1; rb < NCh; rb++ {
 
@@ -675,7 +696,10 @@ func (dbs *DBS) ARBScheduler() {
 				}
 
 				m := EffectiveBW * math.Log2(1+snrrb)
-				m_m := c.GetE().GetMeanTR()
+
+				//m_m := c.meanCapa.Get()
+
+				//b := math.Exp(10 * (meanMeanCapa - E.GetMeanTR()) / maxMeanCapa)
 
 				if m > 100 && m_m < 100000026000 {
 					Metric[i][rb] = math.Log2(m + 1)
@@ -683,6 +707,8 @@ func (dbs *DBS) ARBScheduler() {
 					if b > 1 {
 						Metric[i][rb] /= b
 					}
+
+					//Metric[i][rb] *= b
 
 					//Metric[i][rb] = m / c.GetE().GetMeanTR())
 					//Metric[i][rb] = math.Log2(math.Log2(1 + c.ff_R[rb])) //* c.GetE().Req() / c.GetE().BERT()
