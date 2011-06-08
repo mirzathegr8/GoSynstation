@@ -3,9 +3,12 @@ package synstation
 import "sort"
 import "rand"
 import "math"
-//import "fmt"
+import "fmt"
 
-const popsize = 100
+func init() {
+
+	fmt.Println("init to keep fmt")
+}
 
 func createDesc(ppO *[NCh]int, pool [][NCh]int, Rgen *rand.Rand) {
 	//fmt.Print(" in")
@@ -14,8 +17,7 @@ func createDesc(ppO *[NCh]int, pool [][NCh]int, Rgen *rand.Rand) {
 		//copy
 
 		pool[i] = *ppO // copies value since arraytype
-		//fmt.Println(pool[i])
-		//fmt.Println(ppO)
+
 		pp := pool[i][:] //short name to consider that array descendant
 		//modify
 
@@ -34,7 +36,7 @@ func createDesc(ppO *[NCh]int, pool [][NCh]int, Rgen *rand.Rand) {
 			a := Rgen.Float64()
 			//	fmt.Println("a", a)
 
-			if a < 0.333333 { //either increase size to the right
+			if a < 0.25 { //either increase size to the right
 				for ; rnd < NCh && pp[rnd] == v; rnd++ {
 				}
 				if rnd < NCh { //copy prev or next
@@ -45,7 +47,7 @@ func createDesc(ppO *[NCh]int, pool [][NCh]int, Rgen *rand.Rand) {
 						pp[rnd-1] = pp[rnd]
 					}
 				}
-			} else if a < 0.66666 { // or to the left						
+			} else if a < 0.50 { // or to the left						
 
 				for ; rnd > 0 && pp[rnd] == v; rnd-- {
 				}
@@ -58,7 +60,7 @@ func createDesc(ppO *[NCh]int, pool [][NCh]int, Rgen *rand.Rand) {
 					}
 
 				}
-			} else { // or swap two variables
+			} else if a < .75 { // or swap two variables
 				v1 := v
 				v2 := -1
 				rnd1 := rnd
@@ -83,15 +85,16 @@ func createDesc(ppO *[NCh]int, pool [][NCh]int, Rgen *rand.Rand) {
 						}
 					}
 				}
+			} else { // puncture
+				for ; rnd < NCh && pp[rnd] == v; rnd++ {
+					pp[rnd] = -1
+				}
+
 			}
 		}
-		//fmt.Println("Print pool")
-		//fmt.Println(pool[i])
-
-		//	fmt.Println(ppO)
 
 	}
-	//fmt.Print(" out")
+
 }
 
 
@@ -239,23 +242,23 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 
 	const CAPAthres = 1.5
 	var max float64
-	//		for i := 0; i < len(AL); i++ {
-	//	
-	//			/*	if AL[i] >= 0 {
-	//					fmt.Print(Metric[AL[i]][i], " ")
-	//				} else {
-	//					fmt.Print("-1 ")
-	//				}*/
-	//	
-	//			if AL[i] >= 0 && max < Metric[AL[i]][i] {
-	//	
-	//				max = Metric[AL[i]][i]
-	//			}
-	//		}
+	// for i := 0; i < len(AL); i++ {
+	//
+	// /* if AL[i] >= 0 {
+	// fmt.Print(Metric[AL[i]][i], " ")
+	// } else {
+	// fmt.Print("-1 ")
+	// }*/
+	//
+	// if AL[i] >= 0 && max < Metric[AL[i]][i] {
+	//
+	// max = Metric[AL[i]][i]
+	// }
+	// }
 	//fmt.Println()
 	AL[0] = -1
 	//if AL[NCh-1] != -1 && Metric[AL[NCh-1]][NCh-1] < max/CAPAthres {
-	//	AL[NCh-1] = -1
+	// AL[NCh-1] = -1
 	//}
 	for i := 1; i < len(AL); i++ {
 
@@ -288,7 +291,373 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 		}
 
 	}
-	//	fmt.Println(AL)
+	// fmt.Println(AL)
+
+	//Allocate RB effectivelly
+
+	AL[0] = -1 // connect all
+	for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
+		c := e.Value.(*Connection)
+		E := c.GetE()
+		if c.Status == 0 {
+			if E.IsSetARB(0) {
+				E.UnSetARB(0)
+			}
+
+		}
+	}
+	for rb := 1; rb < NCh; rb++ {
+		if AL[rb] >= 0 {
+			for k, i, e := 0, 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
+				c := e.Value.(*Connection)
+				E := c.GetE()
+
+				if c.Status == 0 {
+
+					if E.IsSetARB(rb) {
+						if AL[rb] != k {
+							E.UnSetARB(rb)
+						}
+					} else {
+						if AL[rb] >= 0 {
+
+							if AL[rb] == k {
+								E.SetARB(rb)
+								Hopcount++
+
+							}
+						}
+					}
+					k++
+				}
+			}
+		}
+	}
+
+	//fmt.Println("done")
+
+}
+
+
+func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
+
+	var Metric [NConnec][NCh]float64
+
+	var MasterMobs [NConnec]EmitterInt
+	var MasterConnec [NConnec]*Connection
+
+	//var MobilesID [NConnec]int
+
+	// Eval Metric for all connections
+	var Nmaster int
+
+	var meanMeanCapa float64
+	var maxMeanCapa float64
+
+	NConnected := dbs.Connec.Len()
+
+	for j, i, e := 0, 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
+
+		c := e.Value.(*Connection)
+		E := c.GetE()
+
+		m_m := E.GetMeanTR()
+
+		meanMeanCapa += m_m
+		if maxMeanCapa < m_m {
+			maxMeanCapa = m_m
+		}
+
+		if c.Status == 0 {
+
+			MasterConnec[Nmaster] = c
+			MasterMobs[Nmaster] = E
+
+			for rb := 1; rb < NCh; rb++ {
+
+				var snrrb float64
+				if DiversityType == SELECTION {
+					snrrb = c.SNRrb[rb]
+				} else {
+					snrrb = E.GetSNRrb(rb)
+				}
+
+				Metric[j][rb] = snrrb
+
+			}
+			Nmaster++
+			j++
+
+		}
+
+	}
+
+	//fmt.Println(Metric[0:Nmaster])
+
+	meanMeanCapa /= float64(dbs.Connec.Len())
+	meanMeanCapa += 0.1
+
+	if Nmaster == 0 { // in this case nothing to assign
+		return
+	}
+
+	//Assign RB for master connections
+
+	//var NumAss [NConnec]int
+
+	var Popul [popsize][NCh]int
+
+	r := 6.0 / 6.0 // fraction of RB to allocate
+
+	//fmt.Print("Nmaster ", Nmaster, " ", int(float64(NCh)*float64(r)/float64(Nmaster)))
+
+	var pool [popsize * 11][NCh]int
+
+	//First assign RB to best Metric
+	for i := 0; i < popsize; i++ {
+
+		numberAmobs := Nmaster                                               //Rgen.Intn(Nmaster) + 1
+		nbrb := int(float64(NCh) * float64(r) / (float64(NConnected) * 1.5)) //int(float64(NCh) * float64(r) / float64(numberAmobs))
+
+		a := Rgen.Perm(Nmaster)
+
+		//expand
+		pp := &Popul[i]
+
+		// first dealocate everything
+		for j := 0; j < NCh; j++ {
+			pp[j] = -1
+		}
+		//second alocate one chanel
+		for j := 0; j < numberAmobs; j++ {
+			index := int(float64(NCh)/float64(numberAmobs)*float64(j)) + Rgen.Intn(int(float64(NCh)*(1-r)/float64(numberAmobs)))
+			pp[index] = a[j]
+
+			for k := 0; k < nbrb; k++ {
+				pp[index+k] = a[j]
+			}
+		}
+
+		//fmt.Println(pp)
+	}
+
+	for gen := 0; gen < generations; gen++ {
+
+		//fmt.Println(gen)
+
+		for j := 0; j < popsize; j++ {
+			createDesc(&Popul[j], pool[j*10:(j+1)*10], Rgen)
+		}
+
+		//fmt.Println("desc created")
+
+		copy(pool[popsize*10:popsize*11], Popul[:])
+
+		//select the new population
+		var metricpool [popsize * 11]float64
+
+		uARBcost := .5 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)
+
+		for i := 0; i < popsize*11; i++ {
+			metricT := float64(0.0)
+			//na := 0
+
+			//eval what would be the AL after trimming
+			var max float64
+			var AL [NCh]int
+			AL = pool[i] //copies 
+			AL[0] = -1
+
+			for i := 1; i < len(AL); i++ {
+
+				switch AL[i] {
+				case -1: // just go on
+
+					metricT += uARBcost
+
+				default:
+
+					//find max
+					jmin := i
+					v := AL[i]
+					max = 0
+					nARBm := 0
+					j := 0
+					for j = i; j < len(AL) && AL[j] == v; j++ {
+						nARBm++
+						if Metric[AL[j]][j] > max {
+							max = Metric[AL[j]][j]
+						}
+					}
+					//loop to trim
+					// here we only consider the Original metric 
+
+					jmax := j - 1 //save first
+					jmaxo := j - 1
+					for j = i; j <= jmax; j++ {
+
+						var snrrb float64
+						if DiversityType == SELECTION {
+							snrrb = MasterConnec[v].SNRrb[j]
+						} else {
+							snrrb = MasterMobs[v].GetSNRrb(j)
+						}
+
+						m := EffectiveBW * math.Log2(1+snrrb/float64(nARBm))
+
+						if AL[j-1] != v && (Metric[v][j] < max/CAPAthres || m < 100) {
+							AL[j] = -1
+							nARBm--
+							jmin++
+
+							metricT += uARBcost
+						} else {
+							break
+						}
+					}
+
+					for j = jmax; j >= jmin; j-- {
+
+						var snrrb float64
+						if DiversityType == SELECTION {
+							snrrb = MasterConnec[v].SNRrb[j]
+						} else {
+							snrrb = MasterMobs[v].GetSNRrb(j)
+						}
+
+						m := EffectiveBW * math.Log2(1+snrrb/float64(nARBm))
+
+						if (j == NCh-1 || AL[j+1] != v) && (Metric[v][j] < max/CAPAthres || m < 100) {
+							AL[j] = -1
+							nARBm--
+							metricT += uARBcost
+							jmax--
+						} else {
+							break
+						}
+					}
+
+					//this range should only have allocated RB to a unique mobile
+
+					var m float64
+					for rb := jmin; rb < jmax; rb++ {
+
+						m += EffectiveBW * math.Log2(1+Metric[v][rb]/float64(nARBm))
+
+					}
+
+					m_m := MasterConnec[v].GetE().GetMeanTR()
+
+					/*a := (m - m_m*0.8)
+					if a > 0 {
+						metricT += a * (meanMeanCapa*1.2 - m_m)
+					}*/
+
+					//metricT += math.Log2(1+m) * math.Exp(m_m-meanMeanCapa) //* (1 + (meanMeanCapa-MasterMobs[v].GetMeanTR())/meanMeanCapa)
+
+					metricT += math.Log2(1 + m/(m_m+0.0001)) // fair metric, low latency// math.Log2(1+math.Exp((meanMeanCapa-m_m)/maxMeanCapa))
+
+					i = jmaxo
+				}
+
+			}
+
+			metricpool[i] = metricT
+		}
+		//find the best 100
+
+
+		S := initSequence(metricpool[:])
+
+		sort.Sort(S)
+
+		shift := 0 //len(metricpool)/4 - len(Popul)/2
+		if shift < 0 {
+			shift = 0
+		}
+
+		for i := 0; i < len(Popul); i++ {
+			//fmt.Print(" ", S.value[S.index[i]])
+			Popul[i] = pool[S.index[i+shift]]
+			//fmt.Println(Popul[i])
+		}
+		//fmt.Println(S.value[S.index[0]])
+	}
+
+	AL := Popul[0][:]
+
+	//Trimm we delete endings of allocation sequence if the capacity of these RB is not that good
+	//this is to prevent spendin too much energy for little gain, and also to give a chance to minimize interference
+
+	//fmt.Println("AL       ", AL)
+
+	var max float64
+
+	AL[0] = -1
+
+	for i := 1; i < len(AL); i++ {
+
+		switch AL[i] {
+		case -1: // just go on
+
+		default:
+
+			//find max
+			jmin := i
+			v := AL[i]
+			max = 0
+			nARBm := 0
+			j := 0
+			for j = i; j < len(AL) && AL[j] == v; j++ {
+				nARBm++
+				if Metric[AL[j]][j] > max {
+					max = Metric[AL[j]][j]
+				}
+			}
+			//loop to trim
+			// here we only consider the Original metric 
+
+			jmax := j - 1 //save first
+			jmaxo := j - 1
+			for j = i; j <= jmax; j++ {
+
+				m := EffectiveBW * math.Log2(1+Metric[AL[j]][j]/float64(nARBm))
+
+				if AL[j-1] != v && (Metric[AL[j]][j] < max/CAPAthres || m < 100) {
+					AL[j] = -1
+					nARBm--
+					jmin++
+				} else {
+					break
+				}
+			}
+
+			for j = jmax; j >= jmin; j-- {
+
+				m := EffectiveBW * math.Log2(1+Metric[AL[j]][j]/float64(nARBm))
+
+				if (j == NCh-1 || AL[j+1] != v) && (Metric[AL[j]][j] < max/CAPAthres || m < 100) {
+					AL[j] = -1
+					nARBm--
+					jmax--
+				} else {
+					break
+				}
+			}
+			i = jmaxo
+
+		}
+
+	}
+	/*fmt.Println(AL)
+	for h := 0; h < NCh; h++ {
+		if AL[h] >= 0 {
+			fmt.Printf("%2.1f ", math.Log10(Metric[AL[h]][h]))
+		} else {
+			fmt.Print("-1 ")
+		}
+	}
+	fmt.Println()*/
 
 	//Allocate RB effectivelly
 
