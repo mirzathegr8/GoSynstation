@@ -237,6 +237,7 @@ func save_binary_data(method func(t *s.Trace, i int) float64, m int, channel cha
 
 func SaveToFile(Mobiles []s.Mob) {
 
+	os.Remove("out.mat")
 	outF, err := os.Open("out.mat", os.O_WRONLY|os.O_CREATE, 0666)
 
 	fmt.Println(err)
