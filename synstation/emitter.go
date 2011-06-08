@@ -175,41 +175,41 @@ func (e *Emitter) GetPower() float64 {
 func (e *Emitter) AddConnection(c *Connection) {
 
 	lber := c.GetLogMeanBER()
-	if lber <= math.Log10(BERThres) {
-		e.SBERtotal += lber
-		e.SDiversity++
-		c.Status = 1 //we set the status as slave, as master status will be set after all connections data has been recieved
-		num_con++
+	//if lber <= math.Log10(BERThres) {
+	e.SBERtotal += lber
+	e.SDiversity++
+	c.Status = 1 //we set the status as slave, as master status will be set after all connections data has been recieved
+	num_con++
 
-		if e.SMaxBER > lber { //evaluate which connection is the best and memorizes which will be masterconnection
-			e.MasterConnection = c
-			e.SMaxBER = lber
-			e.SInstMaxBER = math.Log10(c.BER + 1e-40)
-			e.SNRb = c.SNR
-			e.PrMaster = c.Pr
+	if e.SMaxBER > lber { //evaluate which connection is the best and memorizes which will be masterconnection
+		e.MasterConnection = c
+		e.SMaxBER = lber
+		e.SInstMaxBER = math.Log10(c.BER + 1e-40)
+		e.SNRb = c.SNR
+		e.PrMaster = c.Pr
 
-			//for test with selection diversity
+		//for test with selection diversity
 
-			if DiversityType == SELECTION {
-				for rb := range e.ARB {
-					//if use {
-					e.SSNRrb[rb] = c.SNRrb[rb]
-					//}
-				}
-			}
-
-		}
-
-		// for maximal RC
-		if DiversityType == MRC {
+		if DiversityType == SELECTION {
 			for rb := range e.ARB {
 				//if use {
-				e.SSNRrb[rb] += c.SNRrb[rb]
+				e.SSNRrb[rb] = c.SNRrb[rb]
 				//}
 			}
 		}
 
 	}
+
+	// for maximal RC
+	if DiversityType == MRC {
+		for rb := range e.ARB {
+			//if use {
+			e.SSNRrb[rb] += c.SNRrb[rb]
+			//}
+		}
+	}
+
+	//}
 }
 
 
@@ -237,74 +237,61 @@ func (M *Emitter) SetPower(P float64) {
 // finnaly sents to syncchannel BER level
 func (M *Emitter) FetchData() {
 
+	var syncval float64
+
 	M.BERtotal, M.Diversity, M.MaxBER, M.InstMaxBER = M.SBERtotal, M.SDiversity, M.SMaxBER, M.SInstMaxBER
 	M.SInstMaxBER, M.SBERtotal, M.SDiversity, M.SMaxBER = 0, 0, 0, 0
 
 	M.TransferRate = 0
 
 	M.Outage++
-	for rb := 1; rb < NCh; rb++ {
 
-		if M.IsSetARB(rb) {
-			/*M.SBERrb[rb] = 0
-			pe := L1 * math.Exp(-M.SSNRrb[rb]/2/L2) / 2.0
-			for i := 0; i < 10; i++ {
-				M.SBERrb[rb] += math.Pow(1-pe, 1024-float64(i)) *
-					math.Pow(pe, float64(i)) * factorial[i]
-			}
-			M.SBERrb[rb] = 1 - M.SBERrb[rb]*/
+	syncval = 1
 
-			//M.meanBERInstTot.Add(M.SSNRrb[rb]) //for now as we use only 1 rb
+	if M.Diversity == 0 {
 
-			/*if M.Diversity > 0 {
-				M.TransferRate = L1/2.0*math.Exp(-M.SSNRrb[rb]/2/L2) + 1e-40
-			} else {
-				M.TransferRate = 1
+		M.MasterConnection = nil
+		M.Power = 1
+		M.ReSetARB()
+		syncval = 0
 
-			}*/
+	} else {
 
-			TransferRate := EffectiveBW * math.Log2(1+M.SSNRrb[rb])
+		for rb := 1; rb < NCh; rb++ {
 
-			if 100 < TransferRate {
+			if M.IsSetARB(rb) {
 
-				M.Outage = 0
-				if TransferRate > 10000 {
-					TransferRate = 10000
+				TransferRate := EffectiveBW * math.Log2(1+M.SSNRrb[rb])
+
+				if 100 < TransferRate {
+
+					M.Outage = 0
+					if TransferRate > 10000 {
+						TransferRate = 10000
+					}
+
+				} else {
+
+					TransferRate = 0
+
 				}
 
-			} else {
-
-				TransferRate = 0
+				M.TransferRate += TransferRate
 
 			}
-
-			M.TransferRate += TransferRate
-
+			M.SNRrb[rb], M.SSNRrb[rb] = M.SSNRrb[rb], 0
 		}
-		M.SNRrb[rb], M.SSNRrb[rb] = M.SSNRrb[rb], 0
+
+		M.MasterConnection.Status = 0 // we are master
+
+
+		syncval = M.BERtotal
+
 	}
 
 	M.meanTR.Add(M.TransferRate)
 
-	if M.BERtotal == 0 && !M.IsSetARB(0) || M.MasterConnection == nil {
-		M.MasterConnection = nil
-		M.Power = 1
-		M.ReSetARB() //That probably could run in conflicts. have to modify unset/setarb to only send one copy of emitter in channel if called multiple times
-	} else if M.MasterConnection != nil {
-		M.MasterConnection.Status = 0 // we are master
-	}
-
-	if M.IsSetARB(0) {
-
-		if M.BERtotal == 0 {
-			SyncChannel <- 0.0 //not even listened to
-		} else {
-			SyncChannel <- 1 //listen to but not connected
-		}
-
-	} else {
-		SyncChannel <- M.BERtotal
-	}
+	SyncChannel <- syncval
 
 }
 
