@@ -3,29 +3,34 @@ package synstation
 
 const Field = 6000 //length in meters
 
-const Duration = 2000 // in iterations 
+const Duration = 1000 // in iterations 
 
 const M = 1000 //numbers of mobiles
-const D = 100  // numbers of DBS
+const D = 160  // numbers of DBS
 
 const L2 = 2 // modulation factor
 const L1 = 1
 
 const NCh = 30 // number of channels
+const EffectiveBW = 4 * 80
+
+// Here we define the Coherence bandwith as a ratio of the total bandwith (20MHz)
+const corrF = 0.2 * 3
+
 
 // 10 0 11 .1 12 .2 19 .5 37 .75
-const roverlap = float64(0.0) // ratio of overlaping of two adjacent channels
+const roverlap = 0.0 // ratio of overlaping of two adjacent channels
 
-const WNoise = 7.45e-17 // White noise at reciever
-const NChRes = 5        //numbers of reserved channels, not used yet, but chan 0 must be reserved
-const NConnec = 25      // numbers of connections per dbs
+const WNoise = 4 * 5.6885e-15 //7.1614e-16 // White noise at reciever //21.484e-16
+const NChRes = 5              //numbers of reserved channels, not used yet, but chan 0 must be reserved
+const NConnec = 25            // numbers of connections per dbs
 
-const BERThres = float64(0.3)
-const SNRThresConnec = float64(35)
+const BERThres = 0.4
+const SNRThresConnec = 20
 
-const SNRThresChHop = float64(0)
+const SNRThresChHop = 0
 
-const MaxSpeed = float64(15)
+const MaxSpeed = 15
 
 const EnodeBClock = 2
 
@@ -78,12 +83,15 @@ const (
 	AGENTPC
 )
 
-const BWallocation = CHHOPPING
 
-const (
-	CHHOPPING = iota
-	ARBSCHEDUL
-)
+//var ARBSchedulFunc = ARBScheduler3
+//var ARBSchedulFunc = ARBScheduler
+var ARBSchedulFunc = ChHopping
+var estimateFactor = estimateFactor0
 
-const EffectiveBW = 320
+const conservationFactor = 30
+
+const popsize = 100
+const generations = 10
+const CAPAthres = 3000 // this value to define the relative min capacity compared to the maximum over ARB for one mobile, under this threshold RB will not be assigned
 
