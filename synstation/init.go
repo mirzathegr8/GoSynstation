@@ -80,8 +80,6 @@ func init() {
 		Mobiles[i].Init(i)
 	}
 
-	// Here we define the Coherence bandwith as a ratio of the total bandwith (20MHz)
-	corrF := float64(.2)
 	// we use that to create a filter used to generates inputs to the doppler filters for each signals	
 	A := Butter(corrF)
 	B := Cheby(10, corrF)
