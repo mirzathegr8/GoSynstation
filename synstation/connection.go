@@ -19,9 +19,10 @@ type Connection struct {
 
 	Status int //0 master ,1 slave
 
-	meanPr  MeanData
-	meanSNR MeanData
-	meanBER MeanData
+	meanPr   MeanData
+	meanSNR  MeanData
+	meanBER  MeanData
+	meanCapa MeanData
 
 	filterAr [NCh]FilterInt //stores received power
 	filterBr [NCh]FilterInt //stores received power
@@ -163,7 +164,7 @@ func CreateConnection(E EmitterInt, v float64, Rgen *rand.Rand) *Connection {
 }
 
 func (co *Connection) GetLogMeanBER() float64 {
-	return math.Log10(co.meanBER.Get() + 1e-40) //prevent saturation
+	return math.Log10(co.meanBER.Get() + 1e-10) //prevent saturation
 }
 
 
@@ -228,6 +229,8 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 
 	//RcBase := rx.GetRcBase(E.GetId())
 
+	var capaTTI float64
+
 	for rb, use := range ARB {
 
 		Rc := &rx.Channels[rb]
@@ -247,7 +250,7 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 			c.meanSNR.Add(c.SNRrb[rb])
 			c.meanBER.Add(BER)
 			c.SNR += c.SNRrb[rb]
-
+			capaTTI += EffectiveBW * math.Log2(c.SNRrb[rb]+1)
 			touch = true
 		} else {
 
@@ -267,14 +270,16 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 			}*/
 
 			c.SNRrb[rb] = prbase * c.ff_R[rb] / (Rc.Pint + WNoise)
-			div := E.GetNumARB()
+
+			c.SNRrb[rb] *= estimateFactor(dbs, E)
+			/*div := E.GetNumARB()
 			if div > 1 {
 				c.SNRrb[rb] /= float64(div)
 			}
 
 			//if SetReceiverType == BEAM && !dbs.IsInUse(rb) {
 			c.SNRrb[rb] *= 0.8 //}
-
+			*/
 			//c.SNRrb[rb] = 10 * prbase * c.ff_R[rb] / (3*Rc.Pint + WNoise)
 
 		}
@@ -284,8 +289,34 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 		c.meanSNR.Add(0)
 		c.SNR = 0
 		c.meanBER.Add(0)
+
 	}
 
+	c.meanCapa.Add(capaTTI)
+
 	return
+}
+
+
+func estimateFactor0(dbs *DBS, E EmitterInt) float64 {
+
+	return conservationFactor
+
+}
+
+
+func estimateFactor1(dbs *DBS, E EmitterInt) (o float64) {
+	o = 1
+	div := E.GetNumARB()
+	if div > 1 {
+		o = 1 / float64(div)
+	}
+
+	//if SetReceiverType == BEAM && !dbs.IsInUse(rb) {
+	o *= conservationFactor //}
+
+	//c.SNRrb[rb] = 10 * prbase * c.ff_R[rb] / (3*Rc.Pint + WNoise)
+	return
+
 }
 
