@@ -284,8 +284,9 @@ func (M *Emitter) FetchData() {
 
 		M.MasterConnection.Status = 0 // we are master
 
-
+		if M.TransferRate!=0 {
 		syncval = M.BERtotal
+		}
 
 	}
 

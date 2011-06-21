@@ -11,18 +11,19 @@ const D = 160  // numbers of DBS
 const L2 = 2 // modulation factor
 const L1 = 1
 
-const NCh = 30 // number of channels
-const EffectiveBW = 4 * 80
+const DivCh=1
+const NCh = 100/DivCh + NChRes // number of channels
+const EffectiveBW =  80  * DivCh
 
 // Here we define the Coherence bandwith as a ratio of the total bandwith (20MHz)
-const corrF = 0.2 * 3
-
+const corrF = 0.2
 
 // 10 0 11 .1 12 .2 19 .5 37 .75
 const roverlap = 0.0 // ratio of overlaping of two adjacent channels
 
-const WNoise = 4 * 5.6885e-15 //7.1614e-16 // White noise at reciever //21.484e-16
-const NChRes = 5              //numbers of reserved channels, not used yet, but chan 0 must be reserved
+// thermal noise per RB 121.45dBm normalized per maximum terminal power output 21dBm and divided for one TTI
+const WNoise = DivCh * 5.6885e-15 //7.1614e-16 // White noise at reciever //21.484e-16
+const NChRes = 1              //numbers of reserved channels, not used yet, but chan 0 must be reserved
 const NConnec = 25            // numbers of connections per dbs
 
 const BERThres = 0.4
@@ -69,7 +70,7 @@ const (
 	MONTECARLO
 )
 
-const DiversityType = MRC
+const DiversityType = SELECTION
 
 const (
 	SELECTION = iota
@@ -84,14 +85,17 @@ const (
 )
 
 
-//var ARBSchedulFunc = ARBScheduler3
+var ARBSchedulFunc = ARBScheduler3
 //var ARBSchedulFunc = ARBScheduler
-var ARBSchedulFunc = ChHopping
+//var ARBSchedulFunc = ChHopping
+
 var estimateFactor = estimateFactor0
 
-const conservationFactor = 30
+//const conservationFactor = 0.8 //best for estimateFactor1 and ARBScheduler
+const conservationFactor = 10 // best for estimateFactor0 and ARBScheduler3
 
-const popsize = 100
+
+const popsize = 10
 const generations = 10
 const CAPAthres = 3000 // this value to define the relative min capacity compared to the maximum over ARB for one mobile, under this threshold RB will not be assigned
 
