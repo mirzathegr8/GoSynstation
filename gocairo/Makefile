@@ -6,7 +6,7 @@ TARG=gocairo
 CGOFILES=draw.go
 CGO_OFILES=\
         cairolib.o
-CGO_LDFLAGS=-lcairo
+CGO_LDFLAGS=-lcairo -lm
 CLEANFILES+=cairolib
 
 include $(GOROOT)/src/Make.pkg
