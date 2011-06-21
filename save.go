@@ -67,7 +67,7 @@ func NumARB(t *s.Trace, i int) float64       { return float64(t.Mobs[i].GetNumAR
 
 func WriteDataToFile(method func(t *s.Trace, i int) float64, m int, channel chan *s.Trace, file string) {
 
-	outF, err := os.Open(file+".mat", os.O_WRONLY|os.O_CREATE, 0666)
+	outF, err := os.OpenFile(file+".mat", os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return
 	}
@@ -177,7 +177,7 @@ func sendTrace(t *s.Trace) {
 func save_binary_data(method func(t *s.Trace, i int) float64, m int, channel chan *s.Trace, file string) {
 
 	os.Remove(file + ".mat")
-	os, err := os.Open(file+".mat", os.O_WRONLY|os.O_CREATE, 0666)
+	os, err := os.OpenFile(file+".mat", os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return
 	}
@@ -238,7 +238,7 @@ func save_binary_data(method func(t *s.Trace, i int) float64, m int, channel cha
 func SaveToFile(Mobiles []s.Mob) {
 
 	os.Remove("out.mat")
-	outF, err := os.Open("out.mat", os.O_WRONLY|os.O_CREATE, 0666)
+	outF, err := os.OpenFile("out.mat", os.O_WRONLY|os.O_CREATE, 0666)
 
 	fmt.Println(err)
 
@@ -323,7 +323,7 @@ func SaveToFile(Mobiles []s.Mob) {
 func fadingSave(c chan int) {
 
 	os.Remove("fading.mat")
-	fadingF, err := os.Open("fading.mat", os.O_WRONLY|os.O_CREATE, 0666)
+	fadingF, err := os.OpenFile("fading.mat", os.O_WRONLY|os.O_CREATE, 0666)
 	fmt.Println(err)
 	fadingF.WriteString(fmt.Sprintln("# name: fading\n# type: matrix\n# rows: ", s.Duration, "\n# columns: ", s.NCh))
 
