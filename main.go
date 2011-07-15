@@ -15,7 +15,7 @@ var outDs outputData // one to sum and take mean over simulation
 
 func main() {
 
-	runtime.GOMAXPROCS(8)
+	runtime.GOMAXPROCS(10)
 
 	s.Init()
 
@@ -97,7 +97,7 @@ func readDataAndPrintToStd(save bool) {
 		case v < -1:
 			outD.BER3++
 			fallthrough
-		case v < -0.01:
+		case v < -0.00001:
 			outD.connected++
 			fallthrough
 		case v != 0:
