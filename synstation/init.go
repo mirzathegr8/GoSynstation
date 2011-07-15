@@ -3,6 +3,7 @@ package synstation
 import "math"
 //import "fmt"
 import "rand"
+import "geom"
 //import "container/list"
 
 var SyncChannel chan float64
@@ -65,17 +66,7 @@ func init() {
 		}
 	}
 
-	/*d:=0
-	nD := int(math.Sqrt(synstation.D))
-	for i:=0;i< nD ;i++{
-		for j:=0;j < nD;j++{
-			x:=synstation.Field/float64(nD)*(float64(i)+ .5*float64(j%2) )
-			y:=synstation.Field/float64(nD)*(float64(j)+.5)
-			Synstations[d].R.SetPos(geom.Pos{x,y})
-			d++
-		}
-	}*/
-
+	
 	for i := range Mobiles {
 		Mobiles[i].Init(i)
 	}
@@ -101,8 +92,27 @@ func Init() {
 	for i := range Synstations {
 		go Synstations[i].Init()
 	}
+
+
 	//sync
 	Sync(D)
+
+	if NetLayout==HONEYCOMB{
+	d:=0
+	nD := int(math.Sqrt(D))
+	for i:=0;i< nD ;i++{
+		for j:=0;j < nD;j++{
+			x:=Field/float64(nD)*(float64(i)+ .5*float64(j%2) )
+			y:=Field/float64(nD)*(float64(j)+.5)
+			Synstations[d].R.SetPos(geom.Pos{x,y})
+			d++
+	
+		}
+	}}
+
+
+
+
 
 	ChannelHop() //Set Mobile's initial channel
 
