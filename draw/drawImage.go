@@ -127,7 +127,7 @@ func DrawReceptionField(dbs []synstation.DBS, name string) {
 		}
 	}
 
-	f, err := os.Open(name, os.O_CREATE|os.O_WRONLY, 0666)
+	f, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY, 0666)
 
 	if err = png.Encode(f, im); err != nil {
 		os.Exit(-1)

@@ -78,7 +78,7 @@ const (
 	MONTECARLO
 )
 
-const DiversityType = MRC
+const DiversityType = SELECTION
 
 const (
 	SELECTION = iota
