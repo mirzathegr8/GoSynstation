@@ -29,7 +29,14 @@ type Connection struct {
 	ff_R     [NCh]float64   //stores received power with FF
 	SNRrb    [NCh]float64   //stores received power with FF
 
-	filterF FilterInt //stores received power
+
+	IfilterAr [NCh]FilterInt //stores received power
+	IfilterBr [NCh]FilterInt //stores received power
+	Iff_R     [NCh]float64   //stores received power with FF
+	//ISNRrb    [NCh]float64   //stores received power with FF
+
+
+	filterF FilterInt //Coherence Frequency filter	
 
 	Rgen *rand.Rand
 
@@ -111,7 +118,8 @@ func (Conn *Connection) InitConnection(E EmitterInt, v float64, Rgen *rand.Rand)
 		for i := 0; i < NCh; i++ {
 			Conn.filterAr[i] = &PNF
 			Conn.filterBr[i] = &PNF
-
+			Conn.IfilterAr[i] = &PNF
+			Conn.IfilterBr[i] = &PNF
 		}
 		Conn.filterF = &PNF
 	} else {
@@ -120,6 +128,7 @@ func (Conn *Connection) InitConnection(E EmitterInt, v float64, Rgen *rand.Rand)
 		C := MultFilter(A, B)
 
 		Conn.filterF = CoherenceFilter.Copy()
+
 
 		for i := 0; i < NCh; i++ {
 			Conn.filterAr[i] = C.Copy()
@@ -147,10 +156,42 @@ func (Conn *Connection) InitConnection(E EmitterInt, v float64, Rgen *rand.Rand)
 			}
 
 			for i := 0; i < NCh; i++ {
-				Conn.filterAr[i].nextValue(Conn.filterF.nextValue(Conn.Rgen.NormFloat64()))
+				Conn.filterBr[i].nextValue(Conn.filterF.nextValue(Conn.Rgen.NormFloat64()))
 			}
 
 		}
+
+		for i := 0; i < NCh; i++ {
+			Conn.IfilterAr[i] = C.Copy()
+			Conn.IfilterBr[i] = C.Copy()
+		}
+
+		// initalize filters : sent some values to prevent having empty values z^-n in filters 
+		// 1.5/DopplerF gives a good number of itterations to decorelate initial null variables
+		// and set the channel to a steady state		
+
+		for l := 0; l < int(2.5/DopplerF); l++ {
+
+			// for speed optimization, decorelation samples or not used, it makes little difference 
+			for i := 0; i < 50; i++ {
+				Conn.filterF.nextValue(Conn.Rgen.NormFloat64())
+			}
+
+			for i := 0; i < NCh; i++ {
+				Conn.IfilterAr[i].nextValue(Conn.filterF.nextValue(Conn.Rgen.NormFloat64()))
+			}
+
+			// for speed optimization, decorelation samples or not used, it makes little difference 
+			for i := 0; i < 50; i++ {
+				Conn.filterF.nextValue(Conn.Rgen.NormFloat64())
+			}
+
+			for i := 0; i < NCh; i++ {
+				Conn.IfilterBr[i].nextValue(Conn.filterF.nextValue(Conn.Rgen.NormFloat64()))
+			}
+
+		}
+
 
 	}
 
@@ -174,15 +215,6 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 	ARB := E.GetARB()
 
 	c.SNR = 0 //reset
-
-/*	if E.IsSetARB(0) {
-		_, c.BER, c.SNR, c.Pr = rx.EvalSignalBER(E, 0)
-
-		c.meanBER.Add(c.BER)
-		c.meanSNR.Add(c.SNR)
-		c.meanPr.Add(c.Pr)
-		//return
-	}*/
 
 	K := rx.GetK(E.GetId())
 
@@ -211,17 +243,33 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 		c.ff_R[rb] = (a*a + b*b) / (2 + K*K)
 	}
 
-	/*for rb := 0; rb < NCh; rb++ {
-		//a := c.filterAr[rb].nextValue(c.initz[0][rb]) + K
-		b := c.filterBr[rb].nextValue(c.filterF.nextValue(c.Rgen.NormFloat64()))
-		c.ff_R[rb] = (c.ff_R[rb] + b*b) / (2 + K*K)
+
+
+	// Generate fading values for First Interferer
+	//
+	for i := 0; i < 50; i++ {
+		c.filterF.nextValue(c.Rgen.NormFloat64())
 	}
-	*/
-	/*for rb := 0; rb < NCh; rb++ {
-		a := c.filterAr[rb].nextValue(c.filterF.nextValue(c.Rgen.NormFloat64())) + K
-		//b := c.filterBr[rb].nextValue(c.initz[1][rb])
-		c.ff_R[rb] = a * a
-	}*/
+
+	for i := 0; i < NCh; i++ {
+		c.initz[0][i] = c.filterF.nextValue(c.Rgen.NormFloat64())
+	}
+
+	//pass some values to decorelate
+	for i := 0; i < 50; i++ {
+		c.filterF.nextValue(c.Rgen.NormFloat64())
+	}
+
+	for i := 0; i < NCh; i++ {
+		c.initz[1][i] = c.filterF.nextValue(c.Rgen.NormFloat64())
+	}
+
+	for rb := 0; rb < NCh; rb++ {
+		a := c.IfilterAr[rb].nextValue(c.initz[0][rb]) + K
+		b := c.IfilterBr[rb].nextValue(c.initz[1][rb])
+		c.Iff_R[rb] = (a*a + b*b) / (2 + K*K)
+	}
+
 
 	var touch bool
 
@@ -237,6 +285,12 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 
 		Rc := &rx.Channels[rb]
 
+			NotPint1:=0.0
+			if(Rc.Signal[1]>=0){
+				NotPint1=Rc.pr[Rc.Signal[1]]*(c.Iff_R[rb]-1)
+			}
+
+
 		if use {
 
 			//Pr, Rc := rx.GetPr(E.GetId(), rb)
@@ -245,7 +299,10 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 
 			c.Pr = Pr // to save data to file
 
-			c.SNRrb[rb] = Pr * c.ff_R[rb] / GetNoisePInterference(Rc.Pint, Pr)
+		
+			c.SNRrb[rb] = Pr * c.ff_R[rb] / (GetNoisePInterference(Rc.Pint, Pr)  + NotPint1 )
+
+
 			BER := L1 * math.Exp(-c.SNRrb[rb]/2/L2) / 2.0
 
 			c.meanPr.Add(Pr)
@@ -271,7 +328,7 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 				// and we can suppose that the first signal is listened too and of course will not be emitting on this RB 						anymore if it is assigned to the current mobiles
 			}*/
 
-			c.SNRrb[rb] = prbase * c.ff_R[rb] / GetNoisePInterference(Rc.Pint,0) // WNoise // Wnoise check
+			c.SNRrb[rb] = prbase * c.ff_R[rb] / ( GetNoisePInterference(Rc.Pint,0) +NotPint1 ) // WNoise // Wnoise check
 
 			c.SNRrb[rb] *= estimateFactor(dbs, E)
 			/*div := E.GetNumARB()
