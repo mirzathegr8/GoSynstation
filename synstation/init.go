@@ -98,17 +98,35 @@ func Init() {
 	Sync(D)
 
 	if NetLayout==HONEYCOMB{
-	d:=0
-	nD := int(math.Sqrt(D))
+	
+
+d:=0
+	Wsd := math.Sqrt(D*2*math.Sqrt(3) )	
+	nD := int(Wsd/2.0)
+	mD := int(Wsd/math.Sqrt(3))
+	DD := Field / (float64(nD)+.8)
+
+	deltaH:= (Field- (float64(nD)-0.5)*DD) / 2.0
+	deltaV:= (Field- (float64(mD)-0.5)*DD/2*math.Sqrt(3)) / 2.0
 	for i:=0;i< nD ;i++{
-		for j:=0;j < nD;j++{
-			x:=Field/float64(nD)*(float64(i)+ .5*float64(j%2) )
-			y:=Field/float64(nD)*(float64(j)+.5)
+		for j:=0;j < mD;j++{
+			x:=deltaH + DD*(float64(i)+ .5*float64(j%2) )
+			y:=deltaV + DD*float64(j)
 			Synstations[d].R.SetPos(geom.Pos{x,y})
 			d++
 	
 		}
-	}}
+	
+
+
+
+
+	
+
+
+
+	}
+}
 
 
 
