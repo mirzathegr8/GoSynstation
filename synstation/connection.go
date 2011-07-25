@@ -175,14 +175,14 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 
 	c.SNR = 0 //reset
 
-	if E.IsSetARB(0) {
+/*	if E.IsSetARB(0) {
 		_, c.BER, c.SNR, c.Pr = rx.EvalSignalBER(E, 0)
 
 		c.meanBER.Add(c.BER)
 		c.meanSNR.Add(c.SNR)
 		c.meanPr.Add(c.Pr)
-		return
-	}
+		//return
+	}*/
 
 	K := rx.GetK(E.GetId())
 
@@ -231,7 +231,9 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 
 	var capaTTI float64
 
-	for rb, use := range ARB {
+	for rb:= 1; rb<NCh; rb++ {
+
+		use:=ARB[rb]
 
 		Rc := &rx.Channels[rb]
 
@@ -243,7 +245,7 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 
 			c.Pr = Pr // to save data to file
 
-			c.SNRrb[rb] = Pr * c.ff_R[rb] / (Rc.Pint - Pr + WNoise)
+			c.SNRrb[rb] = Pr * c.ff_R[rb] / GetNoisePInterference(Rc.Pint, Pr)
 			BER := L1 * math.Exp(-c.SNRrb[rb]/2/L2) / 2.0
 
 			c.meanPr.Add(Pr)
@@ -269,7 +271,7 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 				// and we can suppose that the first signal is listened too and of course will not be emitting on this RB 						anymore if it is assigned to the current mobiles
 			}*/
 
-			c.SNRrb[rb] = prbase * c.ff_R[rb] / (Rc.Pint + WNoise)
+			c.SNRrb[rb] = prbase * c.ff_R[rb] / GetNoisePInterference(Rc.Pint,0) // WNoise // Wnoise check
 
 			c.SNRrb[rb] *= estimateFactor(dbs, E)
 			/*div := E.GetNumARB()
@@ -284,7 +286,16 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 
 		}
 	}
-	if !touch { // add null to mean BER
+	
+
+	if E.IsSetARB(0) {
+		_, c.BER, c.SNR, c.Pr = rx.EvalSignalBER(E, 0)
+
+		c.meanBER.Add(c.BER)
+		c.meanSNR.Add(c.SNR)
+		c.meanPr.Add(c.Pr)
+		//return
+	}else if !touch { // add null to mean BER
 		c.meanPr.Add(0)
 		c.meanSNR.Add(0)
 		c.SNR = 0
