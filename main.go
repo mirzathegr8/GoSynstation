@@ -61,7 +61,7 @@ func main() {
 	}
 	fmt.Println()
 
-	SaveToFile(s.Mobiles[:])
+	SaveToFile(s.Mobiles[:],s.Synstations[:])
 
 	//And finaly close channels and background processes
 
