@@ -2,16 +2,16 @@
 
 figure(1);
 load TransferRate.mat ;
-plot(sort(sum(TransferRate,2)),c);
-ylabel ("capacity")
+plot(sort(sum(TransferRate,2)/size(TransferRate,2)*1000/1e6),c);
+%ylabel ("capacity")
 xlabel("mobiles")
 hold on;
 
 figure(2);
 load Outage.mat;
 [rr,T]=outage(Outage);
-plot(log10(rr+1),c);
-ylabel ("number of mobiles in outage")
+plot(log10(rr/size(TransferRate,1)*1000+1),c);
+%ylabel ("number of mobiles in outage")
 xlabel("TTI")
 hold on;
 
