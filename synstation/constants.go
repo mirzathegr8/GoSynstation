@@ -1,12 +1,12 @@
 package synstation
 
 
-const Field = 6000 //length in meters
+const Field = 4000 //length in meters
 
 const Duration = 1000 // in iterations 
 
-const M = 800 //numbers of mobiles
-const D = 128  // numbers of DBS
+const M = 1000 //numbers of mobiles
+const D = 160  // numbers of DBS
 
 const L2 = 2 // modulation factor
 const L1 = 1
@@ -24,7 +24,7 @@ const roverlap = 0.0 // ratio of overlaping of two adjacent channels
 // thermal noise per RB 121.45dBm normalized per maximum terminal power output 21dBm and divided for one TTI
 const WNoise = DivCh * 5.6885e-15 //7.1614e-16 // White noise at reciever //21.484e-16
 const NChRes = 1              //numbers of reserved channels, not used yet, but chan 0 must be reserved
-const NConnec = 25            // numbers of connections per dbs
+const NConnec = 20            // numbers of connections per dbs
 
 const BERThres = 0.4
 const SNRThresConnec = 15
@@ -44,6 +44,9 @@ const (
 	RANDOM
 )
 
+//const BeamAngle = 1.1345 // for 120degre lobe ==PI/2 (half lob size)
+const BeamAngle = 0.4
+
 const SetReceiverType = BEAM
 
 //type ReceiverType int
@@ -54,7 +57,7 @@ const (
 	SECTORED
 )
 
-const SetShadowMap = SHADOWMAP
+const SetShadowMap = NOSHADOW
 
 //type ReceiverType int
 
@@ -78,7 +81,7 @@ const (
 	MONTECARLO
 )
 
-const DiversityType = SELECTION
+const DiversityType = MRC
 
 const (
 	SELECTION = iota
@@ -93,13 +96,15 @@ const (
 )
 
 
-var ARBSchedulFunc = ARBScheduler3
+//var ARBSchedulFunc = ARBScheduler3
 //var ARBSchedulFunc = ARBScheduler
 //var ARBSchedulFunc = ChHopping
+var ARBSchedulFunc = ChHopping2
+var subsetSize=5
 
-var estimateFactor = estimateFactor0
+var estimateFactor = estimateFactor1
 
-const conservationFactor = 10 // 0.8 best for estimateFactor1 and ARBScheduler
+const conservationFactor = 0.8 // 0.8 best for estimateFactor1 and ARBScheduler
 //const conservationFactor = 10 // best for estimateFactor0 and ARBScheduler3
 
 
@@ -107,3 +112,8 @@ const popsize = 10
 const generations = 10
 const CAPAthres = 3000 // this value to define the relative min capacity compared to the maximum over ARB for one mobile, under this threshold RB will not be assigned
 
+
+func GetNoisePInterference(Pint,Pr float64) float64{
+	return Pint-Pr + WNoise
+	//return WNoise
+}
