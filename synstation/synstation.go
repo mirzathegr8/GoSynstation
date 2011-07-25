@@ -214,7 +214,7 @@ func (dbs *DBS) checkLinkViability() {
 func (dbs *DBS) connectionAgent() {
 
 	var conn int
-	if dbs.Connec.Len() >= NConnec {
+	if dbs.Connec.Len() >= NConnec-1 {
 		//disconnect
 		var disc *list.Element
 		var min float64
@@ -240,7 +240,7 @@ func (dbs *DBS) connectionAgent() {
 
 		//First try to connect unconnected mobiles
 
-		for i, j := 0, NConnec-dbs.Connec.Len(); j > 0 && i < SizeES; j-- {
+		for i, j := 0, NConnec-dbs.Connec.Len(); j >= 0 && i < SizeES; j-- {
 
 			//var i=0
 			Rc, Eval := dbs.R.EvalChRSignalSNR(0, i)
