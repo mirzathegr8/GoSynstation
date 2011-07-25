@@ -235,7 +235,7 @@ func save_binary_data(method func(t *s.Trace, i int) float64, m int, channel cha
 }
 
 
-func SaveToFile(Mobiles []s.Mob) {
+func SaveToFile(Mobiles []s.Mob, dbs []s.DBS) {
 
 	os.Remove("out.mat")
 	outF, err := os.OpenFile("out.mat", os.O_WRONLY|os.O_CREATE, 0666)
@@ -311,6 +311,13 @@ func SaveToFile(Mobiles []s.Mob) {
 	outF.WriteString(fmt.Sprintln("# name: Speed\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 2))
 	for i := 0; i < s.M; i++ {
 		outF.WriteString(fmt.Sprintln(Mobiles[i].Speed[0], Mobiles[i].Speed[1], " "))
+
+	}
+	outF.WriteString("\n")
+
+	outF.WriteString(fmt.Sprintln("# name: XYD\n# type: matrix\n# rows: ", s.D, "\n# columns: ", 2))
+	for i := 0; i < s.D; i++ {
+		outF.WriteString(fmt.Sprintln(dbs[i].R.GetPos().X, " ", dbs[i].R.GetPos().Y," "))
 
 	}
 	outF.WriteString("\n")
