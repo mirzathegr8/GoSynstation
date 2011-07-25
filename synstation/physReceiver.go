@@ -164,10 +164,11 @@ func (r *PhysReceiver) EvalBestSignalSNR(rb int) (Rc *ChanReceiver, Eval float64
 	if Rc.Signal[0] >= 0 {
 
 		PMax := Rc.pr[Rc.Signal[0]]
+		//Wnoise check
 		if rb == 0 {
 			Eval = PMax / WNoise
 		} else {
-			Eval = PMax / (Rc.Pint - PMax + WNoise)
+			Eval = PMax /  GetNoisePInterference(Rc.Pint, PMax)
 		}
 
 	}
@@ -184,10 +185,11 @@ func (r *PhysReceiver) EvalChRSignalSNR(rb int, k int) (Rc *ChanReceiver, Eval f
 	if Rc.Signal[k] >= 0 {
 
 		PMax := Rc.pr[Rc.Signal[k]]
+		//Wnoise check
 		if rb == 0 {
 			Eval = PMax / WNoise
 		} else {
-			Eval = PMax / (Rc.Pint - PMax + WNoise)
+			Eval = PMax / GetNoisePInterference(Rc.Pint, PMax)
 		}
 
 	}
@@ -215,9 +217,9 @@ func (r *PhysReceiver) EvalSignalSNR(e EmitterInt, rb int) (Rc *ChanReceiver, SN
 	case rb == 0: //this channel is the obsever channel to follow Mobiles while they are not assigned a channel
 		SNR = Pr / 1e-15 //WNoise			
 	case e.IsSetARB(rb): // same channel so substract Pr from Pint
-		SNR = Pr / (Rc.Pint - Pr + WNoise)
+		SNR = Pr / GetNoisePInterference(Rc.Pint, Pr) // WNoise//Wnoise check
 	default: // different channel so Pr is not in the sum Pint
-		SNR = Pr / (Rc.Pint + WNoise)
+		SNR = Pr / GetNoisePInterference(Rc.Pint,0) //WNoise //Wnoise check 
 	}
 
 	return
@@ -314,7 +316,7 @@ func (rx *PhysReceiver) Compute(Connec *list.List) {
 					if theta < 0.05 && theta > -0.05 {
 						gain = 10
 					} else {
-						theta /= 1.1345
+						theta /= BeamAngle
 						g := 12 * theta * theta
 						if g > 20 {
 							g = 20
