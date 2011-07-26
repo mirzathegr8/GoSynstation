@@ -151,7 +151,7 @@ func (Conn *Connection) InitConnection(E EmitterInt, v float64, Rgen *rand.Rand)
 			
 		}
 
-if FadingOnPint1{
+		if FadingOnPint1==Fading{
 		for i := 0; i < NCh; i++ {
 			Conn.IfilterAr[i] = C.Copy()		
 		}
@@ -215,7 +215,7 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 	}
 
 
-	if FadingOnPint1{
+	if FadingOnPint1==Fading{
 	// Generate fading values for First Interferer
 	//
 	for i := 0; i < 50; i++ {
@@ -247,11 +247,12 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 		Rc := &rx.Channels[rb]
 
 			NotPint1:=0.0
-			if FadingOnPint1{
+			if FadingOnPint1!=Normal{ //if cancel, c.Iff_r =0 and total multiplied by -1, if fading, remove difference
 			if(Rc.Signal[1]>=0){
 				NotPint1=Rc.pr[Rc.Signal[1]]*(c.Iff_R[rb]-1)
 			}
 			}
+
 
 		if use {
 

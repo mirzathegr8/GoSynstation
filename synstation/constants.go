@@ -118,4 +118,10 @@ func GetNoisePInterference(Pint,Pr float64) float64{
 	//return WNoise*5000
 }
 
-const FadingOnPint1 = true
+const FadingOnPint1 = Cancel
+const (
+	Normal=iota
+	Fading
+	Cancel
+)
+
