@@ -45,7 +45,7 @@ const (
 )
 
 //const BeamAngle = 1.1345 // for 120degre lobe ==PI/2 (half lob size)
-const BeamAngle = 0.4
+const BeamAngle = 1.1345
 
 const SetReceiverType = BEAM
 
@@ -57,7 +57,7 @@ const (
 	SECTORED
 )
 
-const SetShadowMap = NOSHADOW
+const SetShadowMap = SHADOWMAP
 
 //type ReceiverType int
 
@@ -102,9 +102,9 @@ const (
 var ARBSchedulFunc = ChHopping2
 var subsetSize=5
 
-var estimateFactor = estimateFactor1
+var estimateFactor = estimateFactor0
 
-const conservationFactor = 0.8 // 0.8 best for estimateFactor1 and ARBScheduler
+const conservationFactor = 20 // 0.8 best for estimateFactor1 and ARBScheduler
 //const conservationFactor = 10 // best for estimateFactor0 and ARBScheduler3
 
 
@@ -115,5 +115,7 @@ const CAPAthres = 3000 // this value to define the relative min capacity compare
 
 func GetNoisePInterference(Pint,Pr float64) float64{
 	return Pint-Pr + WNoise
-	//return WNoise
+	//return WNoise*5000
 }
+
+const FadingOnPint1 = true

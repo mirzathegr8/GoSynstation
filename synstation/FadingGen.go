@@ -10,25 +10,25 @@ const cel = 3 * 10e8 //vitesse de propagation en m/s
 
 
 type FilterInt interface {
-	nextValue(input float64) (output float64)
-	nextValues(input []float64) []float64
+	nextValue(input complex128) (output complex128)
+	nextValues(input []complex128) []complex128
 	InitRandom(Rgen *rand.Rand)
-	InitZ(z []float64)
+	InitZ(z []complex128)
 	Copy() FilterInt
 }
 
 
 type PassNull struct{}
 
-func (p *PassNull) nextValue(input float64) (output float64) {
+func (p *PassNull) nextValue(input complex128) (output complex128) {
 	return 1 // to compensate  
 }
-func (p *PassNull) nextValues(input []float64) []float64 {
+func (p *PassNull) nextValues(input []complex128) []complex128 {
 	return input
 }
 
 func (p *PassNull) InitRandom(Rgen *rand.Rand) {}
-func (f *PassNull) InitZ(z []float64)          {}
+func (f *PassNull) InitZ(z []complex128)          {}
 
 func (p *PassNull) Copy() (fo FilterInt) {
 	return p
@@ -38,12 +38,12 @@ func (p *PassNull) Copy() (fo FilterInt) {
 var PNF PassNull
 
 type Filter struct {
-	a []float64
-	b []float64
-	z []float64
+	a []complex128
+	b []complex128
+	z []complex128
 }
 
-func (f *Filter) nextValue(input float64) (output float64) {
+func (f *Filter) nextValue(input complex128) (output complex128) {
 	f.z[0] = input //* f.a[0]
 	for i := 1; i < len(f.a); i++ {
 		f.z[0] -= f.a[i] * f.z[i]
@@ -59,7 +59,7 @@ func (f *Filter) nextValue(input float64) (output float64) {
 }
 
 
-func (f *Filter) nextValues(Input []float64) []float64 {
+func (f *Filter) nextValues(Input []complex128) []complex128 {
 
 	for k, input := range Input {
 		f.z[0] = input //* f.a[0]
@@ -79,14 +79,14 @@ func (f *Filter) nextValues(Input []float64) []float64 {
 
 func (f *Filter) InitRandom(Rgen *rand.Rand) {
 	for i := 0; i < len(f.z); i++ {
-		f.z[i] = Rgen.NormFloat64()
+		f.z[i] = complex(Rgen.NormFloat64(),Rgen.NormFloat64())
 	}
 
 	return
 }
 
 
-func (f *Filter) InitZ(z []float64) {
+func (f *Filter) InitZ(z []complex128) {
 
 	for i := 0; i < len(f.z) && i < len(z); i++ {
 		f.z[i] = z[i]
@@ -137,11 +137,11 @@ func Butter(W float64) (f *Filter) {
 
 	f.b = Sreal(poly(zero))
 	for i := range f.b {
-		f.b[i] = real(gain) * f.b[i]
+		f.b[i] = complex(real(gain),0) * f.b[i]
 	}
 	f.a = Sreal(poly(pole))
 
-	f.z = make([]float64, 3)
+	f.z = make([]complex128, 3)
 	for i := range f.z {
 		f.z[i] = 1 //init stream to non null
 		//f.z2[i] = 1 //init stream to non null
@@ -149,7 +149,7 @@ func Butter(W float64) (f *Filter) {
 
 	//adjust gain
 	for j := range f.b {
-		f.b[j] *= math.Sqrt(1/W) * .96 //scale input to compensate for lowpass and have same output power as input
+		f.b[j] *= complex(math.Sqrt(1/W) * .96, 0) //scale input to compensate for lowpass and have same output power as input
 	}
 
 	return
@@ -172,10 +172,10 @@ func poly(x []complex128) (y []complex128) {
 	}
 	return
 }
-func Sreal(x []complex128) (y []float64) {
-	y = make([]float64, len(x))
+func Sreal(x []complex128) (y []complex128) {
+	y = make([]complex128, len(x))
 	for i := range x {
-		y[i] = real(x[i])
+		y[i] = complex(real(x[i]), 0)
 	}
 	return
 }
@@ -232,11 +232,11 @@ func Cheby(Rp, W float64) (f *Filter) {
 
 	f.b = Sreal(poly(zero))
 	for i := range f.b {
-		f.b[i] = real(gain) * f.b[i]
+		f.b[i] = complex(real(gain),0) * f.b[i]
 	}
 	f.a = Sreal(poly(pole))
 
-	f.z = make([]float64, 3)
+	f.z = make([]complex128, 3)
 	for i := range f.z {
 		f.z[i] = 1 //init stream to non null
 		//f.z2[i] = 1 //init stream to non null
@@ -254,8 +254,8 @@ func Cheby(Rp, W float64) (f *Filter) {
 
 
 func (f *Filter) PassNull() {
-	f.a = []float64{0, -1.0}
-	f.b = []float64{0, 1.0}
+	f.a = []complex128{0,0 , -1.0,0}
+	f.b = []complex128{0,0, 1.0,0}
 	for i := range f.z {
 		f.z[i] = 1 //init stream to non null
 		//f.z2[i] = 1 //init stream to non null
@@ -272,7 +272,7 @@ func MultFilter(f1, f2 *Filter) (fo *Filter) {
 	if lz < len(fo.b) {
 		lz = len(fo.b)
 	}
-	fo.z = make([]float64, lz)
+	fo.z = make([]complex128, lz)
 
 	for i := range fo.z {
 		fo.z[i] = 1 //init stream to non null
@@ -281,13 +281,13 @@ func MultFilter(f1, f2 *Filter) (fo *Filter) {
 	return
 }
 
-func conv(a, b []float64) (y []float64) {
+func conv(a, b []complex128) (y []complex128) {
 
 	la := len(a)
 	lb := len(b)
 	ly := la + lb - 1
 
-	y = make([]float64, ly)
+	y = make([]complex128, ly)
 
 	for i := 0; i < la; i++ {
 
@@ -306,10 +306,10 @@ func (f *Filter) Copy() (fb FilterInt) {
 	fo := new(Filter)
 	fo.a = f.a
 	fo.b = f.b
-	fo.z = make([]float64, len(f.z))
+	fo.z = make([]complex128, len(f.z))
 
 	for i := range fo.z {
-		fo.z[i] = 1 //init stream to non null
+		fo.z[i] = complex(1,0) //init stream to non null
 		//f.z2[i] = 1 //init stream to non null
 	}
 	return fo

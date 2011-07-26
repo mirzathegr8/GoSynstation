@@ -3,6 +3,7 @@ package synstation
 import "math"
 import "geom"
 import "rand"
+import "cmath"
 //import "fmt"
 
 
@@ -25,13 +26,13 @@ type Connection struct {
 	meanCapa MeanData
 
 	filterAr [NCh]FilterInt //stores received power
-	filterBr [NCh]FilterInt //stores received power
+	//filterBr [NCh]FilterInt //stores received power
 	ff_R     [NCh]float64   //stores received power with FF
 	SNRrb    [NCh]float64   //stores received power with FF
 
 
 	IfilterAr [NCh]FilterInt //stores received power
-	IfilterBr [NCh]FilterInt //stores received power
+	//IfilterBr [NCh]FilterInt //stores received power
 	Iff_R     [NCh]float64   //stores received power with FF
 	//ISNRrb    [NCh]float64   //stores received power with FF
 
@@ -40,7 +41,7 @@ type Connection struct {
 
 	Rgen *rand.Rand
 
-	initz [2][NCh]float64 //generation of random number per RB	
+	initz [NCh]complex128 //generation of random number per RB	
 
 }
 
@@ -117,9 +118,9 @@ func (Conn *Connection) InitConnection(E EmitterInt, v float64, Rgen *rand.Rand)
 	if DopplerF < 0.002 { // the frequency is so low, a simple antena diversity will compensate for 	
 		for i := 0; i < NCh; i++ {
 			Conn.filterAr[i] = &PNF
-			Conn.filterBr[i] = &PNF
+		
 			Conn.IfilterAr[i] = &PNF
-			Conn.IfilterBr[i] = &PNF
+		
 		}
 		Conn.filterF = &PNF
 	} else {
@@ -129,10 +130,8 @@ func (Conn *Connection) InitConnection(E EmitterInt, v float64, Rgen *rand.Rand)
 
 		Conn.filterF = CoherenceFilter.Copy()
 
-
 		for i := 0; i < NCh; i++ {
-			Conn.filterAr[i] = C.Copy()
-			Conn.filterBr[i] = C.Copy()
+			Conn.filterAr[i] = C.Copy()			
 		}
 
 		// initalize filters : sent some values to prevent having empty values z^-n in filters 
@@ -143,27 +142,18 @@ func (Conn *Connection) InitConnection(E EmitterInt, v float64, Rgen *rand.Rand)
 
 			// for speed optimization, decorelation samples or not used, it makes little difference 
 			for i := 0; i < 50; i++ {
-				Conn.filterF.nextValue(Conn.Rgen.NormFloat64())
+				Conn.filterF.nextValue(complex(Conn.Rgen.NormFloat64(), Conn.Rgen.NormFloat64()))
 			}
 
 			for i := 0; i < NCh; i++ {
-				Conn.filterAr[i].nextValue(Conn.filterF.nextValue(Conn.Rgen.NormFloat64()))
+				Conn.filterAr[i].nextValue(Conn.filterF.nextValue(complex(Conn.Rgen.NormFloat64(),Conn.Rgen.NormFloat64() ) ) )
 			}
-
-			// for speed optimization, decorelation samples or not used, it makes little difference 
-			for i := 0; i < 50; i++ {
-				Conn.filterF.nextValue(Conn.Rgen.NormFloat64())
-			}
-
-			for i := 0; i < NCh; i++ {
-				Conn.filterBr[i].nextValue(Conn.filterF.nextValue(Conn.Rgen.NormFloat64()))
-			}
-
+			
 		}
 
+if FadingOnPint1{
 		for i := 0; i < NCh; i++ {
-			Conn.IfilterAr[i] = C.Copy()
-			Conn.IfilterBr[i] = C.Copy()
+			Conn.IfilterAr[i] = C.Copy()		
 		}
 
 		// initalize filters : sent some values to prevent having empty values z^-n in filters 
@@ -174,24 +164,15 @@ func (Conn *Connection) InitConnection(E EmitterInt, v float64, Rgen *rand.Rand)
 
 			// for speed optimization, decorelation samples or not used, it makes little difference 
 			for i := 0; i < 50; i++ {
-				Conn.filterF.nextValue(Conn.Rgen.NormFloat64())
+				Conn.filterF.nextValue(complex(Conn.Rgen.NormFloat64(), Conn.Rgen.NormFloat64()))
 			}
 
 			for i := 0; i < NCh; i++ {
-				Conn.IfilterAr[i].nextValue(Conn.filterF.nextValue(Conn.Rgen.NormFloat64()))
-			}
-
-			// for speed optimization, decorelation samples or not used, it makes little difference 
-			for i := 0; i < 50; i++ {
-				Conn.filterF.nextValue(Conn.Rgen.NormFloat64())
-			}
-
-			for i := 0; i < NCh; i++ {
-				Conn.IfilterBr[i].nextValue(Conn.filterF.nextValue(Conn.Rgen.NormFloat64()))
+				Conn.IfilterAr[i].nextValue(Conn.filterF.nextValue(complex(Conn.Rgen.NormFloat64() , Conn.Rgen.NormFloat64() ) ) )
 			}
 
 		}
-
+}
 
 	}
 
@@ -221,55 +202,35 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 	//Generate DopplerFading
 	//pass some values to decorelate
 	for i := 0; i < 50; i++ {
-		c.filterF.nextValue(c.Rgen.NormFloat64())
+		c.filterF.nextValue(complex(c.Rgen.NormFloat64(),c.Rgen.NormFloat64()))
 	}
 
 	for i := 0; i < NCh; i++ {
-		c.initz[0][i] = c.filterF.nextValue(c.Rgen.NormFloat64())
+		c.initz[i] = c.filterF.nextValue(complex(c.Rgen.NormFloat64(),c.Rgen.NormFloat64()))
 	}
-
-	//pass some values to decorelate
-	for i := 0; i < 50; i++ {
-		c.filterF.nextValue(c.Rgen.NormFloat64())
-	}
-
-	for i := 0; i < NCh; i++ {
-		c.initz[1][i] = c.filterF.nextValue(c.Rgen.NormFloat64())
-	}
-
+	
 	for rb := 0; rb < NCh; rb++ {
-		a := c.filterAr[rb].nextValue(c.initz[0][rb]) + K
-		b := c.filterBr[rb].nextValue(c.initz[1][rb])
-		c.ff_R[rb] = (a*a + b*b) / (2 + K*K)
+		a := c.filterAr[rb].nextValue(c.initz[rb]) + complex(K,0)
+		c.ff_R[rb] = (real(a*cmath.Conj(a)) ) / (2 + K*K)
 	}
 
 
-
+	if FadingOnPint1{
 	// Generate fading values for First Interferer
 	//
 	for i := 0; i < 50; i++ {
-		c.filterF.nextValue(c.Rgen.NormFloat64())
+		c.filterF.nextValue(complex(c.Rgen.NormFloat64(),c.Rgen.NormFloat64()))
 	}
 
 	for i := 0; i < NCh; i++ {
-		c.initz[0][i] = c.filterF.nextValue(c.Rgen.NormFloat64())
-	}
-
-	//pass some values to decorelate
-	for i := 0; i < 50; i++ {
-		c.filterF.nextValue(c.Rgen.NormFloat64())
-	}
-
-	for i := 0; i < NCh; i++ {
-		c.initz[1][i] = c.filterF.nextValue(c.Rgen.NormFloat64())
+		c.initz[i] = c.filterF.nextValue(complex(c.Rgen.NormFloat64(),c.Rgen.NormFloat64()))
 	}
 
 	for rb := 0; rb < NCh; rb++ {
-		a := c.IfilterAr[rb].nextValue(c.initz[0][rb]) + K
-		b := c.IfilterBr[rb].nextValue(c.initz[1][rb])
-		c.Iff_R[rb] = (a*a + b*b) / (2 + K*K)
+		a := c.filterAr[rb].nextValue(c.initz[rb]) + complex(K,0)
+		c.Iff_R[rb] = (real(a*cmath.Conj(a)) ) / (2 + K*K)
 	}
-
+	}
 
 	var touch bool
 
@@ -286,10 +247,11 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 		Rc := &rx.Channels[rb]
 
 			NotPint1:=0.0
+			if FadingOnPint1{
 			if(Rc.Signal[1]>=0){
 				NotPint1=Rc.pr[Rc.Signal[1]]*(c.Iff_R[rb]-1)
 			}
-
+			}
 
 		if use {
 
