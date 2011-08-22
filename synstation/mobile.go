@@ -25,7 +25,7 @@ func (M *Mob) Init(i int) {
 	M.Y = M.Rgen.Float64() * Field
 	M.Power = 1
 
-	M.SetARB(0) // start trying to connect
+	M.ReSetARB() // start trying to connect
 
 	speed := M.Rgen.Float64() * MaxSpeed / 1000
 	//speed := float64(0.00)
