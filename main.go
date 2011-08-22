@@ -5,6 +5,7 @@ import "fmt"
 import s "synstation"
 import "runtime"
 //import "draw"
+import "os"
 
 
 // Data to save for output during simulation
@@ -29,11 +30,43 @@ func main() {
 
 	// precondition
 	for k = -200; k < 0; k++ {
+		/*fmt.Print("---- 1---- ", s.Mobiles[0].Diversity, " ")
+		fmt.Print( &s.Mobiles[0].MasterConnection)
+		fmt.Println()
+		fmt.Println("ARB ",s.Mobiles[0].ARB)
+		fmt.Println("fut ",s.Mobiles[0].ARBfutur)*/
 		s.GoRunPhys()
+		/*fmt.Print("---- 2---- ", s.Mobiles[0].Diversity, " ")
+		fmt.Print( &s.Mobiles[0].MasterConnection)
+		fmt.Println()
+		fmt.Println("ARB ",s.Mobiles[0].ARB)
+		fmt.Println("fut ",s.Mobiles[0].ARBfutur)*/
+
 		s.GoFetchData()
+	/*	fmt.Print("---- 3---- ", s.Mobiles[0].Diversity, " ")
+		fmt.Print( &s.Mobiles[0].MasterConnection)
+		fmt.Println()
+		fmt.Println("ARB ",s.Mobiles[0].ARB)
+		fmt.Println("fut ",s.Mobiles[0].ARBfutur)*/
+
 		readDataAndPrintToStd(false)
+
 		s.GoRunAgent()
+
+
+	/*	fmt.Print("---- 4---- ", s.Mobiles[0].Diversity, " ")
+		fmt.Print( &s.Mobiles[0].MasterConnection)
+		fmt.Println()
+		fmt.Println("ARB ",s.Mobiles[0].ARB)
+		fmt.Println("fut ",s.Mobiles[0].ARBfutur)*/
+
 		s.ChannelHop()
+		/*fmt.Print("---- 5---- ", s.Mobiles[0].Diversity, " ")
+		fmt.Print( &s.Mobiles[0].MasterConnection)
+		fmt.Println()
+		fmt.Println("ARB ",s.Mobiles[0].ARB)
+		fmt.Println("fut ",s.Mobiles[0].ARBfutur)*/
+
 
 		//s.PowerC(s.Synstations[:]) //centralized PowerAllocation
 	}
@@ -45,13 +78,23 @@ func main() {
 		readDataAndPrintToStd(true)
 		s.GoRunAgent()
 		s.ChannelHop()
-
 		//s.PowerC(s.Synstations[:]) // centralized PowerAllocation
 	}
 
 	// Print some status data
 	outDs.Div(float64(s.Duration))
 	fmt.Println("Mean", outDs.String())
+	
+	os.Remove("Mean.mat")
+	outF, err := os.OpenFile("Mean.mat", os.O_WRONLY|os.O_CREATE, 0666)
+
+	fmt.Println(err)
+
+	outF.WriteString(fmt.Sprintln("# name: Mean\n# type: matrix\n# rows: ", 1, "\n# columns: ", 11))
+	outF.WriteString(fmt.Sprintln(outDs.String(), " "))	
+	outF.WriteString("\n")
+	outF.Close()
+
 	for i := range s.Synstations {
 		fmt.Print(" ", s.Synstations[i].Connec.Len())
 	}
@@ -66,9 +109,6 @@ func main() {
 	//And finaly close channels and background processes
 
 	close(outChannel)
-	for ch := range s.SystemChan {
-		close(s.SystemChan[ch].Change)
-	}
 	close(s.SyncChannel)
 
 	StopSave()
