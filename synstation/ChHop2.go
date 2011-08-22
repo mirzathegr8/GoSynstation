@@ -3,11 +3,13 @@ package synstation
 import "container/vector"
 import "math"
 import "rand"
-//import "fmt"
+import "fmt"
 
 
 
-
+func init(){
+fmt.Println("init")
+}
 
 
 
@@ -49,6 +51,7 @@ func (dbs *DBS) RandomChan2() {
 
 }
 
+//var plus int
 
 func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 
@@ -56,61 +59,60 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 	var MobileList vector.Vector
 
 	//pour trier les canaux
-	dbs.RandomChan2()
+//	dbs.RandomChan2()
 
 	var stop = 0
 
 	// find a mobile
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
+
 		c := e.Value.(*Connection)
 
 		if c.Status == 0 { // only change if master
 
+			//first copy the future vector
+
+			//c.E.CopyFuturARB()
+	
+			//if c.E.GetFirstRB()<NChRes {
 			if c.E.IsSetARB(0) { //if the mobile is waiting to be assigned a proper channel
 
 				var ratio float64
 				nch := 0
 
 				//Parse channels in some order  given by dbs.RndCh to find a suitable channel 
-				for j := 0; j < NCh-NChRes; j+=subsetSize {
-					i := dbs.RndCh[j]
+				for j := NChRes; j < NCh; j+=subsetSize {
+					i := j// dbs.RndCh[j]
 					if !dbs.IsInUse(i) && !c.E.IsSetARB(i) {
-
-						/*snr:=0.0
+				
+						snr:=0.0;
 						for l:=0; l<subsetSize ; l++{
-						_, a,_,_ :=dbs.R.EvalSignalSNR(c.E, i+l)
-						snr+=a
+							 snr += c.GetE().GetSNRrb(i+l) 
 						}
 						snr/=float64(subsetSize)
-					*/
-				snr:=0.0;
-				for l:=0; l<subsetSize ; l++{
-					 snr += c.GetE().GetSNRrb(i+l) //dbs.R.EvalSignalSNR(co.GetE(), i+l)
-				}
-				snr/=float64(subsetSize)
-
-
 						if 10*math.Log10(snr) > SNRThresChHop {
-							if snr > ratio {
-								ratio = snr
-								nch = i
-								//assign and exit
-							}
+	
+						if snr > ratio {
+							ratio = snr
+							nch = i
+							//assign and exit
 						}
 					}
+						}
 				}
 				if nch != 0 {
-					dbs.changeChannel(c, 0, nch)
-					for l:=1 ; l<subsetSize;l++{	
-						c.GetE().SetARB(nch+l)
+					c.E.UnSetARB(0)					
+					for l:=0 ; l<subsetSize;l++{	
+						c.E.SetARB(nch+l)
+						Hopcount++
 					}
 					stop++
 					if stop > 1 {
 						return
 					}
 				}
-
-				// sort mobile connection for channel hopping
+	
+					// sort mobile connection for channel hopping
 			} else {
 				ratio := c.EvalRatio(dbs.R)
 				var i int
@@ -126,23 +128,35 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 	}
 
 	// change channel to some mobiles
-	for k := 0; k < MobileList.Len() && k < 2; k++ {
+	for k := 0; k < MobileList.Len() && k < 1; k++ {
 		co := MobileList.At(k).(ConnecType)
-		ratio := co.EvalRatio(dbs.R)
+		E:=co.GetE();
+		ratio := 0.0
+		oldCh:=co.GetE().GetFirstRB()
+		//if (oldCh<1) {
+		//	fmt.Println(" oops chhop")
+			//return
+		//	ratio= co.EvalRatio(dbs.R)
+		//}else {
+		for l:=0; l<subsetSize ; l++{
+		 	ratio += E.GetSNRrb(oldCh+l)
+		}
+		ratio/=float64(subsetSize)
+		//}
+
 		chHop := 0
 
-		for j := 0; j < NCh-NChRes; j+=subsetSize {
+		for j := NChRes; j < NCh; j+=subsetSize {
 
-			i := dbs.RndCh[j]
+			i := j//dbs.RndCh[j]
 
-			if !dbs.IsInUse(i) && !co.GetE().IsSetARB(i) {
+			if !dbs.IsInUse(i) && !E.IsSetARB(i) {
 
 				snr:=0.0;
 				for l:=0; l<subsetSize ; l++{
-					 snr += co.GetE().GetSNRrb(i+l) //dbs.R.EvalSignalSNR(co.GetE(), i+l)
+					 snr += E.GetSNRrb(i+l)
 				}
 				snr/=float64(subsetSize)
-//				_, snr, _, _ := dbs.R.EvalSignalSNR(co.GetE(), i)
 
 				if snr > ratio {
 					ratio = snr
@@ -150,14 +164,13 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 				}
 			}
 		}
-		if chHop > 0 {
-			oldCh:=co.GetE().GetFirstRB()
+		if chHop > 0 {			
 			for l:=0; l<subsetSize ; l++{
-			dbs.changeChannel(co, oldCh+l, chHop+l)
-			}
-			Hopcount++
+				if (oldCh>0) {E.UnSetARB(oldCh+l)}
+				E.SetARB(chHop+l)
+				Hopcount++
+			}					
 		}
-
 	}
-
 }
+
