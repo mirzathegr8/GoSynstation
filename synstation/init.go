@@ -85,7 +85,7 @@ var Rgen *rand.Rand  //on used for position
 var Rgen2 *rand.Rand //one used to init shadow maps
 //different rndvar are used to ensure repeatability of position with or without shadow maps
 
-
+var IntereNodeBDist float64
 
 func Init() {
 
@@ -93,18 +93,19 @@ func Init() {
 		go Synstations[i].Init()
 	}
 
-
 	//sync
 	Sync(D)
 
 	if NetLayout==HONEYCOMB{
 	
 
-d:=0
+	d:=0
 	Wsd := math.Sqrt(D*2*math.Sqrt(3) )	
 	nD := int(Wsd/2.0)
 	mD := int(Wsd/math.Sqrt(3))
 	DD := Field / (float64(nD)+.8)
+
+	IntereNodeBDist=DD // set the interdistance for schedulers with antipasta
 
 	deltaH:= (Field- (float64(nD)-0.5)*DD) / 2.0
 	deltaV:= (Field- (float64(mD)-0.5)*DD/2*math.Sqrt(3)) / 2.0
@@ -114,16 +115,8 @@ d:=0
 			y:=deltaV + DD*float64(j)
 			Synstations[d].R.SetPos(geom.Pos{x,y})
 			d++
-	
+			Synstations[d].Color=( 2*(j%2) + i )%3
 		}
-	
-
-
-
-
-	
-
-
 
 	}
 }
