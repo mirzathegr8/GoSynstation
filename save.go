@@ -336,8 +336,8 @@ func fadingSave(c chan int) {
 
 	for _ = range c {
 
-		if s.Mobiles[35].MasterConnection != nil {
-			ffR := s.Mobiles[35].MasterConnection.GetInstantSNIR()
+		if s.Mobiles[1].MasterConnection != nil {
+			ffR := s.Mobiles[1].MasterConnection.GetInstantSNIR()
 			buffer := bytes.NewBufferString("")
 			for _, a := range ffR {
 				fmt.Fprint(buffer, a)

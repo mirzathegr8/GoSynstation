@@ -2,6 +2,7 @@ package synstation
 
 import "rand"
 import "container/vector"
+import "math"
 
 
 // Sorts channels in random order

@@ -7,7 +7,7 @@ import "fmt"
 
 
 
-const uARBcost = 0.01 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)
+const uARBcost = 0.0 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)
 
 func init() {
 
