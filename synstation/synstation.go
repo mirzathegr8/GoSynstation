@@ -29,14 +29,25 @@ type DBS struct {
 	RndCh []int
 
 	ConnectionBank vector.Vector
+
+	Color int // This value is used to store some colorisation of the eNodeB, that is for example to use inside schedulers in honeycomb layout, where it will use a subset of RBs for ICIM
+
+	ALsave [NCh]int
+
+	Id int
 }
 
+var idtmp int
 
 func (dbs *DBS) Init() {
 
 	for i := 0; i < NConnec; i++ {
 		dbs.ConnectionBank.Push(new(Connection))
 	}
+
+	
+	dbs.Id=idtmp
+	idtmp++
 
 	switch SetReceiverType {
 	case OMNI, BEAM:
@@ -60,60 +71,45 @@ func (dbs *DBS) Init() {
 // Physics : evaluate SNRs at receiver, evaluate BER of connections
 func (dbs *DBS) RunPhys() {
 
+	/*var AL [NCh]int	
+	for i:= range AL {AL[i]=-1}
+	i:=0*/
+
+
 	dbs.R.Compute(dbs.Connec)
 
 	dbs.Clock = dbs.Rgen.Intn(EnodeBClock)
 
+
+
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
-		c.BitErrorRate(dbs.R.GetPhysReceiver(c.GetE().GetId()), dbs)
 
+	/*	if (c.Status==0){		
+		for rb,v:= range c.GetE().GetARB(){
+			if v {
+//				if rb!=0 && AL[rb]!=-1 {fmt.Println("Double Assign")}
+				AL[rb]=i
+
+				}
+		}
+		i++
+		}*/
+		c.BitErrorRate(dbs.R.GetPhysReceiver(c.GetE().GetId()), dbs)
 	}
+			/*AL[0]=-1
+			if i>0 && testSCFDMA(AL[:])==-1{
+				//for k:=range AL{  AL[k]=AL[k]-dbs.ALsave[k]}	
+					fmt.Println(AL)
+			}*/
+	
+	
 
 	SyncChannel <- 1
 }
 
 func (dbs *DBS) FetchData() {
 	SyncChannel <- 1
-}
-
-// Sorts channels in random order
-func (dbs *DBS) RandomChan() {
-
-	var SortCh vector.IntVector
-
-	for i := 0; i < NCh; i++ {
-		SortCh.Push(i)
-		dbs.RndCh[i] = i
-	}
-
-	//randomizesd reserved top canals
-	/*	for i := 10; i > 1; i-- {
-			j := dbs.Rgen.Intn(i) + NCh-10
-			SortCh.Swap(NCh-10+i-1, j)
-			dbs.RndCh[NCh-10+i-1] =SortCh.Pop()
-		}
-		dbs.RndCh[NCh-10]=SortCh.Pop()
-	*/
-	//randomizes other canals
-	/*	for i := NCh - 11; i > NChRes; i-- {
-			j := dbs.Rgen.Intn(i-NChRes) + NChRes 
-			SortCh.Swap(i, j)
-			dbs.RndCh[i] =SortCh.Pop()
-		}
-		dbs.RndCh[NChRes] = SortCh.Pop()
-		dbs.RndCh[0] = 0
-	*/
-	//fmt.Println(dbs.RndCh);
-
-	for i := NCh - 1; i > NChRes; i-- {
-		j := dbs.Rgen.Intn(i-NChRes) + NChRes
-		SortCh.Swap(i, j)
-		dbs.RndCh[i] = SortCh.Pop()
-	}
-	dbs.RndCh[NChRes] = SortCh.Pop()
-	dbs.RndCh[0] = 0
-
 }
 
 
@@ -163,19 +159,11 @@ func (dbs *DBS) RunAgent() {
 
 	dbs.checkLinkViability()
 
-	if dbs.Clock == 0 {
-
-		//if BWallocation == CHHOPPING {
-		//	dbs.channelHopping()
-		//} else {
-		//dbs.ARBScheduler()
-		//ARBScheduler2(dbs, dbs.Rgen)
-
-		ARBSchedulFunc(dbs, dbs.Rgen)
-		//}
+	if dbs.Clock == 0 {		
 
 		dbs.connectionAgent()
-
+		ARBSchedulFunc(dbs, dbs.Rgen)
+	
 		if PowerControl == AGENTPC {
 			dbs.optimizePowerAllocation()
 		}
@@ -195,13 +183,13 @@ func (dbs *DBS) checkLinkViability() {
 			Pr, _ := dbs.R.GetPr(c.E.GetId(), 0)
 
 			if 10*math.Log10(Pr/WNoise) < SNRThresConnec-2 {
+
 				dbs.disconnect(e)
 				sens_disconnect--
 				sens_lostconnect++
 			}
-		}
-		// remove any connection that does not satify the threshold
-		if c.GetLogMeanBER() > math.Log10(BERThres) {
+		} else if c.GetLogMeanBER() > math.Log10(BERThres) {	
+		//	fmt.Println("disconnect")
 			dbs.disconnect(e)
 			sens_disconnect--
 			sens_lostconnect++
@@ -289,255 +277,6 @@ func (dbs *DBS) connectionAgent() {
 
 }
 
-//
-//func (dbs *DBS) channelHopping2() {
-//
-//	//pour trier les connections actives
-//	var MobileList vector.Vector
-//
-//	//pour trier les canaux
-//	dbs.RandomChan()
-//
-//	// find a mobile
-//	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
-//		c := e.Value.(*Connection)
-//
-//		if c.Status == 0 { // only change if master
-//
-//			if c.E.IsSetARB(0) { //if the mobile is waiting to be assigned a proper channel
-//
-//				var ratio float64
-//				nch := 0
-//
-//				//Parse channels in some order  given by dbs.RndCh to find a suitable channel 
-//				for j := NChRes; j < NCh; j++ {
-//					i := dbs.RndCh[j]
-//					if !dbs.IsInUse(i)  {
-//
-//						_, ber, snr, _ := dbs.R.EvalSignalBER(c.E, i)
-//						ber = math.Log10(ber)
-//
-//						if ber < math.Log10(BERThres/10) {
-//							if snr > ratio {
-//								ratio = snr
-//								nch = i
-//								//assign and exit
-//							}
-//						}
-//					}
-//				}
-//				if nch != 0 {
-//					dbs.changeChannel(c, nch)
-//					return
-//				}
-//
-//				// sort mobile connection for channel hopping
-//			} else {
-//				ratio := c.EvalRatio(dbs.R)
-//				var i int
-//				for i = 0; i < MobileList.Len(); i++ {
-//					co := MobileList.At(i).(ConnecType)
-//					if ratio < co.EvalRatio(dbs.R) {
-//						break
-//					}
-//				}
-//				MobileList.Insert(i, c)
-//			}
-//		}
-//	}
-//
-//	// change channel to some mobiles
-//	for k := 0; k < MobileList.Len() && k < 15; k++ {
-//		co := MobileList.At(k).(ConnecType)
-//		//ratio := co.EvalRatio(&dbs.R)		
-//
-//		d := co.GetE().GetPos().Distance(dbs.R.GetPos())
-//
-//		//if (10*math.Log10(co.GetSNR())< SNRThres){
-//		//var ir int
-//		//ir:= NCh-NChRes + (6+int(math.Log10(Pr)))
-//		//if d<100 {ir=28
-//		//}else {ir=0}
-//
-//		//	ir:= NCh-NChRes + int(( -float(d)/1500*float(NCh-NChRes) ))
-//		//if (ir<0) {ir=0}
-//		//	if ir> NCh-2 {ir=NCh-2}
-//
-//		ir := 5
-//		if d < 300 {
-//			if !(co.GetE().GetARB()[0] > NCh-ir) || (co.GetSNR() < SNRThresChHop-3) {
-//				for j := NCh - ir; j < NCh; j++ {
-//
-//					i := dbs.RndCh[j]
-//					if !dbs.IsInUse(i) && i != co.GetE().GetARB()[0] {
-//						_, snr, _, _ := dbs.R.EvalSignalSNR(co.GetE(), i)
-//						if snr > SNRThresChHop {
-//							dbs.changeChannel(co, i)
-//							Hopcount++
-//							break
-//						}
-//					}
-//				}
-//			}
-//		} else {
-//
-//			if !(co.GetE().GetARB()[0] < NCh-ir) || (co.GetSNR() < SNRThresChHop-3) {
-//				for j := NChRes; j < NCh-ir; j++ {
-//
-//					i := dbs.RndCh[j]
-//
-//					if !dbs.IsInUse(i) && i != co.GetE().GetARB()[0] {
-//						_, snr, _, _ := dbs.R.EvalSignalSNR(co.GetE(), i)
-//						if snr > SNRThresChHop {
-//							dbs.changeChannel(co, i)
-//							Hopcount++
-//							break
-//						}
-//					}
-//				}
-//			}
-//
-//		}
-//
-//	}
-//	//}
-//
-//	/*
-//		for k := 0; k < MobileList.Len() && k < 1; k++ {
-//			co := MobileList.At(k).(ConnecType)
-//			ratio := co.EvalRatio(&dbs.R)
-//
-//
-//			if (Pr<8e-9) && co.GetE().GetCh()>NCh-3{
-//
-//		//push down		
-//			for j := NChRes; j < NCh; j++ {
-//
-//				i := dbs.RndCh[j]
-//
-//				if !dbs.IsInUse(i) && i != co.GetE().GetCh() {
-//					Rnew, ev, Pr:=dbs.R.EvalSignalBER(co.E,i)
-//					if Pr/(Rnew.Pint+WNoise) > ratio/2 {
-//						dbs.changeChannel(co, i)
-//						Hopcount++
-//						break
-//					}
-//				}
-//			}} else{
-//
-//		//push up		
-//			for j := NCh-2; j < NCh; j++ {
-//
-//				i := dbs.RndCh[j]			
-//				if !dbs.IsInUse(i) && i != co.GetE().GetCh() {
-//					Rnew, ev, Pr:=dbs.R.EvalSignalBER(co.E,i)
-//					if Pr/(Rnew.Pint+WNoise) > ratio/2 {
-//						dbs.changeChannel(co, i)
-//						Hopcount++
-//						break
-//					}
-//				}
-//			}}
-//
-//
-//		}
-//	*/
-//
-//
-//}
-//
-
-func ChHopping(dbs *DBS, Rgen *rand.Rand) {
-
-	//pour trier les connections actives
-	var MobileList vector.Vector
-
-	//pour trier les canaux
-	dbs.RandomChan()
-
-	var stop = 0
-
-	// find a mobile
-	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
-		c := e.Value.(*Connection)
-
-		if c.Status == 0 { // only change if master
-
-			if c.E.IsSetARB(0) { //if the mobile is waiting to be assigned a proper channel
-
-				var ratio float64
-				nch := 0
-
-				//Parse channels in some order  given by dbs.RndCh to find a suitable channel 
-				for j := NChRes; j < NCh; j++ {
-					i := dbs.RndCh[j]
-					if !dbs.IsInUse(i) && !c.E.IsSetARB(i) {
-						_, snr, _, _ := dbs.R.EvalSignalSNR(c.E, i)
-						if 10*math.Log10(snr) > SNRThresChHop {
-							if snr > ratio {
-								ratio = snr
-								nch = i
-								//assign and exit
-							}
-						}
-					}
-				}
-				if nch != 0 {
-					dbs.changeChannel(c, 0, nch)
-					stop++
-					if stop > 5 {
-						return
-					}
-				}
-
-				// sort mobile connection for channel hopping
-			} else {
-				ratio := c.EvalRatio(dbs.R)
-				var i int
-				for i = 0; i < MobileList.Len(); i++ {
-					co := MobileList.At(i).(ConnecType)
-					if ratio < co.EvalRatio(dbs.R) {
-						break
-					}
-				}
-				MobileList.Insert(i, c)
-			}
-		}
-	}
-
-	// change channel to some mobiles
-	for k := 0; k < MobileList.Len() && k < 2; k++ {
-		co := MobileList.At(k).(ConnecType)
-		ratio := co.EvalRatio(dbs.R)
-		chHop := 0
-
-		for j := NChRes; j < NCh; j++ {
-
-			i := dbs.RndCh[j]
-
-			if !dbs.IsInUse(i) && !co.GetE().IsSetARB(i) {
-
-				_, snr, _, _ := dbs.R.EvalSignalSNR(co.GetE(), i)
-
-				if snr > ratio {
-					ratio = snr
-					chHop = i
-				}
-			}
-		}
-		if chHop > 0 {
-			dbs.changeChannel(co, co.GetE().GetFirstRB(), chHop)
-			Hopcount++
-		}
-
-	}
-
-}
-
-func (dbs *DBS) changeChannel(co ConnecType, pch, nch int) {
-	co.GetE().UnSetARB(pch)
-	co.GetE().SetARB(nch)
-}
 
 func (dbs *DBS) optimizePowerAllocation() {
 
@@ -652,152 +391,6 @@ func (dbs *DBS) optimizePowerAllocationSimple() {
 
 //Minimum Area-Difference to the Envelope
 
-
-func ARBScheduler(dbs *DBS, Rgen *rand.Rand) {
-
-	var Metric [NConnec][NCh]float64
-
-	//var MobilesID [NConnec]int
-
-	var meanMeanCapa float64
-	var maxMeanCapa float64
-
-	for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
-
-		c := e.Value.(*Connection)
-
-		m_m := c.GetE().GetMeanTR()
-		meanMeanCapa += m_m
-		if maxMeanCapa < m_m {
-			maxMeanCapa = m_m
-		}
-
-	}
-	meanMeanCapa /= float64(dbs.Connec.Len())
-	meanMeanCapa += 0.1
-
-	// Eval Metric for all connections
-	for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
-
-		c := e.Value.(*Connection)
-		E := c.GetE()
-
-		if c.Status == 0 {
-
-			m_m := c.GetE().GetMeanTR()
-
-			for rb := 1; rb < NCh; rb++ {
-
-				var snrrb float64
-				if DiversityType == SELECTION {
-					snrrb = c.SNRrb[rb]
-				} else {
-					snrrb = E.GetSNRrb(rb)
-				}
-
-				m := EffectiveBW * math.Log2(1+snrrb)
-
-				//m_m := c.meanCapa.Get()
-
-				//b := math.Exp(10 * (meanMeanCapa - E.GetMeanTR()) / maxMeanCapa)
-
-				if m > 100 && m_m < 100000026000 {
-					Metric[i][rb] = math.Log2(m + 1)
-					b := (m_m + 1)
-					if b > 1 {
-						Metric[i][rb] /= b
-					}
-
-					//Metric[i][rb] *= b
-
-					//Metric[i][rb] = m / c.GetE().GetMeanTR())
-					//Metric[i][rb] = math.Log2(math.Log2(1 + c.ff_R[rb])) //* c.GetE().Req() / c.GetE().BERT()
-				} else {
-					Metric[i][rb] = 0
-				}
-
-			}
-
-		}
-
-	}
-
-	//fmt.Println(Metric)
-
-	//Assign RB for master connections
-
-	var AL [NCh]int
-
-	var NumAss [NConnec]int
-
-	//First assign RB to best Metric
-	for rb := 1; rb < NCh; rb++ {
-		AL[rb] = -1
-		for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
-			c := e.Value.(*Connection)
-			if c.Status == 0 {
-				if Metric[i][rb] > 0.001 {
-					if AL[rb] < 0 {
-						AL[rb] = i
-					} else if Metric[i][rb] > Metric[AL[rb]][rb] {
-						AL[rb] = i
-					}
-				}
-			}
-		}
-		if AL[rb] >= 0 {
-			NumAss[AL[rb]]++ //this emitter will have one more assigned RB
-			for rb2 := 1; rb2 < NCh; rb2++ {
-				Metric[AL[rb]][rb2] *= float64(NumAss[AL[rb]]) / float64(NumAss[AL[rb]]+1)
-			}
-		}
-	}
-	//do not allocate RB for which capacity is too low // interference management
-	/*for rb := 0; rb < NCh; rb++ {
-		if Metric[AL[rb]][rb] < math.Log2(80) {
-			AL[rb] = -1
-		}
-
-	}*/
-
-	//Allocate RB effectivelly
-
-	AL[0] = -1 // connect all
-	for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
-		c := e.Value.(*Connection)
-		E := c.GetE()
-		if c.Status == 0 {
-			if E.IsSetARB(0) {
-				E.UnSetARB(0)
-			}
-
-		}
-	}
-	for rb := 1; rb < NCh; rb++ {
-		if AL[rb] >= 0 {
-			for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
-				c := e.Value.(*Connection)
-				E := c.GetE()
-
-				if c.Status == 0 {
-
-					if E.IsSetARB(rb) {
-						if AL[rb] != i {
-							E.UnSetARB(rb)
-						}
-					} else {
-						if AL[rb] == i {
-							E.SetARB(rb)
-							Hopcount++
-
-						}
-					}
-				}
-			}
-		}
-	}
-
-}
 
 
 type vectorFloat64 struct {
