@@ -1,19 +1,28 @@
 package synstation
 
 
-const Field = 4000 //length in meters
+const Field = 6000 //length in meters
 
-const Duration = 1000 // in iterations 
+const Duration = 1000// in iterations 
 
 const M = 1000 //numbers of mobiles
-const D = 160  // numbers of DBS
+const D = 100  // numbers of DBS
 
-const L2 = 2 // modulation factor
-const L1 = 1
+//for M-QAM, km*km=M
+const km = 4.0
+const L2 = 2.0/3.0/km*(km*km-1.0) // modulation factor
+const L1 = 2.0/km*(1.0-1.0/km)
+
+//const BERThres = 0.30 //0.16//0.4/log2*(16)
+
+//const L1=1
+//const L2=2
+const beta=1 // SNR Gap
+
 
 const DivCh=1
 const NCh = 100/DivCh + NChRes // number of channels
-const EffectiveBW =  80  * DivCh
+const EffectiveBW =  90  * DivCh
 
 // Here we define the Coherence bandwith as a ratio of the total bandwith (20MHz)
 const corrF = 0.2
@@ -24,20 +33,20 @@ const roverlap = 0.0 // ratio of overlaping of two adjacent channels
 // thermal noise per RB 121.45dBm normalized per maximum terminal power output 21dBm and divided for one TTI
 const WNoise = DivCh * 5.6885e-15 //7.1614e-16 // White noise at reciever //21.484e-16
 const NChRes = 1              //numbers of reserved channels, not used yet, but chan 0 must be reserved
-const NConnec = 20            // numbers of connections per dbs
+const NConnec = 25           // numbers of connections per dbs
 
-const BERThres = 0.4
-const SNRThresConnec = 15
+
+//const SNRThresConnec = 15
 
 const SNRThresChHop = 0
 
 const MaxSpeed = 15
 
-const EnodeBClock = 2
+const EnodeBClock = 4
 
 
 
-const NetLayout = RANDOM
+//const NetLayout = RANDOM
 
 const (
 	HONEYCOMB = iota
@@ -47,7 +56,7 @@ const (
 //const BeamAngle = 1.1345 // for 120degre lobe ==PI/2 (half lob size)
 const BeamAngle = 1.1345
 
-const SetReceiverType = BEAM
+//const SetReceiverType = BEAM
 
 //type ReceiverType int
 
@@ -57,7 +66,7 @@ const (
 	SECTORED
 )
 
-const SetShadowMap = SHADOWMAP
+const SetShadowMap = NOSHADOW
 
 //type ReceiverType int
 
@@ -74,14 +83,8 @@ const mval = 0.1
 const maplength = 1500
 const mapsize = 600
 
-const FastFading = MONTECARLO
 
-const (
-	MEANEVAL = iota
-	MONTECARLO
-)
-
-const DiversityType = MRC
+//const DiversityType = SELECTION
 
 const (
 	SELECTION = iota
@@ -99,12 +102,12 @@ const (
 //var ARBSchedulFunc = ARBScheduler3
 //var ARBSchedulFunc = ARBScheduler
 //var ARBSchedulFunc = ChHopping
-var ARBSchedulFunc = ChHopping2
+//var ARBSchedulFunc = ChHopping2
 var subsetSize=5
 
-var estimateFactor = estimateFactor0
+//var estimateFactor = estimateFactor1
 
-const conservationFactor = 20 // 0.8 best for estimateFactor1 and ARBScheduler
+//const conservationFactor = 0.8 // 0.8 best for estimateFactor1 and ARBScheduler
 //const conservationFactor = 10 // best for estimateFactor0 and ARBScheduler3
 
 
@@ -118,7 +121,7 @@ func GetNoisePInterference(Pint,Pr float64) float64{
 	//return WNoise*5000
 }
 
-const FadingOnPint1 = Cancel
+const FadingOnPint1 = Normal
 const (
 	Normal=iota
 	Fading
