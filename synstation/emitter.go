@@ -3,7 +3,13 @@ package synstation
 
 import "geom"
 import "math"
+import "fmt"
+import "container/list"
 
+
+func init(){
+	fmt.Println(" fmt arb")
+}
 
 // This struct stores flat data to be directly output for serialization, i.e. no pointers, no channels
 type EmitterS struct {
@@ -48,6 +54,9 @@ type Emitter struct {
 	Speed [2]float64
 
 	meanTR MeanData
+
+	ARBfutur     [NCh]bool //allocated RB
+	ARBe         [NCh]*list.Element //allocated RB
 }
 
 
@@ -66,20 +75,32 @@ type EmitterInt interface {
 	GetFirstRB() int
 	ReSetARB()
 	GetNumARB() int
+	CopyFuturARB() // presets the future allocation to the current one
+	ClearFuturARB()
 
 	PowerDelta(float64)
 	SetPower(float64)
 	GetPos() geom.Pos
-	//	isdone() chan int
+
 	GetMasterConnec() *Connection
 	GetId() int
-	_setCh(i int)
-	_unsetCh(i int)
+
 	GetSpeed() float64
 
 	GetSNRrb(rb int) float64
 
 	GetMeanTR() float64
+}
+
+
+func (e *Emitter) ClearFuturARB(){
+	for i:=range e.ARBfutur {
+		e.ARBfutur[i]=false
+	}
+}
+
+func (e *Emitter) CopyFuturARB(){
+	copy(e.ARBfutur[:],e.ARB[:])
 }
 
 func (e *Emitter) GetMeanTR() float64 {
@@ -93,14 +114,6 @@ func (e *Emitter) GetSNRrb(rb int) float64 {
 
 func (e *Emitter) GetSpeed() float64 {
 	return math.Sqrt(e.Speed[0]*e.Speed[0] + e.Speed[1]*e.Speed[1])
-}
-
-func (e *Emitter) _setCh(i int) {
-	e.ARB[i] = true
-}
-
-func (e *Emitter) _unsetCh(i int) {
-	e.ARB[i] = false
 }
 
 
@@ -122,15 +135,11 @@ func (e *EmitterS) GetFirstRB() int {
 }
 
 func (e *Emitter) SetARB(i int) {
-	if !e.ARB[i] {
-		SystemChan[i].Change <- e
-	}
+	e.ARBfutur[i]=true
 }
 
 func (e *Emitter) UnSetARB(i int) {
-	if e.ARB[i] {
-		SystemChan[i].Remove <- e
-	}
+	e.ARBfutur[i]=false
 }
 
 func (e *Emitter) ReSetARB() {
@@ -142,8 +151,8 @@ func (e *Emitter) ReSetARB() {
 }
 
 func (e *EmitterS) GetNumARB() (n int) {
-	for i := 0; i < NCh; i++ {
-		if e.ARB[i] {
+	for _,v := range e.ARB {
+		if v {
 			n++
 		}
 	}
@@ -248,6 +257,8 @@ func (M *Emitter) FetchData() {
 
 	syncval = 1
 
+	//beta:= 1.//1.5/ -(M.BERtotal*2.3026)
+
 	if M.Diversity == 0 {
 
 		M.MasterConnection = nil
@@ -261,7 +272,7 @@ func (M *Emitter) FetchData() {
 
 			if M.IsSetARB(rb) {
 
-				TransferRate := EffectiveBW * math.Log2(1+M.SSNRrb[rb])
+				TransferRate := EffectiveBW * math.Log2(1 +  beta * M.SSNRrb[rb])
 
 				if 100 < TransferRate {
 
