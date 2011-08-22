@@ -113,6 +113,7 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 		E := c.GetE()
 
 		if c.Status == 0 {
+			for i:=0; i<NCh; i++{E.UnSetARB(i)}
 
 			Nmaster++
 
@@ -125,7 +126,7 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 					snrrb = E.GetSNRrb(rb)
 				}
 
-				m := EffectiveBW * math.Log2(1+snrrb)
+				m := EffectiveBW * math.Log2(1+beta*snrrb)
 				m_m := c.GetE().GetMeanTR()
 
 				if m > 100 && m_m < 100000026000 {
@@ -354,7 +355,7 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 	var meanMeanCapa float64
 	var maxMeanCapa float64
 
-	NConnected := dbs.Connec.Len()
+	//NConnected := dbs.Connec.Len()
 
 	for j, i, e := 0, 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
 
@@ -417,7 +418,7 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 	for i := 0; i < popsize; i++ {
 
 		numberAmobs := Nmaster                                               //Rgen.Intn(Nmaster) + 1
-		nbrb := int(float64(NCh) * float64(r) / (float64(NConnected) * 1.5)) //int(float64(NCh) * float64(r) / float64(numberAmobs))
+		nbrb := int(float64(NCh) * float64(r) / (float64(Nmaster) )) //int(float64(NCh) * float64(r) / float64(numberAmobs))
 
 		a := Rgen.Perm(Nmaster)
 
@@ -456,7 +457,7 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 		//select the new population
 		var metricpool [popsize * 11]float64
 
-		uARBcost := .5 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)
+		uARBcost := 0.00 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)
 
 		for i := 0; i < popsize*11; i++ {
 			metricT := float64(0.0)
@@ -492,18 +493,18 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 					//loop to trim
 					// here we only consider the Original metric 
 
-					jmax := j - 1 //save first
-					jmaxo := j - 1
+					jmax := i +nARBm - 1 //save first
+					jmaxo := jmax
 					for j = i; j <= jmax; j++ {
 
-						var snrrb float64
+						/*var snrrb float64
 						if DiversityType == SELECTION {
 							snrrb = MasterConnec[v].SNRrb[j]
 						} else {
 							snrrb = MasterMobs[v].GetSNRrb(j)
-						}
+						}*/
 
-						m := EffectiveBW * math.Log2(1+snrrb/float64(nARBm))
+						m := EffectiveBW * math.Log2(1+beta*Metric[v][j]/float64(nARBm))
 
 						if AL[j-1] != v && (Metric[v][j] < max/CAPAthres || m < 100) {
 							AL[j] = -1
@@ -518,14 +519,14 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 
 					for j = jmax; j >= jmin; j-- {
 
-						var snrrb float64
+						/*var snrrb float64
 						if DiversityType == SELECTION {
 							snrrb = MasterConnec[v].SNRrb[j]
 						} else {
 							snrrb = MasterMobs[v].GetSNRrb(j)
-						}
+						}*/
 
-						m := EffectiveBW * math.Log2(1+snrrb/float64(nARBm))
+						m := EffectiveBW * math.Log2(1+beta*Metric[v][j]/float64(nARBm))
 
 						if (j == NCh-1 || AL[j+1] != v) && (Metric[v][j] < max/CAPAthres || m < 100) {
 							AL[j] = -1
@@ -540,9 +541,9 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 					//this range should only have allocated RB to a unique mobile
 
 					var m float64
-					for rb := jmin; rb < jmax; rb++ {
+					for rb := jmin; rb <= jmax; rb++ {
 
-						m += EffectiveBW * math.Log2(1+Metric[v][rb]/float64(nARBm))
+						m += EffectiveBW * math.Log2(1+beta*Metric[v][rb]/float64(nARBm))
 
 					}
 
@@ -657,9 +658,129 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 			fmt.Print("-1 ")
 		}
 	}
-	fmt.Println()*/
+	fmt.Println()*/		
+ 
+	
+/*
+	for i,v:= range AL[0:len(AL)-1]{
+		
+	if  v!=sv && sv!=-1{ 
+		
+		for _,vv:=range AL[i:len(AL)]{
+			if sv==vv {fmt.Println("NOT SC-FDMA " ,AL)}	
+			goto br	
+		}
+		sv=v	
+	}else if sv==-1 && v!= -1{
+		sv=v	
+	}
 
-	//Allocate RB effectivelly
+
+	}
+	br:*/
+
+
+	//Allocate RB effectivelly	
+
+	/*AL[0] = -1 // connect all
+	for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
+		c := e.Value.(*Connection)
+		E := c.GetE()
+		if c.Status == 0 {
+			if E.IsSetARB(0) {
+				E.UnSetARB(0)
+			}
+
+		}
+	}
+	for rb := 1; rb < NCh; rb++ {
+		if AL[rb] >= 0 {
+			for k, i, e := 0, 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
+				c := e.Value.(*Connection)
+				E := c.GetE()
+
+				if c.Status == 0 {
+
+					if E.IsSetARB(rb) {
+						if AL[rb] != k {
+							E.UnSetARB(rb)
+						}
+					} else {
+						if AL[rb] >= 0 {
+
+							if AL[rb] == k {
+								E.SetARB(rb)
+								Hopcount++
+
+							}
+						}
+					}
+					k++
+				}
+			}
+		}
+	}*/
+
+	//fmt.Println("done")
+ 	AL[0] = -1 // connect all	
+	for rb, vAL := range AL {		
+		for k, E := range MasterMobs[0:Nmaster] {
+			if E.IsSetARB(rb) {
+				if vAL != k {
+					E.UnSetARB(rb)
+				}
+			} else {
+				if vAL == k {
+					E.SetARB(rb)
+					Hopcount++
+				}
+			}										
+		}
+	}
+
+
+	//test for SCFDMA on past assignment
+	/*for i:=range AL {AL[i]=-1}
+	for i,E:=range MasterMobs[0:Nmaster]{
+		for rb,v:= range E.GetARB(){
+			if v {AL[rb]=i}
+		}
+	}
+	
+	testSCFDMA(AL[:])*/
+
+
+}
+
+
+type Sequence struct {
+	index []int
+	value []float64
+}
+
+func initSequence(value []float64) (s Sequence) {
+	s.index = make([]int, len(value))
+	for i := range value {
+		s.index[i] = i
+	}
+	s.value = value
+	return
+}
+
+// Methods required by sort.Interface.
+func (s Sequence) Len() int {
+	return len(s.value)
+}
+func (s Sequence) Less(i, j int) bool {
+	return s.value[s.index[i]] > s.value[s.index[j]] // sort bigest to smalest
+}
+func (s Sequence) Swap(i, j int) {
+	s.index[i], s.index[j] = s.index[j], s.index[i]
+}
+
+
+
+func AllocateOld(AL []int, dbs *DBS) {
 
 	AL[0] = -1 // connect all
 	for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
@@ -700,33 +821,4 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 		}
 	}
 
-	//fmt.Println("done")
-
 }
-
-
-type Sequence struct {
-	index []int
-	value []float64
-}
-
-func initSequence(value []float64) (s Sequence) {
-	s.index = make([]int, len(value))
-	for i := range value {
-		s.index[i] = i
-	}
-	s.value = value
-	return
-}
-
-// Methods required by sort.Interface.
-func (s Sequence) Len() int {
-	return len(s.value)
-}
-func (s Sequence) Less(i, j int) bool {
-	return s.value[s.index[i]] > s.value[s.index[j]] // sort bigest to smalest
-}
-func (s Sequence) Swap(i, j int) {
-	s.index[i], s.index[j] = s.index[j], s.index[i]
-}
-
