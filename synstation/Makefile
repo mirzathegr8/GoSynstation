@@ -20,7 +20,11 @@ meanStruct.go\
 FadingGen.go\
 agent.go\
 RBSchedule2.go\
-ChHop2.go
+ChHop2.go\
+constantV.go\
+RBSchedule4.go\
+RBSchedule1.go\
+ChHop1.go
 
 
 include $(GOROOT)/src/Make.pkg
