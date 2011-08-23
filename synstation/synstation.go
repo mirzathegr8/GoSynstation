@@ -133,7 +133,7 @@ func (dbs *DBS) IsInUse(i int) bool { //
 
 
 
-func (dbs *DBS) IsFuturInUse(i int) bool { // 
+func (dbs *DBS) IsInFuturUse(i int) bool { // 
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
