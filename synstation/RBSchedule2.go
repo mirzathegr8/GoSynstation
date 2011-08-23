@@ -795,7 +795,7 @@ func AllocateOld(AL []int, dbs *DBS) {
 	}
 	for rb := 1; rb < NCh; rb++ {
 		if AL[rb] >= 0 {
-			for k, i, e := 0, 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
+			for k, e := 0, dbs.Connec.Front(); e != nil; e = e.Next() {
 				c := e.Value.(*Connection)
 				E := c.GetE()
 
