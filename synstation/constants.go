@@ -1,7 +1,7 @@
 package synstation
 
 
-const Field = 6000 //length in meters
+const Field = 4000 //length in meters
 
 const Duration = 1000// in iterations 
 
@@ -42,7 +42,7 @@ const SNRThresChHop = 0
 
 const MaxSpeed = 15
 
-const EnodeBClock = 4
+const EnodeBClock = 2
 
 
 
