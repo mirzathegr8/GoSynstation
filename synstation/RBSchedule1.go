@@ -13,7 +13,7 @@ func ARBScheduler(dbs *DBS, Rgen *rand.Rand) {
 	var Metric [NConnec][NCh]float64
 	var MasterMobs [NConnec]EmitterInt
 	Nmaster :=0
-	k:=0
+
 	for _, e := 0, dbs.Connec.Front(); e != nil; e = e.Next() {	
 	
 		c := e.Value.(*Connection)
@@ -31,13 +31,12 @@ func ARBScheduler(dbs *DBS, Rgen *rand.Rand) {
 				m := EffectiveBW * math.Log2(1+beta*snrrb)
 
 				if m > 100 {
-					Metric[k][rb] = math.Log2(m + 1)
+					Metric[Nmaster][rb] = math.Log2(m + 1)
 					b := (m_m + 1)			
-					Metric[k][rb] /= b				
-				}	
-				MasterMobs[k]=E			
+					Metric[Nmaster][rb] /= b				
+				}					
 			}
-			k++	
+			MasterMobs[Nmaster]=E			
 			Nmaster++
 		}
 	}
@@ -72,13 +71,26 @@ func ARBScheduler(dbs *DBS, Rgen *rand.Rand) {
 	
 	
 
-	//Allocate(AL[:],MasterMobs[0:Nmaster])
-	AllocateOld(AL[:],dbs)
-/*
+	Allocate(AL[:],MasterMobs[0:Nmaster])
+	
+	//AllocateOld(AL[:],dbs)
+
+	/*for _,E := range MasterMobs[0:Nmaster]{
+		E.UnSetARB(0)
+	}
 	for rb, vAL := range AL {		
 		if (vAL>=0) {	
-			if !MasterMobs[vAL].IsSetARB(rb) {Hopcount++}
-			MasterMobs[vAL].SetARB(rb)
+			for i,E := range MasterMobs[0:Nmaster]{
+				if i!= vAL{
+					E.UnSetARB(rb)
+				}else{
+					if !MasterMobs[vAL].IsSetARB(rb) {
+						Hopcount++
+						MasterMobs[vAL].SetARB(rb)
+					}
+
+				}
+			}
 		}	
 	}*/
 
