@@ -132,6 +132,21 @@ func (dbs *DBS) IsInUse(i int) bool { //
 }
 
 
+
+func (dbs *DBS) IsFuturInUse(i int) bool { // 
+
+	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
+		c := e.Value.(*Connection)
+		if c.E.IsFuturSetARB(i) {
+			return true
+		}
+	}
+	return false
+
+}
+
+
+
 func (dbs *DBS) connect(e EmitterInt, m float64) {
 	//Connection instance are now created once and reused for memory consumption purpose
 	// so the Garbage Collector needs not to lots of otherwise unessary work

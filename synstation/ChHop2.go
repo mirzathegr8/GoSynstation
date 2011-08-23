@@ -6,6 +6,7 @@ import "rand"
 import "fmt"
 
 
+const ChRX= 0
 
 func init(){
 fmt.Println("init")
@@ -57,6 +58,7 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 
 	//pour trier les connections actives
 	var MobileList vector.Vector
+	var MobileListRX vector.Vector
 
 	//pour trier les canaux
 //	dbs.RandomChan2()
@@ -81,9 +83,9 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 				nch := 0
 
 				//Parse channels in some order  given by dbs.RndCh to find a suitable channel 
-				for j := NChRes; j < NCh; j+=subsetSize {
+				for j := NChRes; j < NCh-subsetSize+1; j+=subsetSize {
 					i := j// dbs.RndCh[j]
-					if !dbs.IsInUse(i) && !c.E.IsSetARB(i) {
+					if !dbs.IsInUse(i) && !dbs.IsFuturInUse(i) {
 				
 						snr:=0.0;
 						for l:=0; l<subsetSize ; l++{
@@ -114,43 +116,54 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 	
 					// sort mobile connection for channel hopping
 			} else {
-				ratio := c.EvalRatio(dbs.R)
-				var i int
-				for i = 0; i < MobileList.Len(); i++ {
-					co := MobileList.At(i).(ConnecType)
-					if ratio < co.EvalRatio(dbs.R) {
-						break
+				//ratio := c.EvalRatio(dbs.R)
+				ratio:= EvalRatio(c.GetE())
+				i:=0
+				if c.GetE().GetFirstRB()< NChRes+subsetSize*ChRX{
+					for i = 0; i < MobileListRX.Len(); i++ {				
+						co := MobileListRX.At(i).(ConnecType)
+						if ratio < co.EvalRatio(dbs.R) {
+							break
+						}
 					}
+					MobileListRX.Insert(i, c)
+				}else{
+					for i = 0; i < MobileList.Len(); i++ {				
+						co := MobileList.At(i).(ConnecType)
+						if ratio < EvalRatio(co.GetE()) {
+							break
+						}
+					}	
+					MobileList.Insert(i, c)
 				}
-				MobileList.Insert(i, c)
 			}
 		}
 	}
 
 	// change channel to some mobiles
-	for k := 0; k < MobileList.Len() && k < 1; k++ {
-		co := MobileList.At(k).(ConnecType)
+
+	fact:=0.8
+	var MobileListUSE *vector.Vector
+	if MobileListRX.Len()>0{
+		MobileListUSE= &MobileListRX
+		fact=0
+	}else{
+		MobileListUSE= &MobileList
+	}
+
+
+	for k := 0; k < MobileListUSE.Len() && k < 2; k++ {
+		co := MobileListUSE.At(k).(ConnecType)
 		E:=co.GetE();
-		ratio := 0.0
-		oldCh:=co.GetE().GetFirstRB()
-		//if (oldCh<1) {
-		//	fmt.Println(" oops chhop")
-			//return
-		//	ratio= co.EvalRatio(dbs.R)
-		//}else {
-		for l:=0; l<subsetSize ; l++{
-		 	ratio += E.GetSNRrb(oldCh+l)
-		}
-		ratio/=float64(subsetSize)
-		//}
+		ratio:=EvalRatio(E) *fact
 
 		chHop := 0
 
-		for j := NChRes; j < NCh; j+=subsetSize {
+		for j := NChRes+subsetSize*ChRX; j < NCh; j+=subsetSize {
 
 			i := j//dbs.RndCh[j]
 
-			if !dbs.IsInUse(i) && !E.IsSetARB(i) {
+			if !dbs.IsInUse(i) && !dbs.IsFuturInUse(i) && !E.IsSetARB(i) {
 
 				snr:=0.0;
 				for l:=0; l<subsetSize ; l++{
@@ -164,9 +177,10 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 				}
 			}
 		}
+		oldCh:=E.GetFirstRB()
 		if chHop > 0 {			
 			for l:=0; l<subsetSize ; l++{
-				if (oldCh>0) {E.UnSetARB(oldCh+l)}
+				E.UnSetARB(oldCh+l)
 				E.SetARB(chHop+l)
 				Hopcount++
 			}					
@@ -174,3 +188,13 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 	}
 }
 
+func EvalRatio(E EmitterInt) float64{
+
+		ratio := 0.0
+		oldCh:=E.GetFirstRB()		
+		for l:=0; l<subsetSize ; l++{
+		 	ratio += E.GetSNRrb(oldCh+l)
+		}
+		ratio/=float64(subsetSize)
+	return ratio
+}

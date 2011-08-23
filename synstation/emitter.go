@@ -72,6 +72,7 @@ type EmitterInt interface {
 	SetARB(i int)
 	UnSetARB(i int)
 	IsSetARB(i int) bool
+	IsFuturSetARB(i int) bool
 	GetFirstRB() int
 	ReSetARB()
 	GetNumARB() int
@@ -124,6 +125,11 @@ func (e *EmitterS) GetARB() []bool {
 func (e *EmitterS) IsSetARB(i int) bool {
 	return e.ARB[i]
 }
+
+func (e *Emitter) IsFuturSetARB(i int) bool {
+	return e.ARBfutur[i]
+}
+
 
 func (e *EmitterS) GetFirstRB() int {
 	for i, use := range e.ARB {
