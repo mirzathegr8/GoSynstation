@@ -47,8 +47,6 @@ type Emitter struct {
 
 	MasterConnection *Connection
 
-	touch bool
-
 	Id int
 
 	Speed [2]float64
@@ -69,6 +67,7 @@ type EmitterInt interface {
 	GetPower() float64
 
 	GetARB() []bool
+	GetFuturARB() []bool
 	SetARB(i int)
 	UnSetARB(i int)
 	IsSetARB(i int) bool
@@ -121,6 +120,12 @@ func (e *Emitter) GetSpeed() float64 {
 func (e *EmitterS) GetARB() []bool {
 	return e.ARB[:]
 }
+
+
+func (e *Emitter) GetFuturARB() []bool {
+	return e.ARBfutur[:]
+}
+
 
 func (e *EmitterS) IsSetARB(i int) bool {
 	return e.ARB[i]

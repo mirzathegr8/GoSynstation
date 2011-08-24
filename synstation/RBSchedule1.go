@@ -7,7 +7,6 @@ import "math"
 //import "fmt"
 
 
-
 func ARBScheduler(dbs *DBS, Rgen *rand.Rand) {
 
 	var Metric [NConnec][NCh]float64
@@ -22,9 +21,7 @@ func ARBScheduler(dbs *DBS, Rgen *rand.Rand) {
 			E := c.GetE()
 			m_m := E.GetMeanTR()	
 
-			for rb := 0; rb < NCh; rb++ {
-
-				E.UnSetARB(rb)	
+			for rb := 0; rb < NCh; rb++ {	
 
 				snrrb := E.GetSNRrb(rb)
 	
@@ -77,21 +74,25 @@ func ARBScheduler(dbs *DBS, Rgen *rand.Rand) {
 
 	/*for _,E := range MasterMobs[0:Nmaster]{
 		E.UnSetARB(0)
-	}
-	for rb, vAL := range AL {		
-		if (vAL>=0) {	
+	}*/
+
+	
+	/*for rb, vAL := range AL {		
+		
 			for i,E := range MasterMobs[0:Nmaster]{
 				if i!= vAL{
 					E.UnSetARB(rb)
 				}else{
-					if !MasterMobs[vAL].IsSetARB(rb) {
-						Hopcount++
-						MasterMobs[vAL].SetARB(rb)
+					if !E.IsSetARB(rb) {
+						Hopcount++						
 					}
+				//TODO HERE problem with E.SetARB not working outside of if					
+			
+					E.SetARB(rb)	
 
 				}
 			}
-		}	
+			
 	}*/
 
 }

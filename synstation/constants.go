@@ -6,7 +6,7 @@ const Field = 4000 //length in meters
 const Duration = 1000// in iterations 
 
 const M = 1000 //numbers of mobiles
-const D = 100  // numbers of DBS
+const D = 160  // numbers of DBS
 
 //for M-QAM, km*km=M
 const km = 4.0
@@ -42,7 +42,7 @@ const SNRThresChHop = 0
 
 const MaxSpeed = 15
 
-const EnodeBClock = 2
+const EnodeBClock = 0
 
 
 

@@ -7,7 +7,7 @@ import "fmt"
 
 
 
-const uARBcost = 0.0 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)
+const uARBcost = 0.1 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)
 
 func init() {
 
@@ -241,20 +241,18 @@ func Trimm(AL []int, Metric *[NConnec][NCh]float64, MasterMobs []EmitterInt) (me
 
 func Allocate(AL []int,  MasterMobs []EmitterInt){
 
-	//Allocate RB effectivelly
-	//if	testSCFDMA(AL[:])==-1 {fmt.Println(" Allocation SCFDMA error",AL)}
-
 
 	AL[0] = -1 // connect all
-	for _,M :=range MasterMobs{
+	for _,M :=range MasterMobs{		
 		M.ClearFuturARB()
 	}
 	for rb, vAL := range AL {		
 		if vAL>=0{	
-			if !MasterMobs[vAL].IsSetARB(rb){Hopcount++}	
+			if !MasterMobs[vAL].IsSetARB(rb) {Hopcount++}	
 			MasterMobs[vAL].SetARB(rb)
 		}
 	}
+	
 }
 
 
