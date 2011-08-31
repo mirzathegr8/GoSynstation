@@ -11,6 +11,8 @@ type Mob struct {
 	//R    PhysReceiver
 	Rgen  *rand.Rand
 	clock int
+
+	Data int //quantity of data to send in bits
 }
 
 

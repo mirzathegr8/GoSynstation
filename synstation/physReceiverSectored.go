@@ -74,7 +74,7 @@ func (r *PhysReceiverSectored) EvalSignalConnection(ch int) (*ChanReceiver, floa
 }
 
 
-func (r *PhysReceiverSectored) EvalSignalSNR(ex EmitterInt, ch int) (Rc *ChanReceiver, SNR, Pr, K float64) {
+func (r *PhysReceiverSectored) EvalSignalSNR(ex *Emitter, ch int) (Rc *ChanReceiver, SNR, Pr, K float64) {
 	var R [3]*ChanReceiver
 	var s [3]float64
 	var p [3]float64
@@ -88,7 +88,7 @@ func (r *PhysReceiverSectored) EvalSignalSNR(ex EmitterInt, ch int) (Rc *ChanRec
 }
 
 
-func (r *PhysReceiverSectored) EvalSignalBER(ex EmitterInt, ch int) (Rc *ChanReceiver, BER, SNR, Pr float64) {
+func (r *PhysReceiverSectored) EvalSignalBER(ex *Emitter, ch int) (Rc *ChanReceiver, BER, SNR, Pr float64) {
 	var R [3]*ChanReceiver
 	var b [3]float64
 	var s [3]float64

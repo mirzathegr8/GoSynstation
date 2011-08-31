@@ -70,8 +70,8 @@ type PhysReceiverInt interface {
 	// The following function are used to evalueate link qualities or potential link qualities
 	EvalSignalConnection(rb int) (*ChanReceiver, float64, float64)
 	EvalBestSignalSNR(rb int) (Rc *ChanReceiver, eval float64)
-	EvalSignalBER(e EmitterInt, rb int) (Rc *ChanReceiver, BER, SNR, Pr float64)
-	EvalSignalSNR(e EmitterInt, rb int) (Rc *ChanReceiver, SNR, Pr, K float64)
+	EvalSignalBER(e *Emitter, rb int) (Rc *ChanReceiver, BER, SNR, Pr float64)
+	EvalSignalSNR(e *Emitter, rb int) (Rc *ChanReceiver, SNR, Pr, K float64)
 	EvalChRSignalSNR(rb int, k int) (Rc *ChanReceiver, eval float64)
 
 	// This is the main function to launch the calculation of interfernce (tracking/beam/received power),
@@ -198,7 +198,7 @@ func (r *PhysReceiver) EvalChRSignalSNR(rb int, k int) (Rc *ChanReceiver, Eval f
 }
 
 
-func (r *PhysReceiver) EvalSignalSNR(e EmitterInt, rb int) (Rc *ChanReceiver, SNR float64, Pr float64, K float64) {
+func (r *PhysReceiver) EvalSignalSNR(e *Emitter, rb int) (Rc *ChanReceiver, SNR float64, Pr float64, K float64) {
 
 	Rc = &r.Channels[rb]
 	SNR = 0
@@ -226,7 +226,7 @@ func (r *PhysReceiver) EvalSignalSNR(e EmitterInt, rb int) (Rc *ChanReceiver, SN
 
 }
 
-func (r *PhysReceiver) EvalSignalBER(e EmitterInt, rb int) (Rc *ChanReceiver, BER float64, SNR float64, Pr float64) {
+func (r *PhysReceiver) EvalSignalBER(e *Emitter, rb int) (Rc *ChanReceiver, BER float64, SNR float64, Pr float64) {
 
 	var K float64
 	Rc, SNR, Pr, K = r.EvalSignalSNR(e, rb)
@@ -345,7 +345,7 @@ func (rx *PhysReceiver) Compute(Connec *list.List) {
 		chR := &rx.Channels[i]
 
 		for e := SystemChan[i].Emitters.Front(); e != nil; e = e.Next() {
-			c := e.Value.(EmitterInt)
+			c := e.Value.(*Emitter)
 			m := c.GetId()
 			chR.Pint1lvl += chR.pr[m]
 			chR.Push(m, chR.pr[m], rx)

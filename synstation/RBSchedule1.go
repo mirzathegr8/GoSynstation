@@ -10,7 +10,7 @@ import "math"
 func ARBScheduler(dbs *DBS, Rgen *rand.Rand) {
 
 	var Metric [NConnec][NCh]float64
-	var MasterMobs [NConnec]EmitterInt
+	var MasterMobs [NConnec]*Emitter
 	Nmaster :=0
 
 	for _, e := 0, dbs.Connec.Front(); e != nil; e = e.Next() {	
@@ -69,31 +69,9 @@ func ARBScheduler(dbs *DBS, Rgen *rand.Rand) {
 	
 
 	Allocate(AL[:],MasterMobs[0:Nmaster])
+	//AllocateOld(AL[:], dbs )
 	
-	//AllocateOld(AL[:],dbs)
-
-	/*for _,E := range MasterMobs[0:Nmaster]{
-		E.UnSetARB(0)
-	}*/
-
 	
-	/*for rb, vAL := range AL {		
-		
-			for i,E := range MasterMobs[0:Nmaster]{
-				if i!= vAL{
-					E.UnSetARB(rb)
-				}else{
-					if !E.IsSetARB(rb) {
-						Hopcount++						
-					}
-				//TODO HERE problem with E.SetARB not working outside of if					
-			
-					E.SetARB(rb)	
-
-				}
-			}
-			
-	}*/
 
 }
 

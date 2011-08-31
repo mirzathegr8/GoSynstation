@@ -71,7 +71,7 @@ func (dbs *DBS) Init() {
 // Physics : evaluate SNRs at receiver, evaluate BER of connections
 func (dbs *DBS) RunPhys() {
 
-	/*var AL [NCh]int	
+/*	var AL [NCh]int	
 	for i:= range AL {AL[i]=-1}
 	i:=0*/
 
@@ -97,7 +97,7 @@ func (dbs *DBS) RunPhys() {
 		}*/
 		c.BitErrorRate(dbs.R.GetPhysReceiver(c.GetE().GetId()), dbs)
 	}
-			/*AL[0]=-1
+		/*	AL[0]=-1
 			if i>0 && testSCFDMA(AL[:])==-1{
 				//for k:=range AL{  AL[k]=AL[k]-dbs.ALsave[k]}	
 					fmt.Println(AL)
@@ -119,15 +119,15 @@ func (dbs *DBS) disconnect(e *list.Element) {
 	sens_disconnect++
 }
 
-func (dbs *DBS) IsInUse(i int) bool { // 
+func (dbs *DBS) IsInUse(i int) *Connection { // 
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
 		if c.E.IsSetARB(i) {
-			return true
+			return c
 		}
 	}
-	return false
+	return nil
 
 }
 
@@ -147,7 +147,7 @@ func (dbs *DBS) IsInFuturUse(i int) bool { //
 
 
 
-func (dbs *DBS) connect(e EmitterInt, m float64) {
+func (dbs *DBS) connect(e *Emitter, m float64) {
 	//Connection instance are now created once and reused for memory consumption purpose
 	// so the Garbage Collector needs not to lots of otherwise unessary work
 	Conn := dbs.ConnectionBank.Pop().(*Connection)
@@ -157,7 +157,7 @@ func (dbs *DBS) connect(e EmitterInt, m float64) {
 	sens_connect++
 }
 
-func (dbs *DBS) IsConnected(tx EmitterInt) bool {
+func (dbs *DBS) IsConnected(tx *Emitter) bool {
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
@@ -249,9 +249,9 @@ func (dbs *DBS) connectionAgent() {
 			Rc, Eval := dbs.R.EvalChRSignalSNR(0, i)
 
 			if Rc.Signal[i] >= 0 {
-				if !dbs.IsConnected(&Mobiles[Rc.Signal[i]]) {
+				if !dbs.IsConnected(&Mobiles[Rc.Signal[i]].Emitter) {
 					if 10*math.Log10(Eval) > SNRThresConnec {
-						dbs.connect(&Mobiles[Rc.Signal[i]], 0.01)
+						dbs.connect(&Mobiles[Rc.Signal[i]].Emitter, 0.001)
 						conn++
 						return // we are done connecting
 					}
@@ -269,7 +269,7 @@ func (dbs *DBS) connectionAgent() {
 			var Rc *ChanReceiver
 			Rc = nil
 			for i := NChRes; i < NCh; i++ {
-				if dbs.IsInUse(i) == false {
+				if dbs.IsInUse(i) == nil {
 					Rt, r, _ := dbs.R.EvalSignalConnection(i)
 					if r > max {
 						max = r
@@ -280,7 +280,7 @@ func (dbs *DBS) connectionAgent() {
 				}
 			}
 			if Rc != nil {
-				dbs.connect(&Mobiles[Rc.Signal[0]], 0.01)
+				dbs.connect(&Mobiles[Rc.Signal[0]].Emitter, 0.001)
 				conn++
 			} else {
 				break

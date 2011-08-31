@@ -344,7 +344,7 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 
 	var Metric [NConnec][NCh]float64
 
-	var MasterMobs [NConnec]EmitterInt
+	var MasterMobs [NConnec]*Emitter
 	var MasterConnec [NConnec]*Connection
 
 	//var MobilesID [NConnec]int

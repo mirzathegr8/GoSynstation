@@ -85,7 +85,7 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 				//Parse channels in some order  given by dbs.RndCh to find a suitable channel 
 				for j := NChRes; j < NCh-subsetSize+1; j+=subsetSize {
 					i := j// dbs.RndCh[j]
-					if !dbs.IsInUse(i) && !dbs.IsInFuturUse(i) {
+					if dbs.IsInUse(i)==nil && !dbs.IsInFuturUse(i) {
 				
 						snr:=0.0;
 						for l:=0; l<subsetSize ; l++{
@@ -159,11 +159,11 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 
 		chHop := 0
 
-		for j := NChRes+subsetSize*ChRX; j < NCh; j+=subsetSize {
+		for j := NChRes+subsetSize*ChRX; j < NCh-subsetSize+1; j+=subsetSize {
 
 			i := j//dbs.RndCh[j]
 
-			if !dbs.IsInUse(i) && !dbs.IsInFuturUse(i) && !E.IsSetARB(i) {
+			if dbs.IsInUse(i)==nil && !dbs.IsInFuturUse(i) && !E.IsSetARB(i) {
 
 				snr:=0.0;
 				for l:=0; l<subsetSize ; l++{

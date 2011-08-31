@@ -7,7 +7,7 @@ import "fmt"
 
 
 
-const uARBcost = 0.1 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)
+const uARBcost = 0.01 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)
 
 func init() {
 
@@ -19,7 +19,7 @@ func ARBScheduler4(dbs *DBS, Rgen *rand.Rand) {
 
 	var Metric [NConnec][NCh]float64
 
-	var MasterMobs [NConnec]EmitterInt
+	var MasterMobs [NConnec]*Emitter
 	var MasterConnec [NConnec]*Connection
 
 	// Eval Metric for all connections
@@ -142,7 +142,7 @@ func ARBScheduler4(dbs *DBS, Rgen *rand.Rand) {
 	//Trimm we delete endings of allocation sequence if the capacity of these RB is not that good
 	//this is to prevent spendin too much energy for little gain, and also to give a chance to minimize interference
 
-	Trimm(AL[:],&Metric,MasterMobs[0:Nmaster])	
+	//Trimm(AL[:],&Metric,MasterMobs[0:Nmaster])	
 
 	//testSCFDMA(AL)
 
@@ -154,7 +154,7 @@ func ARBScheduler4(dbs *DBS, Rgen *rand.Rand) {
 }
 
 
-func Trimm(AL []int, Metric *[NConnec][NCh]float64, MasterMobs []EmitterInt) (metricT float64) {
+func Trimm(AL []int, Metric *[NConnec][NCh]float64, MasterMobs []*Emitter) (metricT float64) {
 
 	AL[0] = -1	
 
@@ -192,7 +192,7 @@ func Trimm(AL []int, Metric *[NConnec][NCh]float64, MasterMobs []EmitterInt) (me
 			jmax := jmin + nARBm //save first
 		
 		
-			for _,Mval :=range Mvect[jmin:jmax]{ //j:=jmin; j<jmax ;j++ { //
+		/*	for _,Mval :=range Mvect[jmin:jmax]{ //j:=jmin; j<jmax ;j++ { //
 
 				//Mval:=Mvect[j]
 				m := EffectiveBW * math.Log2(1+Mval/float64(nARBm))
@@ -220,7 +220,7 @@ func Trimm(AL []int, Metric *[NConnec][NCh]float64, MasterMobs []EmitterInt) (me
 				} else {
 					break
 				}
-			}
+			}*/
 
 
 			m:=float64(0.0)
@@ -239,7 +239,7 @@ func Trimm(AL []int, Metric *[NConnec][NCh]float64, MasterMobs []EmitterInt) (me
 }
 
 
-func Allocate(AL []int,  MasterMobs []EmitterInt){
+func Allocate(AL []int,  MasterMobs []*Emitter){
 
 
 	AL[0] = -1 // connect all

@@ -42,7 +42,7 @@ const SNRThresChHop = 0
 
 const MaxSpeed = 15
 
-const EnodeBClock = 0
+const EnodeBClock = 2
 
 
 
@@ -66,7 +66,7 @@ const (
 	SECTORED
 )
 
-const SetShadowMap = NOSHADOW
+const SetShadowMap = SHADOWMAP
 
 //type ReceiverType int
 
@@ -103,7 +103,7 @@ const (
 //var ARBSchedulFunc = ARBScheduler
 //var ARBSchedulFunc = ChHopping
 //var ARBSchedulFunc = ChHopping2
-var subsetSize=5
+var subsetSize=6
 
 //var estimateFactor = estimateFactor1
 

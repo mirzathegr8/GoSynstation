@@ -227,7 +227,7 @@ func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 				//Parse channels in some order  given by dbs.RndCh to find a suitable channel 
 				for j := NChRes; j < NCh; j++ {
 					i := dbs.RndCh[j]
-					if !dbs.IsInUse(i) && !c.E.IsSetARB(i) {
+					if dbs.IsInUse(i)==nil && !c.E.IsSetARB(i) {
 						_, snr, _, _ := dbs.R.EvalSignalSNR(c.E, i)
 						if 10*math.Log10(snr) > SNRThresChHop {
 							if snr > ratio {
@@ -271,7 +271,7 @@ func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 
 			i := dbs.RndCh[j]
 
-			if !dbs.IsInUse(i) && !co.GetE().IsSetARB(i) {
+			if dbs.IsInUse(i)==nil && !co.GetE().IsSetARB(i) {
 
 				_, snr, _, _ := dbs.R.EvalSignalSNR(co.GetE(), i)
 

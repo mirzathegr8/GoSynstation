@@ -28,6 +28,7 @@ type EmitterS struct {
 
 	ARB          [NCh]bool //allocated RB
 	TransferRate float64
+	
 }
 
 // EmitterS with additional registers for BER and diversity evaluation, 

@@ -12,7 +12,7 @@ var num_con int
 func GetDiversity() int { a := num_con; num_con = 0; return a }
 
 type Connection struct {
-	E EmitterInt
+	E *Emitter
 
 	Pr     float64 // to store power level received	
 	SNR, K float64
@@ -65,7 +65,7 @@ type ConnecType interface {
 	BitErrorRate(rx *PhysReceiver, dbs *DBS)
 	EvalRatioConnect() float64
 	EvalRatioDisconnect() float64
-	GetE() EmitterInt
+	GetE() *Emitter
 	GetPr() float64
 	EvalRatio(rx PhysReceiverInt) float64
 	GetSNR() float64
@@ -73,7 +73,7 @@ type ConnecType interface {
 	GetInstantSNIR() []float64
 }
 
-func (co *Connection) GetE() EmitterInt { return co.E }
+func (co *Connection) GetE() *Emitter { return co.E }
 func (co *Connection) GetPr() float64   { return co.Pr }
 func (co *Connection) GetSNR() float64  { return co.SNR }
 
@@ -101,7 +101,7 @@ func (co *Connection) EvalRatioDisconnect() float64 {
 }
 
 
-func (Conn *Connection) InitConnection(E EmitterInt, v float64, Rgen *rand.Rand) {
+func (Conn *Connection) InitConnection(E *Emitter, v float64, Rgen *rand.Rand) {
 
 	Conn.E = E
 	Conn.meanBER.Clear(v)
@@ -177,7 +177,7 @@ func (Conn *Connection) InitConnection(E EmitterInt, v float64, Rgen *rand.Rand)
 }
 
 
-func CreateConnection(E EmitterInt, v float64, Rgen *rand.Rand) *Connection {
+func CreateConnection(E *Emitter, v float64, Rgen *rand.Rand) *Connection {
 	Conn := new(Connection)
 	Conn.InitConnection(E, v, Rgen)
 	return Conn
@@ -189,7 +189,7 @@ func (co *Connection) GetLogMeanBER() float64 {
 
 
 //This function is only called once per iteration, so it is where the FF value is generated
-func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
+func (c *Connection) evalInstantBER(E *Emitter, rx *PhysReceiver, dbs *DBS) {
 
 	ARB := E.GetARB()
 
@@ -254,9 +254,7 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 			}
 
 
-		if use {
-
-			//Pr, Rc := rx.GetPr(E.GetId(), rb)
+		if use {			
 
 			Pr := Rc.pr[E.GetId()]
 
@@ -295,18 +293,18 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 				// and we can suppose that the first signal is listened too and of course will not be emitting on this RB 						anymore if it is assigned to the current mobiles
 			}*/
 
-			c.SNRrb[rb] = prbase * c.ff_R[rb] / ( GetNoisePInterference(Rc.Pint,0) +NotPint1 ) // WNoise // Wnoise check
+			//we substract
+
+			Psig2:=0.0 //value of received power of the first signal it it is used by the dbs
+			c2:=dbs.IsInUse(rb) //other signal
+			if c2!=nil {Psig2= Rc.pr[c2.GetE().GetId()]}
+
+			c.SNRrb[rb] = prbase * c.ff_R[rb] / ( GetNoisePInterference(Rc.Pint,Psig2) +NotPint1 ) // WNoise // Wnoise check
+
+			//c.SNRrb[rb] = c.meanPr.Get() / ( GetNoisePInterference(Rc.Pint,Psig2) +NotPint1 ) // WNoise // Wnoise check
 
 			c.SNRrb[rb] *= estimateFactor(dbs, E)
-			/*div := E.GetNumARB()
-			if div > 1 {
-				c.SNRrb[rb] /= float64(div)
-			}
-
-			//if SetReceiverType == BEAM && !dbs.IsInUse(rb) {
-			c.SNRrb[rb] *= 0.8 //}
-			*/
-			//c.SNRrb[rb] = 10 * prbase * c.ff_R[rb] / (3*Rc.Pint + WNoise)
+		
 
 		}
 	}
@@ -320,10 +318,12 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 		c.meanPr.Add(c.Pr)
 		//return
 	}else if !touch { // add null to mean BER
+		
 		c.meanPr.Add(0)
 		c.meanSNR.Add(0)
 		c.SNR = 0
 		c.meanBER.Add(1)
+
 
 	}
 
@@ -333,14 +333,16 @@ func (c *Connection) evalInstantBER(E EmitterInt, rx *PhysReceiver, dbs *DBS) {
 }
 
 
-func estimateFactor0(dbs *DBS, E EmitterInt) float64 {
+func estimateFactor0(dbs *DBS, E *Emitter) float64 {
 
 	return conservationFactor
 
 }
 
 
-func estimateFactor1(dbs *DBS, E EmitterInt) (o float64) {
+
+
+func estimateFactor1(dbe *DBS, E *Emitter) (o float64) {
 	o = 1
 	div := E.GetNumARB()
 	if div > 1 {
