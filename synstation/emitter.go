@@ -21,6 +21,7 @@ type EmitterS struct {
 	Requested  float64
 	MaxBER     float64
 	SNRb       float64
+	InstSNR    float64
 	PrMaster   float64
 	InstMaxBER float64
 
@@ -28,6 +29,8 @@ type EmitterS struct {
 
 	ARB          [NCh]bool //allocated RB
 	TransferRate float64
+
+	Data int //quantity of data to send in bits
 	
 }
 
@@ -41,10 +44,12 @@ type Emitter struct {
 	SMaxBER     float64
 	SDiversity  int
 	SInstMaxBER float64
+	SMinDist float64
 
 	SBERrb [NCh]float64
 	SSNRrb [NCh]float64
 	SNRrb  [NCh]float64
+
 
 	MasterConnection *Connection
 
@@ -61,7 +66,7 @@ type Emitter struct {
 
 // our little interface for emitters
 type EmitterInt interface {
-	AddConnection(c *Connection)
+	AddConnection(c *Connection, dbs *DBS)
 	BERT() float64
 	Req() float64
 	GetE() *Emitter
@@ -93,6 +98,10 @@ type EmitterInt interface {
 	GetMeanTR() float64
 }
 
+
+func (e *EmitterS) GetDataState() int{
+	return e.Data
+}
 
 func (e *Emitter) ClearFuturARB(){
 	for i:=range e.ARBfutur {
@@ -193,18 +202,23 @@ func (e *Emitter) GetPower() float64 {
 
 
 // function called by connections to inform BER quality of a link to the emitter
-func (e *Emitter) AddConnection(c *Connection) {
+func (e *Emitter) AddConnection(c *Connection, dbs *DBS) {
 
 	lber := c.GetLogMeanBER()
-	//if lber <= math.Log10(BERThres) {
+	
 	e.SBERtotal += lber
 	e.SDiversity++
 	c.Status = 1 //we set the status as slave, as master status will be set after all connections data has been recieved
 	num_con++
 
+	d:=e.Pos.DistanceSquare(dbs.R.GetPos())
+	//if d < e.SMinDist {
 	if e.SMaxBER > lber { //evaluate which connection is the best and memorizes which will be masterconnection
+	
+
 		e.MasterConnection = c
 		e.SMaxBER = lber
+		e.SMinDist = d
 		e.SInstMaxBER = math.Log10(c.BER + 1e-40)
 		e.SNRb = c.SNR
 		e.PrMaster = c.Pr
@@ -213,9 +227,7 @@ func (e *Emitter) AddConnection(c *Connection) {
 
 		if DiversityType == SELECTION {
 			for rb := range e.ARB {
-				//if use {
 				e.SSNRrb[rb] = c.SNRrb[rb]
-				//}
 			}
 		}
 
@@ -224,13 +236,10 @@ func (e *Emitter) AddConnection(c *Connection) {
 	// for maximal RC
 	if DiversityType == MRC {
 		for rb := range e.ARB {
-			//if use {
 			e.SSNRrb[rb] += c.SNRrb[rb]
-			//}
 		}
 	}
 
-	//}
 }
 
 
@@ -261,9 +270,10 @@ func (M *Emitter) FetchData() {
 	var syncval float64
 
 	M.BERtotal, M.Diversity, M.MaxBER, M.InstMaxBER = M.SBERtotal, M.SDiversity, M.SMaxBER, M.SInstMaxBER
-	M.SInstMaxBER, M.SBERtotal, M.SDiversity, M.SMaxBER = 0, 0, 0, 0
+	M.SInstMaxBER, M.SBERtotal, M.SDiversity, M.SMaxBER, M.SMinDist = 0, 0, 0, 0, Field*16*Field
 
 	M.TransferRate = 0
+	M.InstSNR =0
 
 	M.Outage++
 
@@ -303,9 +313,13 @@ func (M *Emitter) FetchData() {
 
 			}
 			M.SNRrb[rb], M.SSNRrb[rb] = M.SSNRrb[rb], 0
+		
+			if (M.InstSNR< M.SNRrb[rb]) {M.InstSNR= M.SNRrb[rb]}
 		}
 
 		M.MasterConnection.Status = 0 // we are master
+
+	//		M.InstSNR/=float64(M.GetNumARB());
 
 		if M.TransferRate!=0 {
 		syncval = M.BERtotal
