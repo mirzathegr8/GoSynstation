@@ -76,7 +76,7 @@ type PhysReceiverInt interface {
 
 	// This is the main function to launch the calculation of interfernce (tracking/beam/received power),
 	// and save some information on interferer
-	Compute(Connec *list.List)
+	Compute(Connec *list.List, dbs2, dbs3 *DBS)
 
 	//Getters/Setters	
 	SetPos(p geom.Pos)
@@ -87,6 +87,9 @@ type PhysReceiverInt interface {
 	GetPrBase(i int) (p float64)
 
 	GetPhysReceiver(i int) *PhysReceiver
+
+	GetOrientation(rb int) float64 
+	SetOrientation(rb int, a float64)
 }
 
 
@@ -243,7 +246,7 @@ func (r *PhysReceiver) EvalSignalBER(e *Emitter, rb int) (Rc *ChanReceiver, BER 
 }
 
 
-func (rx *PhysReceiver) Compute(Connec *list.List) {
+func (rx *PhysReceiver) Compute(Connec *list.List, dbs2, dbs3 *DBS) {
 
 	//*********************************
 	//Tracking per RB of all active connections
@@ -261,7 +264,26 @@ func (rx *PhysReceiver) Compute(Connec *list.List) {
 						theta = theta + PI2
 					}
 					rx.Orientation[rb] = theta //+ (dbs.Rgen.Float64()*30-15)
+				} else {
+					if dbs3!=nil{
+					if dbs2.IsInUse(rb)!=nil{
+						theta:=dbs2.R.GetOrientation(rb) + PI2/3.0;
+						if theta>PI2{theta-=PI2}
+						rx.Orientation[rb]=theta
+					} else if dbs3.IsInUse(rb)!=nil{
+						theta:=dbs3.R.GetOrientation(rb) + PI2/3.0;
+						if theta>PI2{theta-=PI2}
+						rx.Orientation[rb]=theta
+					}
+					}else 	if (dbs2!=nil){
+					if dbs2.IsInUse(rb)!=nil{
+						theta:=dbs2.R.GetOrientation(rb) - PI2/3.0;
+						if theta<0 { theta+=PI2}
+						rx.Orientation[rb]=theta
+					}
+					}
 				}
+	
 			}
 		}
 
@@ -419,10 +441,10 @@ func (s *shadowMap) Init(corr_dist float64, Rgen2 *rand.Rand) {
 		s.xsin[i] = Rgen2.Float64() * 2 * math.Pi
 		s.ysin[i] = Rgen2.Float64() * 2 * math.Pi
 
-		if s.xcos[i] < mval {
+		if !(s.xcos[i] > mval || s.xcos[i]< -mval) {
 			s.xcos[i] = 0
 		}
-		if s.ycos[i] < mval {
+		if !(s.ycos[i] > mval || s.ycos[i]< -mval) {
 			s.ycos[i] = 0
 		}
 		s.power += s.xcos[i] * s.xcos[i]
@@ -489,6 +511,7 @@ func (s *shadowMap) evalShadowFadingDirect(d geom.Pos) float64 {
 
 
 const PI2 = 2 * math.Pi
+const PI = math.Pi
 
 
 //Returns K value and base level received power (used for estimating potential on other channels)
@@ -510,5 +533,13 @@ func (rx PhysReceiver) GetPr(i, rb int) (p float64, Rc *ChanReceiver) {
 
 func (r *PhysReceiver) GetPhysReceiver(i int) *PhysReceiver {
 	return r
+}
+
+func (r *PhysReceiver) GetOrientation(rb int) float64 {
+	return r.Orientation[rb]
+}
+
+func (r *PhysReceiver) SetOrientation(rb int, a float64) {
+	r.Orientation[rb]=a
 }
 
