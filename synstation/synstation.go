@@ -5,7 +5,7 @@ import "container/vector"
 import "rand"
 import "math"
 import "geom"
-import "fmt"
+//import "fmt"
 //import "sort"
 
 // counters to observe connection agents health
@@ -35,6 +35,9 @@ type DBS struct {
 	ALsave [NCh]int
 
 	Id int
+
+	DBS2,DBS3 *DBS
+	
 }
 
 var idtmp int
@@ -76,7 +79,7 @@ func (dbs *DBS) RunPhys() {
 	i:=0*/
 
 
-	dbs.R.Compute(dbs.Connec)
+	dbs.R.Compute(dbs.Connec,dbs.DBS2,dbs.DBS3)
 
 	dbs.Clock = dbs.Rgen.Intn(EnodeBClock)
 
@@ -178,10 +181,9 @@ func (dbs *DBS) RunAgent() {
 
 		dbs.connectionAgent()
 		ARBSchedulFunc(dbs, dbs.Rgen)
-	
-		if PowerControl == AGENTPC {
-			dbs.optimizePowerAllocation()
-		}
+		
+		PowerAllocation(dbs)
+		
 		//dbs.optimizePowerAllocationSimple()
 	}
 
@@ -208,6 +210,13 @@ func (dbs *DBS) checkLinkViability() {
 			dbs.disconnect(e)
 			sens_disconnect--
 			sens_lostconnect++
+		}
+
+		/* for collocated eNodeB*/
+		if  (dbs.DBS2!=nil && dbs.DBS2.IsConnected(c.GetE())) || (dbs.DBS3!=nil && dbs.DBS3.IsConnected(c.GetE())){
+			dbs.disconnect(e)
+			sens_disconnect--
+
 		}
 
 	}
@@ -293,120 +302,10 @@ func (dbs *DBS) connectionAgent() {
 }
 
 
-func (dbs *DBS) optimizePowerAllocation() {
-
-	var meanPtot, meanPd, meanPtotPd, meanPePd, meanPr, meanPe float64
-	//var meanBER float64
-
-	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
-		c := e.Value.(*Connection)
-		M := c.E
-		meanPtotPd += M.BERT() / M.Req()
-		meanPePd += c.BER / M.Req()
-		meanPtot += M.BERT()
-		meanPe += c.BER
-		meanPd += M.Req()
-		meanPr += c.Pr
-	}
-
-	nbconnec := float64(dbs.Connec.Len())
-
-	meanPtot /= nbconnec
-	meanPtotPd /= nbconnec
-	meanPePd /= nbconnec
-	meanPe /= nbconnec
-	meanPd /= nbconnec
-	meanPr /= nbconnec
-
-	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
-		c := e.Value.(*Connection)
-		M := c.E
-
-		if c.Status == 0 && !c.E.IsSetARB(0) { // if master connection	
-
-			var b, need, delta, alpha float64
-
-			b = M.BERT() / M.Req() // meanPtotPd
-			//b = M.BERT() / M.Req() / meanPtotPd
-			b = b * 1.5
-			alpha = 1.0
-			need = 2.0*math.Exp(-b)*(b+1.0) - 1.0
-
-			//need = .5 - math.Atan(5*(b-1))/math.Pi
-
-			delta = math.Pow(geom.Abs(need), 1) *
-				math.Pow(M.GetPower(), 1) *
-				geom.Sign(need-M.GetPower()) * alpha *
-				math.Pow(geom.Abs(need-M.GetPower()), 1.5)
-
-			if math.IsNaN(delta) {
-				fmt.Println("delta NAN", need, M.GetPower(), b, M.BERT())
-				delta = -1
-			}
-
-			if delta > 0 {
-				v := (1.0 - M.GetPower()) / 2.0
-				if delta > v {
-					delta = v
-				}
-			} else {
-				v := -M.GetPower() / 2.0
-				if delta < v {
-					delta = v
-				}
-			}
-
-			if delta > 1 || delta < -1 {
-				fmt.Println("Power Error ", delta)
-			}
-
-			M.PowerDelta(delta)
-
-			//M.SetPower(1.0/math.Pow(2.0+dbs.R.Pos.Distance(M.GetPos()),4 ) )
-		}
-
-	}
-
-}
-
-
-func (dbs *DBS) optimizePowerAllocationSimple() {
-
-	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
-		c := e.Value.(*Connection)
-		M := c.E
-
-		if c.Status == 0 {
-			if !c.E.IsSetARB(0) { // if master connection and transmitting data
-
-				L := float64(100)
-				d := (L - dbs.R.GetPos().Distance(M.GetPos())) / L
-				var p float64
-				if d > 0 {
-					//p=1-math.Pow(d,1)
-					p = 1 - d
-				} else {
-					p = 1
-				}
-
-				//p:=0.001*(math.Pow(dbs.R.GetPos().Distance(M.GetPos()),4)/100000)
-
-				M.SetPower(p)
-
-			} else {
-				M.SetPower(1)
-			}
-
-		}
-
-	}
-
-}
-
-
+// deprecated, not used, will be removed in future
 //Minimum Area-Difference to the Envelope
 
-
+/*
 
 type vectorFloat64 struct {
 	f []float64
@@ -457,4 +356,4 @@ func (v vectorFloat64) mean() float64 {
 	}
 	return a
 }
-
+*/
