@@ -11,6 +11,7 @@ var num_con int
 
 func GetDiversity() int { a := num_con; num_con = 0; return a }
 
+
 type Connection struct {
 	E *Emitter
 
@@ -25,12 +26,12 @@ type Connection struct {
 	meanBER  MeanData
 	meanCapa MeanData
 
-	filterAr [NCh]FilterInt //filter ban to use for channel gain FF generator
+	filterAr [NRB]FilterInt //filter ban to use for channel gain FF generator
 	ff_R     [NCh]float64   // stores channel gain for every RB
 	SNRrb    [NCh]float64   //stores SNR per RB
 
 
-	IfilterAr [NCh]FilterInt //filter bank for first interferer
+	IfilterAr [NRB]FilterInt //filter bank for first interferer
 	Iff_R     [NCh]float64   //channel FF gain  for first interer if fading is generated
 
 
@@ -38,7 +39,7 @@ type Connection struct {
 
 	Rgen *rand.Rand
 
-	initz [NCh]complex128 //generation of random number per RB	
+	initz [NRB]complex128 //generation of random number per RB	
 
 }
 
@@ -83,7 +84,7 @@ func (co *Connection) BitErrorRate(rx *PhysReceiver, dbs *DBS) {
 	co.evalInstantBER(co.GetE(), rx, dbs)
 
 	co.Status = 1 //let mobile set master state		
-	co.E.AddConnection(co)
+	co.E.AddConnection(co,dbs)
 
 }
 
@@ -113,7 +114,7 @@ func (Conn *Connection) InitConnection(E *Emitter, v float64, Rgen *rand.Rand) {
 	DopplerF := Speed * F / cel // 1000 samples per seconds speed already divided by 1000 for RB TTI
 
 	if DopplerF < 0.002 { // the frequency is so low, a simple antena diversity will compensate for 	
-		for i := 0; i < NCh; i++ {
+		for i := 0; i < NRB; i++ {
 			Conn.filterAr[i] = &PNF
 		
 			Conn.IfilterAr[i] = &PNF
@@ -127,7 +128,7 @@ func (Conn *Connection) InitConnection(E *Emitter, v float64, Rgen *rand.Rand) {
 
 		Conn.filterF = CoherenceFilter.Copy()
 
-		for i := 0; i < NCh; i++ {
+		for i := 0; i < NRB; i++ {
 			Conn.filterAr[i] = C.Copy()			
 		}
 
@@ -142,14 +143,14 @@ func (Conn *Connection) InitConnection(E *Emitter, v float64, Rgen *rand.Rand) {
 				Conn.filterF.nextValue(complex(Conn.Rgen.NormFloat64(), Conn.Rgen.NormFloat64()))
 			}
 
-			for i := 0; i < NCh; i++ {
+			for i := 0; i < NRB; i++ {
 				Conn.filterAr[i].nextValue(Conn.filterF.nextValue(complex(Conn.Rgen.NormFloat64(),Conn.Rgen.NormFloat64() ) ) )
 			}
 			
 		}
 
 		if FadingOnPint1==Fading{
-			for i := 0; i < NCh; i++ {
+			for i := 0; i < NRB; i++ {
 				Conn.IfilterAr[i] = C.Copy()		
 			}
 	
@@ -199,17 +200,20 @@ func (c *Connection) evalInstantBER(E *Emitter, rx *PhysReceiver, dbs *DBS) {
 
 	//Generate DopplerFading
 	//pass some values to decorelate
+
+	for tdma:=0;tdma<NCh-NChRes; tdma+=NRB{
+	
 	for i := 0; i < 50; i++ {
 		c.filterF.nextValue(complex(c.Rgen.NormFloat64(),c.Rgen.NormFloat64()))
 	}
 
-	for i := 0; i < NCh; i++ {
+	for i := 0; i < NRB; i++ {
 		c.initz[i] = c.filterF.nextValue(complex(c.Rgen.NormFloat64(),c.Rgen.NormFloat64()))
 	}
 	
-	for rb := 0; rb < NCh; rb++ {
+	for rb := 0; rb < NRB; rb++ {
 		a := c.filterAr[rb].nextValue(c.initz[rb]) + complex(K,0)
-		c.ff_R[rb] = (real(a*cmath.Conj(a)) ) / (2 + K*K)
+		c.ff_R[rb+tdma] = (real(a*cmath.Conj(a)) ) / (2 + K*K)
 	}
 
 
@@ -220,14 +224,16 @@ func (c *Connection) evalInstantBER(E *Emitter, rx *PhysReceiver, dbs *DBS) {
 		c.filterF.nextValue(complex(c.Rgen.NormFloat64(),c.Rgen.NormFloat64()))
 	}
 
-	for i := 0; i < NCh; i++ {
+	for i := 0; i < NRB; i++ {
 		c.initz[i] = c.filterF.nextValue(complex(c.Rgen.NormFloat64(),c.Rgen.NormFloat64()))
 	}
 
-	for rb := 0; rb < NCh; rb++ {
+	for rb := 0; rb < NRB; rb++ {
 		a := c.filterAr[rb].nextValue(c.initz[rb]) + complex(K,0)
-		c.Iff_R[rb] = (real(a*cmath.Conj(a)) ) / (2 + K*K)
+		c.Iff_R[rb+tdma] = (real(a*cmath.Conj(a)) ) / (2 + K*K)
 	}
+	}
+
 	}
 
 	var touch bool
@@ -250,7 +256,9 @@ func (c *Connection) evalInstantBER(E *Emitter, rx *PhysReceiver, dbs *DBS) {
 				NotPint1=Rc.pr[Rc.Signal[1]]*(c.Iff_R[rb]-1)
 			}
 			}else if FadingOnPint1==Cancel{
-				NotPint1=-1.0
+				if(Rc.Signal[1]>=0){
+					NotPint1=-Rc.pr[Rc.Signal[1]]
+				}
 			}
 
 
@@ -316,6 +324,7 @@ func (c *Connection) evalInstantBER(E *Emitter, rx *PhysReceiver, dbs *DBS) {
 		c.meanBER.Add(c.BER)
 		c.meanSNR.Add(c.SNR)
 		c.meanPr.Add(c.Pr)
+		c.SNR=0
 		//return
 	}else if !touch { // add null to mean BER
 		
