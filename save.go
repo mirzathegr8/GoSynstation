@@ -18,17 +18,19 @@ func init() {
 
 	syncsavech = make(chan int)
 
-	saveData.Push(CreateStart(MaxBER, s.M, "BERMax"))
-	saveData.Push(CreateStart(InstMaxBER, s.M, "InstMatBER"))
+//	saveData.Push(CreateStart(MaxBER, s.M, "BERMax"))
+//	saveData.Push(CreateStart(InstMaxBER, s.M, "InstMatBER"))
 	saveData.Push(CreateStart(BER, s.M, "BER"))
 	saveData.Push(CreateStart(SNR, s.M, "SNR"))
-	saveData.Push(CreateStart(CH, s.M, "CH"))
+	saveData.Push(CreateStart(InstSNR, s.M, "InstSNR"))
+//	saveData.Push(CreateStart(CH, s.M, "CH"))
 	saveData.Push(CreateStart(DIV, s.M, "DIV"))
 	saveData.Push(CreateStart(Outage, s.M, "Outage"))
 	saveData.Push(CreateStart(Ptxr, s.M, "Ptxr"))
 	saveData.Push(CreateStart(PrMaster, s.M, "PrMaster"))
 	saveData.Push(CreateStart(TransferRate, s.M, "TransferRate"))
 	saveData.Push(CreateStart(NumARB, s.M, "NumARB"))
+	saveData.Push(CreateStart(DataTransfer, s.M, "DataTransfer"))
 
 	fadingChan = make(chan int)
 	go fadingSave(fadingChan)
@@ -56,6 +58,7 @@ func MaxBER(t *s.Trace, i int) float64       { return t.Mobs[i].MaxBER }
 func InstMaxBER(t *s.Trace, i int) float64   { return t.Mobs[i].InstMaxBER }
 func BER(t *s.Trace, i int) float64          { return t.Mobs[i].BERtotal }
 func SNR(t *s.Trace, i int) float64          { return t.Mobs[i].SNRb }
+func InstSNR(t *s.Trace, i int) float64          { return t.Mobs[i].InstSNR }
 func CH(t *s.Trace, i int) float64           { return float64(t.Mobs[i].GetFirstRB()) }
 func DIV(t *s.Trace, i int) float64          { return float64(t.Mobs[i].Diversity) }
 func Outage(t *s.Trace, i int) float64       { return float64(t.Mobs[i].Outage) }
@@ -63,6 +66,7 @@ func Ptxr(t *s.Trace, i int) float64         { return float64(t.Mobs[i].Power) }
 func PrMaster(t *s.Trace, i int) float64     { return float64(t.Mobs[i].PrMaster) }
 func TransferRate(t *s.Trace, i int) float64 { return float64(t.Mobs[i].TransferRate) }
 func NumARB(t *s.Trace, i int) float64       { return float64(t.Mobs[i].GetNumARB()) }
+func DataTransfer(t *s.Trace, i int) float64       { return float64(t.Mobs[i].GetDataState()) }
 
 
 func WriteDataToFile(method func(t *s.Trace, i int) float64, m int, channel chan *s.Trace, file string) {
@@ -315,9 +319,9 @@ func SaveToFile(Mobiles []s.Mob, dbs []s.DBS) {
 	}
 	outF.WriteString("\n")
 
-	outF.WriteString(fmt.Sprintln("# name: XYD\n# type: matrix\n# rows: ", s.D, "\n# columns: ", 2))
+	outF.WriteString(fmt.Sprintln("# name: XYD\n# type: matrix\n# rows: ", s.D, "\n# columns: ", 3))
 	for i := 0; i < s.D; i++ {
-		outF.WriteString(fmt.Sprintln(dbs[i].R.GetPos().X, " ", dbs[i].R.GetPos().Y," "))
+		outF.WriteString(fmt.Sprintln(dbs[i].R.GetPos().X, " ", dbs[i].R.GetPos().Y," ", dbs[i].Color," "))
 
 	}
 	outF.WriteString("\n")
