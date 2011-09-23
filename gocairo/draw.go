@@ -1,12 +1,11 @@
 
-
 package gocairo
-
 
 
 // #include "cairolib.h"
 import "C"
 
+import "synstation"
 
 
 type Canvas struct{
@@ -15,6 +14,8 @@ type Canvas struct{
 }
 
 //var I sync.Mutex
+
+func ToField(x float32) float32{ return x/synstation.Field *600.0}
 
 func Cairotest(){
 	C.cairolibtest()
@@ -34,17 +35,17 @@ func (Cv *Canvas) Clear() {
 }
 
 func (Cv *Canvas) DrawLine(x1 float32, y1 float32,x2 float32,y2 float32 ){
-	C.drawConnection(Cv.Cv, _Ctype_float(x1), 
-				_Ctype_float(y1), 
-				_Ctype_float(x2),
-				_Ctype_float(y2) )
+	C.drawConnection(Cv.Cv, _Ctype_float(ToField(x1)), 
+				_Ctype_float(ToField(y1)), 
+				_Ctype_float(ToField(x2)),
+				_Ctype_float(ToField(y2)) )
 }
 
 
 func (Cv *Canvas) DrawCircle(x float32, y float32,r float32){
-	C.drawCircle(Cv.Cv, _Ctype_float(x),
-			_Ctype_float(y),
-			_Ctype_float(r)	)
+	C.drawCircle(Cv.Cv, _Ctype_float(ToField(x)),
+			_Ctype_float(ToField(y)),
+			_Ctype_float(ToField(r))	)
 }
 
 func (Cv *Canvas) SetColor(r float32, g float32,b float32, a float32){
@@ -65,11 +66,11 @@ func (Cv *Canvas) Stroke (){
 }
 
 func (Cv *Canvas) MoveTo (x,y float32){
-	C.move_to(Cv.Cv,_Ctype_float(x),_Ctype_float(y))
+	C.move_to(Cv.Cv,_Ctype_float(ToField(x)),_Ctype_float(ToField(y)))
 }
 
 func (Cv *Canvas) LineTo (x,y float32){
-	C.line_to(Cv.Cv,_Ctype_float(x),_Ctype_float(y))
+	C.line_to(Cv.Cv,_Ctype_float(ToField(x)),_Ctype_float(ToField(y)))
 }
 
 func (Cv *Canvas) ClosePath (){

@@ -30,8 +30,9 @@ func Init(MobileNumber int, ConnectionNumber int) {
 
 	sentData = make(chan *DataSave, numImThread)
 	for i := 0; i < numImThread; i++ {
-		go drawingThread(MobileNumber, ConnectionNumber, drawP)
+		//go drawingThread(MobileNumber, ConnectionNumber, drawP)
 		//go drawingThread(MobileNumber, ConnectionNumber,drawP)
+		go drawingThread(MobileNumber, ConnectionNumber,drawChan)
 	}
 }
 
@@ -73,7 +74,7 @@ func (d *DataSave) Close() {
 		for p := 0; p < d.t.NumConn; p++ {
 			c := &d.t.Connec[p]
 			d.cv.SetColor(0.0, 0.0, 0.0, 1.0)
-			d.cv.DrawCircle(float32(c.B.X)/2.0, float32(c.B.Y)/2.0, 5.0)
+			d.cv.DrawCircle(float32(c.B.X), float32(c.B.Y), 5.0)
 			d.cv.Stroke()
 		}
 
@@ -107,7 +108,9 @@ func drawP(d *DataSave) {
 	d.cv.Clear()
 
 	for p := 0; p < d.t.NumConn; p++ {
+
 		c := &d.t.Connec[p]
+//		if c.BER < math.Log10(synstation.BERThres) {
 		d.cv.SetColor(0.5, .5, 0.5, 0.1)
 
 		d.cv.DrawLine(float32(c.A.X),
@@ -118,6 +121,7 @@ func drawP(d *DataSave) {
 		d.cv.SetColor(0.0, 0.0, 0.0, 1.0)
 		d.cv.DrawCircle(float32(c.B.X), float32(c.B.Y), 5.0)
 		d.cv.Stroke()
+//		}
 	}
 
 	for i := range d.t.Mobs {
@@ -126,7 +130,7 @@ func drawP(d *DataSave) {
 
 		var r, g, b, v float32
 
-		if p.BERtotal < synstation.BERThres && !p.IsSetARB(0) {
+		//if p.MaxBER < synstation.BERThres && !p.IsSetARB(0) {
 			/*	r = 1.0
 				g = 0.0
 				b = 0.0
@@ -140,9 +144,18 @@ func drawP(d *DataSave) {
 
 			switch {
 
+			case v>float32(math.Log10(synstation.BERThres)):
+				b=0
+				r=0
+				g=0
+	
+			case v> -1:
+				b=1.0
+				g= -v
+
 			case v > -2.0:
 				b = 2.0 + v
-				g = -v
+				g = 1
 			case v > -4:
 				g = 1
 				r = -v/2.0 - 1.0
@@ -151,12 +164,13 @@ func drawP(d *DataSave) {
 				b = -v/2.0 - 2.0
 				g = 1.0 - b
 			}
-		}
+		
 
 		d.cv.SetColor(r, g, b, 1)
 
-		d.cv.DrawCircle(float32(p.X)/2.0, float32(p.Y)/2.0, 10.0)
+		d.cv.DrawCircle(float32(p.X), float32(p.Y), 15.0)
 		d.cv.Stroke()
+		//}
 
 	}
 
@@ -167,7 +181,7 @@ func drawP(d *DataSave) {
 
 func drawChan(d *DataSave) {
 
-	v := float32(d.t.K) / 1000.0 * -8.0
+	/*v := float32(d.t.K) / 1000.0 * -8.0
 
 	var r, g, b float32
 
@@ -187,22 +201,27 @@ func drawChan(d *DataSave) {
 		r = 1.0
 		b = 4.0 + v/2.0
 		g = 0.0
-	}
+	}*/
 
 	for i := range d.t.Mobs {
 
 		p := &d.t.Mobs[i]
 
-		if p.IsSetARB(0) || p.BERtotal > synstation.BERThres { // >= synstation.NCh-5{
+		//if p.IsSetARB(0) || p.BERtotal > synstation.BERThres { // >= synstation.NCh-5{
+		ch:=p.GetFirstRB()
+		if ch >synstation.NCh/3+2 && ch>0{
+			d.cv.SetColor(1, 0, 0, 0.2)
+		}else {
+			d.cv.SetColor(0, 1, 0, 0.2)
+		}
 
-			d.cv.SetColor(r, g, b, 0.2)
 
-			r := 15 * math.Log(-30.0/p.BERtotal)
-
-			d.cv.DrawCircle(float32(p.X)/2.0, float32(p.Y)/2.0, float32(r))
+			//r := 15 * math.Log(-30.0/p.BERtotal)
+			r:=10
+			d.cv.DrawCircle(float32(p.X), float32(p.Y), float32(r))
 			d.cv.Stroke()
 
-		}
+		
 
 	}
 

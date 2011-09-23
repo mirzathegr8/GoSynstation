@@ -7,7 +7,7 @@
 #include "cairolib.h"
 
 
-inline float toField(float f){return  f/10.0;}
+inline float toField(float f){return  f;}
 
 void cairolibtest(){
 
