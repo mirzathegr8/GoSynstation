@@ -1,23 +1,24 @@
 
 
 
-vNetLayout = {"RANDOM"}
+vNetLayout = {"RANDOM"; "HONEYCOMB"}
 %V_BERThres=[0.05:0.05:0.25]
-V_BERThres=[0.15];
-V_SNRThresConnec=[0 5 10 15 20 25 30 35 ];
-ARBSchedul={"ARBScheduler3";"ARBScheduler";"ChHopping2"};
+V_BERThres=[0.5 0.15 0.05];
+%V_SNRThresConnec=[0 5 10 15 20 25 30 35 ];
+V_SNRThresConnec=[0];
+ARBSchedul={"ARBScheduler4"} %;"ARBScheduler";"ChHopping2"};
 EstimateF={"estimateFactor0";"estimateFactor1";"estimateFactor1"};
 
 DIVTYP={"SELECTION";"MRC"};
 RECEIVERTYP={"OMNI";"BEAM"};
 
-Array_cF={ [20];
-	 [0.8];
-	 [0.8]};
+Array_cF={ [0.2 1 10 20];
+	 [0.2 0.8 2 10];
+	 [0.2 0.8 2 10]};
 
-%Array_cF={ [1:5:35];
-%	 [0.4:0.2:2];
-%	 [0.4:0.2:2]};
+%Array_cF={ [0.2 1:5:35];
+%	 [0.1:0.2:2];
+%	 [0.1:0.2:2]};
 
 for h=1:size(vNetLayout,1)
 NetLayout=vNetLayout{h};

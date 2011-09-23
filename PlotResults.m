@@ -15,13 +15,18 @@ plot(log10(rr/size(TransferRate,1)*1000+1),c);
 xlabel("TTI")
 hold on;
 
-#figure(3);
-#load Ptxr.mat;
-#plot(sort(mean(Ptxr,2)),c);
-#hold on;
+figure(3+fign);
+
+load SNR.mat
+load NumARB.mat
+plot(10*log10( sort(mean( SNR./(NumARB+0.000001) .* (NumARB>0)  ,2 )      )   ))
+hold on;
+%load Ptxr.mat;
+%plot(sort(mean(Ptxr,2)),c);
+%hold on;
 
 
-figure(4);
+figure(4+fign);
 load NumARB.mat;
 [V,I]=sort(mean(NumARB,2));
 plot(V,c);
