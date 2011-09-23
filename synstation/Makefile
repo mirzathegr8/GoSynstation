@@ -14,6 +14,7 @@ mobile.go\
 synstation.go\
 physReceiverSectored.go\
 powerC.go\
+powerControl.go\
 trace.go\
 physReceiver.go\
 meanStruct.go\
@@ -24,6 +25,7 @@ ChHop2.go\
 constantV.go\
 RBSchedule4.go\
 RBSchedule1.go\
+RBSchedule5.go\
 ChHop1.go
 
 
