@@ -7,7 +7,7 @@ import "fmt"
 
 
 
-const uARBcost = 0.01 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)
+const uARBcost = 0.00000 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)
 
 func init() {
 
@@ -55,7 +55,7 @@ func ARBScheduler4(dbs *DBS, Rgen *rand.Rand) {
 			MasterConnec[Nmaster] = c
 			MasterMobs[Nmaster] = E
 
-			for i:=0; i<NCh; i++{E.UnSetARB(i)}
+			//for i:=0; i<NCh; i++{E.UnSetARB(i)}
 
 			for rb := 1; rb < NCh; rb++ {
 				var snrrb float64
@@ -84,15 +84,23 @@ func ARBScheduler4(dbs *DBS, Rgen *rand.Rand) {
 
 	//var NumAss [NConnec]int
 
-	var Popul [popsize][NCh]int	
-	var pool [popsize * 11][NCh]int
+//	var Popul [popsize][NCh]int	
+//	var pool [popsize * 11][NCh]int
+
+	var PopulAr [popsize][NCh]int
+	var Popul [popsize]allocSet
+	for i:=range Popul{ Popul[i].vect=PopulAr[i][:]}
+
+	var poolAr [(popsize+1)*generations][NCh]int
+	var pool [(popsize+1)*10]allocSet
+	for i:=range pool{ pool[i].vect=poolAr[i][:]}
 
 	//First assign RB to best Metric
 	for i := 0; i < popsize; i++ {
 		nbrb := int(float64(NCh) / (float64(Nmaster) ) ) //int(float64(NCh) * float64(r) / float64(numberAmobs))
 		a := Rgen.Perm(Nmaster)
 		//expand
-		pp := &Popul[i]
+		pp := Popul[i].vect
 		// first dealocate everything
 		for j := 0; j < NCh; j++ {
 			pp[j] = -1
@@ -111,17 +119,20 @@ func ARBScheduler4(dbs *DBS, Rgen *rand.Rand) {
 	for gen := 0; gen < generations; gen++ {
 		
 		for j := 0; j < popsize; j++ {
-			createDesc(&Popul[j], pool[j*10:(j+1)*10], Rgen)
+			createDesc(Popul[j], pool[j*10:(j+1)*10], Rgen)
 		}
 
-		copy(pool[popsize*10:popsize*11], Popul[:])
+		for i:=range Popul{
+			copy(pool[popsize*10+i].vect, Popul[i].vect)	
+		}
+		//copy(pool[popsize*10:popsize*11].vect, Popul[:].vect)
 
 		//select the new population
 		var metricpool [popsize * 11]float64
 	
 		for i := 0; i < popsize*11; i++ {					
 			var AL [NCh]int
-			AL = pool[i] //copies 
+			copy(AL[:],pool[i].vect) //copies 
 			AL[0] = -1
 			metricpool[i] = Trimm(AL[:],&Metric, MasterMobs[0:Nmaster])
 		}
@@ -135,7 +146,7 @@ func ARBScheduler4(dbs *DBS, Rgen *rand.Rand) {
 		
 	}
 
-	AL := Popul[0][:]
+	AL := Popul[0].vect
 
 	
 
@@ -192,7 +203,7 @@ func Trimm(AL []int, Metric *[NConnec][NCh]float64, MasterMobs []*Emitter) (metr
 			jmax := jmin + nARBm //save first
 		
 		
-		/*	for _,Mval :=range Mvect[jmin:jmax]{ //j:=jmin; j<jmax ;j++ { //
+			for _,Mval :=range Mvect[jmin:jmax]{ //j:=jmin; j<jmax ;j++ { //
 
 				//Mval:=Mvect[j]
 				m := EffectiveBW * math.Log2(1+Mval/float64(nARBm))
@@ -220,7 +231,7 @@ func Trimm(AL []int, Metric *[NConnec][NCh]float64, MasterMobs []*Emitter) (metr
 				} else {
 					break
 				}
-			}*/
+			}
 
 
 			m:=float64(0.0)
@@ -229,7 +240,7 @@ func Trimm(AL []int, Metric *[NConnec][NCh]float64, MasterMobs []*Emitter) (metr
 			}
 
 			m_m := MasterMobs[v].GetMeanTR()				
-			metricT += math.Log2(1 + m/(m_m+0.0001)) 
+			metricT += math.Log2(1 + m/(m_m+0.0001))
 
 			i += nARBmOrg
 		}
