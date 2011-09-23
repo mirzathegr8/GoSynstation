@@ -1,7 +1,7 @@
 package synstation
 
 
-//Adds power contral for macrodiversity based on 
+//Adds power control for macrodiversity based on 
 func PowerC(dbsA []DBS) {
 
 	var maxMob int
@@ -12,7 +12,7 @@ func PowerC(dbsA []DBS) {
 		}
 	}
 
-	for ch := 2; ch < NCh; ch++ {
+	for ch := NCh; ch < NCh-subsetSize+1; ch+=subsetSize {
 
 		go powerch(ch, dbsA, maxMob)
 
