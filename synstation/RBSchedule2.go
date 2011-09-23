@@ -10,15 +10,23 @@ func init() {
 	fmt.Println("init to keep fmt")
 }
 
-func createDesc(ppO *[NCh]int, pool [][NCh]int, Rgen *rand.Rand) {
+
+type allocSet struct {
+	vect []int
+} 
+
+func createDesc(ppO allocSet, pool []allocSet, Rgen *rand.Rand) {
 	//fmt.Print(" in")
+
+	nCh:= len(ppO.vect)
+
 	for i := 0; i < 10; i++ {
 
 		//copy
 
-		pool[i] = *ppO // copies value since arraytype
+		copy(pool[i].vect,ppO.vect) // copies value since arraytype
 
-		pp := pool[i][:] //short name to consider that array descendant
+		pp := pool[i].vect //short name to consider that array descendant
 		//modify
 
 		//take a random location
@@ -26,7 +34,7 @@ func createDesc(ppO *[NCh]int, pool [][NCh]int, Rgen *rand.Rand) {
 		rnd := 0
 
 		for r := 0; v == -1 && r < 20; r++ {
-			rnd = Rgen.Intn(NCh)
+			rnd = Rgen.Intn(nCh)
 			v = pp[rnd]
 		}
 
@@ -37,9 +45,9 @@ func createDesc(ppO *[NCh]int, pool [][NCh]int, Rgen *rand.Rand) {
 			//	fmt.Println("a", a)
 
 			if a < 0.25 { //either increase size to the right
-				for ; rnd < NCh && pp[rnd] == v; rnd++ {
+				for ; rnd < nCh && pp[rnd] == v; rnd++ {
 				}
-				if rnd < NCh { //copy prev or next
+				if rnd < nCh { //copy prev or next
 					a := Rgen.Float64()
 					if a < .5 {
 						pp[rnd] = pp[rnd-1]
@@ -66,7 +74,7 @@ func createDesc(ppO *[NCh]int, pool [][NCh]int, Rgen *rand.Rand) {
 				rnd1 := rnd
 				rnd2 := 0
 				for r := 0; v2 == -1 && r < 20; r++ {
-					rnd2 = Rgen.Intn(NCh)
+					rnd2 = Rgen.Intn(nCh)
 					v2 = pp[rnd]
 				}
 				if v2 >= 0 {
@@ -77,16 +85,16 @@ func createDesc(ppO *[NCh]int, pool [][NCh]int, Rgen *rand.Rand) {
 						for ; rnd2 > 0 && pp[rnd] == v2; rnd2-- {
 						}
 
-						for ; rnd1 < NCh && pp[rnd1] == v1; rnd1++ {
+						for ; rnd1 < nCh && pp[rnd1] == v1; rnd1++ {
 							pp[rnd1] = v2
 						}
-						for ; rnd2 < NCh && pp[rnd2] == v2; rnd1++ {
+						for ; rnd2 < nCh && pp[rnd2] == v2; rnd1++ {
 							pp[rnd2] = v1
 						}
 					}
 				}
 			} else { // puncture
-				for ; rnd < NCh && pp[rnd] == v; rnd++ {
+				for ; rnd < nCh && pp[rnd] == v; rnd++ {
 					pp[rnd] = -1
 				}
 
@@ -156,23 +164,28 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 
 	//var NumAss [NConnec]int
 
-	var Popul [popsize][NCh]int
+	var PopulAr [popsize][NCh]int
+	var Popul [popsize]allocSet
+	for i:=range Popul{ Popul[i].vect=PopulAr[i][:]}
 
 	r := 6.0 / 6.0 // fraction of RB to allocate
 
 	//fmt.Print("Nmaster ", Nmaster, " ", int(float64(NCh)*float64(r)/float64(Nmaster)))
 
-	var pool [1100][NCh]int
+	var poolAr [(popsize+1)*generations][NCh]int
+	var pool [(popsize+1)*10]allocSet
+	for i:=range pool{ pool[i].vect=poolAr[i][:]}
+	
 
 	nbrb := int(float64(NCh) * float64(r) / float64(Nmaster))
 
 	//First assign RB to best Metric
-	for i := 0; i < 100; i++ {
+	for i := 0; i < generations; i++ {
 
 		a := Rgen.Perm(Nmaster)
 
 		//expand
-		pp := &Popul[i]
+		pp := Popul[i].vect
 
 		// first dealocate everything
 		for j := 0; j < NCh; j++ {
@@ -196,12 +209,16 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 		//fmt.Println(gen)
 
 		for j := 0; j < 100; j++ {
-			createDesc(&Popul[j], pool[j*10:(j+1)*10], Rgen)
+			createDesc(Popul[j], pool[j*10:(j+1)*10], Rgen)
 		}
 
 		//fmt.Println("desc created")
 
-		copy(pool[1000:1100], Popul[:])
+
+		for i:=range Popul{
+			copy(pool[popsize*10+i].vect, Popul[i].vect)	
+		}
+		//copy(pool[1000:1100], Popul[:])
 
 		//select the new population
 		var metricpool [1100]float64
@@ -210,8 +227,8 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 			metricT := float64(0.0)
 			na := 0
 			for j := 1; j < NCh; j++ {
-				if pool[i][j] >= 0 {
-					metricT += Metric[pool[i][j]][j]
+				if pool[i].vect[j] >= 0 {
+					metricT += Metric[pool[i].vect[j]][j]
 				} else {
 					na++
 				}
@@ -229,12 +246,12 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 
 		for i := range Popul {
 			//fmt.Print(" ", S.value[S.index[i]])
-			Popul[i] = pool[S.index[i]]
+			copy(Popul[i].vect, pool[S.index[i]].vect)
 		}
 		//fmt.Println(S.value[S.index[0]])
 	}
 
-	AL := Popul[0][:]
+	AL := Popul[0].vect
 
 	//Trimm we delete endings of allocation sequence if the capacity of these RB is not that good
 	//this is to prevent spendin too much energy for little gain, and also to give a chance to minimize interference
@@ -406,13 +423,19 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 
 	//var NumAss [NConnec]int
 
-	var Popul [popsize][NCh]int
+//	var Popul [popsize][NCh]int
+	var PopulAr [popsize][NCh]int
+	var Popul [popsize]allocSet
+	for i:=range Popul{ Popul[i].vect=PopulAr[i][:]}
 
 	r := 6.0 / 6.0 // fraction of RB to allocate
 
 	//fmt.Print("Nmaster ", Nmaster, " ", int(float64(NCh)*float64(r)/float64(Nmaster)))
 
-	var pool [popsize * 11][NCh]int
+//	var pool [popsize * 11][NCh]int
+	var poolAr [(popsize+1)*10][NCh]int
+	var pool [(popsize+1)*10]allocSet
+	for i:=range pool{ pool[i].vect=poolAr[i][:]}
 
 	//First assign RB to best Metric
 	for i := 0; i < popsize; i++ {
@@ -423,7 +446,7 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 		a := Rgen.Perm(Nmaster)
 
 		//expand
-		pp := &Popul[i]
+		pp := Popul[i].vect
 
 		// first dealocate everything
 		for j := 0; j < NCh; j++ {
@@ -447,12 +470,15 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 		//fmt.Println(gen)
 
 		for j := 0; j < popsize; j++ {
-			createDesc(&Popul[j], pool[j*10:(j+1)*10], Rgen)
+			createDesc(Popul[j], pool[j*10:(j+1)*10], Rgen)
 		}
 
 		//fmt.Println("desc created")
 
-		copy(pool[popsize*10:popsize*11], Popul[:])
+		for i:=range Popul{
+			copy(pool[popsize*10+i].vect, Popul[i].vect)	
+		}
+
 
 		//select the new population
 		var metricpool [popsize * 11]float64
@@ -466,7 +492,7 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 			//eval what would be the AL after trimming
 			var max float64
 			var AL [NCh]int
-			AL = pool[i] //copies 
+			copy(AL[:],pool[i].vect) //copies 
 			AL[0] = -1
 
 			for i := 1; i < len(AL); i++ {
@@ -585,7 +611,7 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 		//fmt.Println(S.value[S.index[0]])
 	}
 
-	AL := Popul[0][:]
+	AL := Popul[0].vect
 
 	//Trimm we delete endings of allocation sequence if the capacity of these RB is not that good
 	//this is to prevent spendin too much energy for little gain, and also to give a chance to minimize interference
