@@ -4,13 +4,13 @@ package main
 import "fmt"
 import s "synstation"
 import "runtime"
-//import "draw"
+import "draw"
 import "os"
 
 
 // Data to save for output during simulation
 
-var k int
+
 var outD outputData  // one to print
 var outDs outputData // one to sum and take mean over simulation
 
@@ -20,8 +20,8 @@ func main() {
 
 	s.Init()
 
-	//draw.Init(s.M, s.D*s.NConnec) // init drawing system
-	//draw.DrawReceptionField(Synstations[:], "receptionLevel.png")
+	draw.Init(s.M, s.D*s.NConnec) // init drawing system
+	//draw.DrawReceptionField(s.Synstations[:], "receptionLevel.png")
 
 	go printData() //launch thread to print output
 
@@ -29,7 +29,7 @@ func main() {
 	fmt.Println("Start Simulation")
 
 	// precondition
-	for k = -200; k < 0; k++ {
+	for s.Tti = -200; s.Tti < 0; s.Tti++ {
 		/*fmt.Print("---- 1---- ", s.Mobiles[0].Diversity, " ")
 		fmt.Print( &s.Mobiles[0].MasterConnection)
 		fmt.Println()
@@ -72,7 +72,7 @@ func main() {
 	}
 
 	// simu
-	for k = 0; k < s.Duration; k++ {
+	for s.Tti = 0; s.Tti < s.Duration; s.Tti++ {
 		s.GoRunPhys()
 		s.GoFetchData()
 		readDataAndPrintToStd(true)
@@ -113,7 +113,7 @@ func main() {
 
 	StopSave()
 
-	//draw.Close()
+	draw.Close()
 
 }
 
@@ -157,19 +157,19 @@ func readDataAndPrintToStd(save bool) {
 	outD.d_lost = float64(s.GetLostConnect())
 	outD.HopCount = float64(s.GetHopCount())
 
-	outD.k = float64(k)
-	if k%10 == 0 {
+	outD.k = float64(s.Tti)
+	if s.Tti%10 == 0 {
 		outChannel <- outD //sent data to print to  stdout			
 	}
 
-	/*if k%200 == 0 {
+	if s.Tti%200 == 0 {
 		runtime.GC()
-	}*/
+	}
 
 	if save {
 		outDs.Add(&outD)
-		t := s.CreateTrace(s.Mobiles[:], s.Synstations[:], k)
-		//draw.Draw(t)
+		t := s.CreateTrace(s.Mobiles[:], s.Synstations[:], s.Tti)
+		draw.Draw(t)
 		sendTrace(t)
 	}
 
