@@ -6,6 +6,9 @@ import "rand"
 import "geom"
 //import "container/list"
 
+
+var Tti int //number of the current tti, to be incremented by the main loop
+
 var SyncChannel chan float64
 
 
@@ -96,30 +99,89 @@ func Init() {
 	//sync
 	Sync(D)
 
+	Dprim:=D
+	if OneAgentPerBEAM {Dprim/=3}
+
+
 	if NetLayout==HONEYCOMB{
+
+		d:=0
+		Wsd := math.Sqrt(float64(Dprim)*2*math.Sqrt(3) )	
+		xD := int(Wsd/2.0)
+		yD := int(Wsd/math.Sqrt(3))
+
+		a:=(xD+1)*yD
+		b:=(yD+1)*xD
+		if a<=Dprim && b<=Dprim{
+			if a>b { xD++} else {yD++}		
+		} else if a<=Dprim{ xD++
+		} else if b<=Dprim { yD++}
 	
 
-	d:=0
-	Wsd := math.Sqrt(D*2*math.Sqrt(3) )	
-	nD := int(Wsd/2.0)
-	mD := int(Wsd/math.Sqrt(3))
-	DD := Field / (float64(nD)+.8)
+		DDx := Field / (float64(xD)+.8)
+		DDy := DDx*math.Sqrt(3)/2
 
-	IntereNodeBDist=DD // set the interdistance for schedulers with antipasta
+		IntereNodeBDist=DDx // set the interdistance for schedulers with antipasta
 
-	deltaH:= (Field- (float64(nD)-0.5)*DD) / 2.0
-	deltaV:= (Field- (float64(mD)-0.5)*DD/2*math.Sqrt(3)) / 2.0
-	for i:=0;i< nD ;i++{
-		for j:=0;j < mD;j++{
-			x:=deltaH + DD*(float64(i)+ .5*float64(j%2) )
-			y:=deltaV + DD*float64(j)
-			Synstations[d].R.SetPos(geom.Pos{x,y})
-			d++
-			Synstations[d].Color=( 2*(j%2) + i )%3
+		deltaX:= (Field- (float64(xD)-0.5)*DDx) / 2.0
+		deltaY:= (Field- (float64(yD)-1)*DDy) / 2.0
+		for i:=0;i< xD ;i++{
+			for j:=0;j < yD;j++{
+				x:=deltaX + DDx*(float64(i)+ .5*float64(j%2) )
+				y:=deltaY + DDy*float64(j)
+				Synstations[d].R.SetPos(geom.Pos{x,y})
+				Synstations[d].Color=( 2*(j%2) + i )%3
+				d++
+			}
 		}
-
 	}
-}
+
+
+	if OneAgentPerBEAM {
+		for i:=0; i<Dprim;i++{		
+
+			switch ICIMtype{
+			case ICIMb:
+			Color:=Synstations[i].Color	
+			Synstations[i+Dprim].Color=Color		
+			Synstations[i+2*Dprim].Color=Color
+			case ICIMc:
+			Synstations[i].Color=0
+			Synstations[i+Dprim].Color=1
+			Synstations[i+2*Dprim].Color=2
+
+			}
+
+			R:=Synstations[i].R.GetPos()
+			Synstations[i+Dprim].R.(*PhysReceiver).SetPos(R)	
+			Synstations[i+2*Dprim].R.(*PhysReceiver).SetPos(R)
+
+			Synstations[i+Dprim].DBS2= &Synstations[i]
+			Synstations[i+2*Dprim].DBS2= &Synstations[i]
+			Synstations[i+2*Dprim].DBS3= &Synstations[i+Dprim]
+
+		}
+	
+		if SetReceiverType==SECTORED2 {		
+			for i:=0; i<Dprim;i++{
+				R:=Synstations[i].R.(*PhysReceiver)			
+				for i := 0; i < len(R.Orientation); i++ {
+					R.Orientation[i] = 0
+				}
+				R=Synstations[i+Dprim].R.(*PhysReceiver)
+				R.SetPos(Synstations[i].R.GetPos())
+				for i := 0; i < len(R.Orientation); i++ {
+					R.Orientation[i] = PI2/3.0
+				}
+				R = Synstations[i+2*Dprim].R.(*PhysReceiver)
+				R.SetPos(Synstations[i].R.GetPos())
+				for i := 0; i < len(R.Orientation); i++ {
+					R.Orientation[i] = PI2*2.0/3.0
+				}			
+		}
+	}
+	}
+
 
 
 
