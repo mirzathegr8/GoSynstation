@@ -11,8 +11,7 @@ type Mob struct {
 	//R    PhysReceiver
 	Rgen  *rand.Rand
 	clock int
-
-	Data int //quantity of data to send in bits
+	
 }
 
 
@@ -34,6 +33,8 @@ func (M *Mob) Init(i int) {
 	angle := M.Rgen.Float64() * 2 * math.Pi
 	M.Speed[0] = speed * math.Cos(angle)
 	M.Speed[1] = speed * math.Sin(angle)
+
+	M.Data=4e6;
 
 }
 
@@ -59,6 +60,9 @@ func (M *Mob) RunAgent() {
 		M.Speed[1] = -M.Speed[1]
 		M.Y = Field
 	}
+
+	if Tti>=0 {M.Data-= int(M.TransferRate); if M.Data<0 {M.Data+=200}}
+//	if M.Data<2 { M.Power=0}
 
 	SyncChannel <- 1.0
 }
