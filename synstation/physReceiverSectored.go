@@ -16,14 +16,14 @@ func (r *PhysReceiverSectored) Init(p geom.Pos, Rgen *rand.Rand) {
 		r.R[i].Init(p, Rgen)
 	}
 
-	r.R[0].Orientation[0] = -1
+	/*r.R[0].Orientation[0] = -1
 	r.R[1].Orientation[0] = -1
-	r.R[2].Orientation[0] = -1
+	r.R[2].Orientation[0] = -1*/
 
-	for i := 1; i < len(r.R[0].Orientation); i++ {
+	for i := 0; i < len(r.R[0].Orientation); i++ {
 		r.R[0].Orientation[i] = 0
-		r.R[1].Orientation[i] = 120
-		r.R[2].Orientation[i] = 240
+		r.R[1].Orientation[i] = PI2/3.0
+		r.R[2].Orientation[i] = PI2*2/3.0
 	}
 }
 
@@ -127,9 +127,9 @@ func findMin(arr []float64) int {
 }
 
 
-func (rx *PhysReceiverSectored) Compute(Connec *list.List) {
+func (rx *PhysReceiverSectored) Compute(Connec *list.List,dbs2, dbs3 *DBS) {
 	for i := range rx.R {
-		rx.R[i].Compute(Connec)
+		rx.R[i].Compute(Connec,dbs2,dbs3)
 	}
 }
 
@@ -186,3 +186,11 @@ func (r *PhysReceiverSectored) GetPhysReceiver(mi int) *PhysReceiver {
 	return &r.R[ir]
 }
 
+
+func (r *PhysReceiverSectored) GetOrientation(rb int) float64 {
+	return r.R[0].Orientation[rb]
+}
+
+func (r *PhysReceiverSectored) SetOrientation(rb int, a float64) {
+	r.R[0].Orientation[rb]=a
+}
