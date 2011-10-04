@@ -16,10 +16,6 @@ func (r *PhysReceiverSectored) Init(p geom.Pos, Rgen *rand.Rand) {
 		r.R[i].Init(p, Rgen)
 	}
 
-	/*r.R[0].Orientation[0] = -1
-	r.R[1].Orientation[0] = -1
-	r.R[2].Orientation[0] = -1*/
-
 	for i := 0; i < len(r.R[0].Orientation); i++ {
 		r.R[0].Orientation[i] = 0
 		r.R[1].Orientation[i] = PI2/3.0
