@@ -26,7 +26,9 @@ constantV.go\
 RBSchedule4.go\
 RBSchedule1.go\
 RBSchedule5.go\
-ChHop1.go
+ChHop1.go\
+icim.go\
+ChHop3.go
 
 
 include $(GOROOT)/src/Make.pkg
