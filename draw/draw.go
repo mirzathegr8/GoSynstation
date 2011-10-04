@@ -274,7 +274,7 @@ func drawVoronoi(d *DataSave) {
 
 								vd := m2.Pos.Minus(m1.Pos)
 								dist := vd.Len()
-								al := math.Pow(m1.Power/m2.Power, .25)
+								al := math.Pow(m1.Power[Ch]/m2.Power[Ch], .25)
 								q := (al*(dist+2) - 2) / (1 + al)
 								l.Org = m1.Pos.Plus(vd.Times(q / dist))
 
