@@ -24,7 +24,7 @@ func (M *Mob) Init(i int) {
 
 	M.X = M.Rgen.Float64() * Field
 	M.Y = M.Rgen.Float64() * Field
-	M.Power = 1
+	M.SetPower( 1.0 )
 
 	M.ReSetARB() // start trying to connect
 
