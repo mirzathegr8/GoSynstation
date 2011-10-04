@@ -804,6 +804,11 @@ func (s Sequence) Swap(i, j int) {
 	s.index[i], s.index[j] = s.index[j], s.index[i]
 }
 
+func (s Sequence) PrintOrder(){
+	for _,v:=range s.index{
+		fmt.Print(s.value[v]," ")
+	}
+}
 
 
 func AllocateOld(AL []int, dbs *DBS) {
