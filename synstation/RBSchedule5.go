@@ -45,7 +45,7 @@ func ARBScheduler5(dbs *DBS, Rgen *rand.Rand) {
 				Metric[Nmaster][rb] = snrrb
 			}
 
-			ICIM(&r,E,Metric[Nmaster][:],dbs.Color)
+			ICIMfunc(&r,E,Metric[Nmaster][:],dbs.Color)
 
 			Nmaster++
 		}
