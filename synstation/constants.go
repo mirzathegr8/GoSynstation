@@ -64,7 +64,7 @@ const (
 
 // Shadow map can be set or not, direct evaluation can also be used by modifying one line in physReceiver.go
 // direct evaluation generates is slower as it computes the shading value each time.
-const SetShadowMap = SHADOWMAP
+const SetShadowMap = NOSHADOW
 const (
 	NOSHADOW = iota
 	SHADOWMAP
@@ -97,7 +97,7 @@ const (
 
 //Sets the power allocation methode
 //var PowerAllocation = optimizePowerAllocationAgent
-var PowerAllocation = optimizePowerNone
+//var PowerAllocation = optimizePowerNone
 //var PowerAllocation = optimizePowerAllocationSimple
 
 //Sets the Scheduling methode
@@ -106,7 +106,7 @@ var PowerAllocation = optimizePowerNone
 //var ARBSchedulFunc = ChHopping
 //var ARBSchedulFunc = ChHopping2
 
-var subsetSize=5
+
 
 //var estimateFactor = estimateFactor1
 
@@ -147,20 +147,3 @@ const (
 	ICIMb=iota
 	ICIMc
 )
-const ICIMtype=ICIMb
-
-// ICIM Theta is for the moment deprecated,
-const ICIMTheta=false
-// ICIMdistRatio sets the ratio of distance (emiter-enode/neighboring enode) for reusing all RB in the cell's center
-const ICIMdistRatio=10000
-
-
-// These two parameters allows arranging eNodeBs to colocate 3 into one and allow RB reuse
-// a hack is being used to prevent the 3 colocated enodes to connect more than once to one emitter
-// this is a work in progress and the architecture needs to be rethought TODO
-const OneAgentPerBEAM =true // controls for beamforming or sectorisation the ability to reuse RB accross different beam
-const mDf =3 // multiplies the number of eNodes for beamforming or SECTORED2 which creates one enode per sector  
-
-// The enodebclock, that sets the interval before reactivation
-const EnodeBClock = 1
-
