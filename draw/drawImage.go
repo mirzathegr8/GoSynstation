@@ -22,7 +22,7 @@ func DrawReceptionField(dbs []synstation.DBS, name string) {
 
 
 	e := new(synstation.Emitter)
-	e.Power = 1
+	e.Power[0] = 1
 
 	var TMax, TMin float64
 	TMax = -300
