@@ -11,13 +11,12 @@ var num_con int
 
 func GetDiversity() int { a := num_con; num_con = 0; return a }
 
-
 type Connection struct {
 	E *Emitter
 
-	Pr     float64 // to store power level received	
-	SNR, K float64
-	BER    float64
+	//	Pr     float64 // to store power level received	
+	//	SNR, K float64
+	//	BER    float64
 
 	Status int //0 master ,1 slave
 
@@ -48,7 +47,6 @@ func (c *Connection) GetInstantSNIR() []float64 {
 	return c.ff_R[:]
 }
 
-
 type ConnectionS struct {
 	A, B   geom.Pos
 	Status int
@@ -58,7 +56,7 @@ type ConnectionS struct {
 
 func (c *ConnectionS) Copy(cc *Connection) {
 	c.A = cc.E.GetPos()
-	c.BER = cc.BER
+	c.BER = cc.meanBER.Get()
 	c.Status = cc.Status
 }
 
@@ -67,16 +65,16 @@ type ConnecType interface {
 	EvalRatioConnect() float64
 	EvalRatioDisconnect() float64
 	GetE() *Emitter
-	GetPr() float64
+	//GetPr() float64
 	EvalRatio(rx PhysReceiverInt) float64
-	GetSNR() float64
+	//GetSNR() float64
 
 	GetInstantSNIR() []float64
 }
 
-func (co *Connection) GetE() *Emitter { return co.E }
-func (co *Connection) GetPr() float64   { return co.Pr }
-func (co *Connection) GetSNR() float64  { return co.SNR }
+func (co *Connection) GetE() *Emitter     { return co.E }
+func (co *Connection) GetMeanPr() float64 { return co.meanPr.Get() }
+//func (co *Connection) GetSNR() float64  { return co.SNR }
 
 
 func (co *Connection) BitErrorRate(rx *PhysReceiver, dbs *DBS) {
@@ -84,7 +82,7 @@ func (co *Connection) BitErrorRate(rx *PhysReceiver, dbs *DBS) {
 	co.evalInstantBER(co.GetE(), rx, dbs)
 
 	co.Status = 1 //let mobile set master state		
-	co.E.AddConnection(co,dbs)
+	co.E.AddConnection(co, dbs)
 
 }
 
@@ -101,7 +99,6 @@ func (co *Connection) EvalRatioDisconnect() float64 {
 	return Ptot * math.Log(Ptot/co.GetLogMeanBER())
 }
 
-
 func (Conn *Connection) InitConnection(E *Emitter, v float64, Rgen *rand.Rand) {
 
 	Conn.E = E
@@ -116,9 +113,9 @@ func (Conn *Connection) InitConnection(E *Emitter, v float64, Rgen *rand.Rand) {
 	if DopplerF < 0.002 { // the frequency is so low, a simple antena diversity will compensate for 	
 		for i := 0; i < NRB; i++ {
 			Conn.filterAr[i] = &PNF
-		
+
 			Conn.IfilterAr[i] = &PNF
-		
+
 		}
 		Conn.filterF = &PNF
 	} else {
@@ -129,7 +126,7 @@ func (Conn *Connection) InitConnection(E *Emitter, v float64, Rgen *rand.Rand) {
 		Conn.filterF = CoherenceFilter.Copy()
 
 		for i := 0; i < NRB; i++ {
-			Conn.filterAr[i] = C.Copy()			
+			Conn.filterAr[i] = C.Copy()
 		}
 
 		// initalize filters : sent some values to prevent having empty values z^-n in filters 
@@ -144,39 +141,38 @@ func (Conn *Connection) InitConnection(E *Emitter, v float64, Rgen *rand.Rand) {
 			}
 
 			for i := 0; i < NRB; i++ {
-				Conn.filterAr[i].nextValue(Conn.filterF.nextValue(complex(Conn.Rgen.NormFloat64(),Conn.Rgen.NormFloat64() ) ) )
+				Conn.filterAr[i].nextValue(Conn.filterF.nextValue(complex(Conn.Rgen.NormFloat64(), Conn.Rgen.NormFloat64())))
 			}
-			
+
 		}
 
-		if FadingOnPint1==Fading{
+		if FadingOnPint1 == Fading {
 			for i := 0; i < NRB; i++ {
-				Conn.IfilterAr[i] = C.Copy()		
+				Conn.IfilterAr[i] = C.Copy()
 			}
-	
+
 			// initalize filters : sent some values to prevent having empty values z^-n in filters 
 			// 1.5/DopplerF gives a good number of itterations to decorelate initial null variables
 			// and set the channel to a steady state		
 
 			for l := 0; l < int(2.5/DopplerF); l++ {
-	
+
 				// for speed optimization, decorelation samples or not used, it makes little difference 
 				for i := 0; i < 50; i++ {
 					Conn.filterF.nextValue(complex(Conn.Rgen.NormFloat64(), Conn.Rgen.NormFloat64()))
 				}
-	
-				for i := 0; i < NCh; i++ {
+
+				for i := 0; i < NRB; i++ {
 					Conn.IfilterAr[i].nextValue(Conn.filterF.nextValue(
-						complex(Conn.Rgen.NormFloat64() , Conn.Rgen.NormFloat64() ) ) )
+						complex(Conn.Rgen.NormFloat64(), Conn.Rgen.NormFloat64())))
 				}
-	
+
 			}
 		}
 
 	}
 
 }
-
 
 func CreateConnection(E *Emitter, v float64, Rgen *rand.Rand) *Connection {
 	Conn := new(Connection)
@@ -188,51 +184,49 @@ func (co *Connection) GetLogMeanBER() float64 {
 	return math.Log10(co.meanBER.Get() + 1e-10) //prevent saturation
 }
 
-
 //This function is only called once per iteration, so it is where the FF value is generated
 func (c *Connection) evalInstantBER(E *Emitter, rx *PhysReceiver, dbs *DBS) {
 
 	ARB := E.GetARB()
 
-	c.SNR = 0 //reset
+	//c.SNR = 0 //reset
 
 	K := rx.GetK(E.GetId())
 
 	//Generate DopplerFading
 	//pass some values to decorelate
 
-	for tdma:=0;tdma<NCh-NChRes; tdma+=NRB{
-	
-	for i := 0; i < 50; i++ {
-		c.filterF.nextValue(complex(c.Rgen.NormFloat64(),c.Rgen.NormFloat64()))
-	}
+	for tdma := 0; tdma < NCh-NChRes; tdma += NRB {
 
-	for i := 0; i < NRB; i++ {
-		c.initz[i] = c.filterF.nextValue(complex(c.Rgen.NormFloat64(),c.Rgen.NormFloat64()))
-	}
-	
-	for rb := 0; rb < NRB; rb++ {
-		a := c.filterAr[rb].nextValue(c.initz[rb]) + complex(K,0)
-		c.ff_R[rb+tdma] = (real(a*cmath.Conj(a)) ) / (2 + K*K)
-	}
+		for i := 0; i < 50; i++ {
+			c.filterF.nextValue(complex(c.Rgen.NormFloat64(), c.Rgen.NormFloat64()))
+		}
 
+		for i := 0; i < NRB; i++ {
+			c.initz[i] = c.filterF.nextValue(complex(c.Rgen.NormFloat64(), c.Rgen.NormFloat64()))
+		}
 
-	if FadingOnPint1==Fading{
-	// Generate fading values for First Interferer
-	//
-	for i := 0; i < 50; i++ {
-		c.filterF.nextValue(complex(c.Rgen.NormFloat64(),c.Rgen.NormFloat64()))
-	}
+		for rb := 0; rb < NRB; rb++ {
+			a := c.filterAr[rb].nextValue(c.initz[rb]) + complex(K, 0)
+			c.ff_R[rb+tdma] = (real(a * cmath.Conj(a))) / (2 + K*K)
+		}
 
-	for i := 0; i < NRB; i++ {
-		c.initz[i] = c.filterF.nextValue(complex(c.Rgen.NormFloat64(),c.Rgen.NormFloat64()))
-	}
+		if FadingOnPint1 == Fading {
+			// Generate fading values for First Interferer
+			//
+			for i := 0; i < 50; i++ {
+				c.filterF.nextValue(complex(c.Rgen.NormFloat64(), c.Rgen.NormFloat64()))
+			}
 
-	for rb := 0; rb < NRB; rb++ {
-		a := c.filterAr[rb].nextValue(c.initz[rb]) + complex(K,0)
-		c.Iff_R[rb+tdma] = (real(a*cmath.Conj(a)) ) / (2 + K*K)
-	}
-	}
+			for i := 0; i < NRB; i++ {
+				c.initz[i] = c.filterF.nextValue(complex(c.Rgen.NormFloat64(), c.Rgen.NormFloat64()))
+			}
+
+			for rb := 0; rb < NRB; rb++ {
+				a := c.filterAr[rb].nextValue(c.initz[rb]) + complex(K, 0)
+				c.Iff_R[rb+tdma] = (real(a * cmath.Conj(a))) / (2 + K*K)
+			}
+		}
 
 	}
 
@@ -244,44 +238,42 @@ func (c *Connection) evalInstantBER(E *Emitter, rx *PhysReceiver, dbs *DBS) {
 
 	var capaTTI float64
 
-	for rb:= 1; rb<NCh; rb++ {
+	for rb := 1; rb < NCh; rb++ {
 
-		use:=ARB[rb]
+		use := ARB[rb]
 
 		Rc := &rx.Channels[rb]
 
-			NotPint1:=0.0
-			if FadingOnPint1==Fading{ //if cancel, c.Iff_r =0 and total multiplied by -1, if fading, remove difference
-			if(Rc.Signal[1]>=0){
-				NotPint1=Rc.pr[Rc.Signal[1]]*(c.Iff_R[rb]-1)
+		NotPint1 := 0.0
+		if FadingOnPint1 == Fading { //if cancel, c.Iff_r =0 and total multiplied by -1, if fading, remove difference
+			if Rc.Signal[1] >= 0 {
+				NotPint1 = Rc.pr[Rc.Signal[1]] * (c.Iff_R[rb] - 1)
 			}
-			}else if FadingOnPint1==Cancel{
-				if(Rc.Signal[1]>=0){
-					NotPint1=-Rc.pr[Rc.Signal[1]]
-				}
+		} else if FadingOnPint1 == Cancel {
+			if Rc.Signal[1] >= 0 {
+				NotPint1 = -Rc.pr[Rc.Signal[1]]
 			}
+		}
 
-
-		if use {			
+		if use {
 
 			Pr := Rc.pr[E.GetId()]
 
-			c.Pr = Pr // to save data to file
+			//c.Pr = Pr // to save data to file
 
-		
-			c.SNRrb[rb] = Pr * c.ff_R[rb] / (GetNoisePInterference(Rc.Pint, Pr)  + NotPint1 )
 
+			c.SNRrb[rb] = Pr * c.ff_R[rb] / (GetNoisePInterference(Rc.Pint, Pr) + NotPint1)
 
 			BER := L1 * math.Exp(-c.SNRrb[rb]/2/L2) / 2.0
 
 			c.meanPr.Add(Pr)
 			c.meanSNR.Add(c.SNRrb[rb])
 			c.meanBER.Add(BER)
-			c.SNR += c.SNRrb[rb]
+			//c.SNR += c.SNRrb[rb]
 
 			//beta:= 1.5/-math.Log(5*c.meanBER.Get())
 
-			capaTTI += EffectiveBW * math.Log2(  c.SNRrb[rb] + 1 )
+			capaTTI += EffectiveBW * math.Log2(c.SNRrb[rb]+1)
 
 			touch = true
 		} else {
@@ -303,36 +295,36 @@ func (c *Connection) evalInstantBER(E *Emitter, rx *PhysReceiver, dbs *DBS) {
 
 			//we substract
 
-			Psig2:=0.0 //value of received power of the first signal it it is used by the dbs
-			c2:=dbs.IsInUse(rb) //other signal
-			if c2!=nil {Psig2= Rc.pr[c2.GetE().GetId()]}
+			Psig2 := 0.0          //value of received power of the first signal it it is used by the dbs
+			c2 := dbs.IsInUse(rb) //other signal
+			if c2 != nil {
+				Psig2 = Rc.pr[c2.GetE().GetId()]
+			}
 
-			c.SNRrb[rb] = prbase * c.ff_R[rb] / ( GetNoisePInterference(Rc.Pint,Psig2) +NotPint1 ) // WNoise // Wnoise check
+			c.SNRrb[rb] = c.E.Power[rb] * prbase * c.ff_R[rb] / (GetNoisePInterference(Rc.Pint, Psig2) + NotPint1) // WNoise // Wnoise check
 
 			//c.SNRrb[rb] = c.meanPr.Get() / ( GetNoisePInterference(Rc.Pint,Psig2) +NotPint1 ) // WNoise // Wnoise check
 
 			c.SNRrb[rb] *= estimateFactor(dbs, E)
-		
 
 		}
 	}
-	
 
 	if E.IsSetARB(0) {
-		_, c.BER, c.SNR, c.Pr = rx.EvalSignalBER(E, 0)
 
-		c.meanBER.Add(c.BER)
-		c.meanSNR.Add(c.SNR)
-		c.meanPr.Add(c.Pr)
-		c.SNR=0
+		_, BER, SNR, Pr := rx.EvalSignalBER(E, 0)
+
+		c.meanBER.Add(BER)
+		c.meanSNR.Add(SNR)
+		c.meanPr.Add(Pr)
+		//c.SNR=0
 		//return
-	}else if !touch { // add null to mean BER
-		
+	} else if !touch { // add null to mean BER
+
 		c.meanPr.Add(0)
 		c.meanSNR.Add(0)
-		c.SNR = 0
+		//c.SNR = 0
 		c.meanBER.Add(1)
-
 
 	}
 
@@ -341,15 +333,11 @@ func (c *Connection) evalInstantBER(E *Emitter, rx *PhysReceiver, dbs *DBS) {
 	return
 }
 
-
 func estimateFactor0(dbs *DBS, E *Emitter) float64 {
 
 	return conservationFactor
 
 }
-
-
-
 
 func estimateFactor1(dbe *DBS, E *Emitter) (o float64) {
 	o = 1
@@ -365,4 +353,6 @@ func estimateFactor1(dbe *DBS, E *Emitter) (o float64) {
 	return
 
 }
+
+//   Reformatted by   lerouxp    Mon Oct 3 09:49:19 CEST 2011
 
