@@ -17,7 +17,7 @@ type ChanReceiver struct {
 
 	Signal [SizeES]int // used to store ordered list of ids of most important emitters interfering in this RB
 
-	pr [M]float64 //stores received power
+	pr [M]float64 //stores received power with shadowing and power-level and distance atenuation
 }
 
 //This function is called to reset the list of received signals
@@ -103,7 +103,8 @@ type PhysReceiver struct {
 	Rgen        *rand.Rand
 
 	kk [M]float64 //stores received power
-	pr [M]float64 //stores base level received power
+	pr [M]float64 //stores base level received power with shadowing and distance,
+			//no powerlevel nor fast fading (dependant on RB) 
 }
 
 
@@ -265,6 +266,8 @@ func (rx *PhysReceiver) Compute(Connec *list.List, dbs2, dbs3 *DBS) {
 					}
 					rx.Orientation[rb] = theta //+ (dbs.Rgen.Float64()*30-15)
 				} else {
+					// this is to orient the beams in other directions than first beam
+					// such that receiver can catch other signals
 					if dbs3!=nil{
 					if dbs2.IsInUse(rb)!=nil{
 						theta:=dbs2.R.GetOrientation(rb) + PI2/3.0;
@@ -307,7 +310,7 @@ func (rx *PhysReceiver) Compute(Connec *list.List, dbs2, dbs3 *DBS) {
 		d *= d
 
 		rx.kk[i] = K
-		rx.pr[i] = rx.shadow.evalShadowFading(p) / d * E.Power
+		rx.pr[i] = rx.shadow.evalShadowFading(p) / d
 
 		prRB := rx.pr[i] / float64(E.GetNumARB())
 
@@ -348,7 +351,7 @@ func (rx *PhysReceiver) Compute(Connec *list.List, dbs2, dbs3 *DBS) {
 
 				}
 
-				rx.Channels[rb].pr[i] = prRB * gain
+				rx.Channels[rb].pr[i] = prRB * gain *  E.Power[rb]
 
 			}
 		}
@@ -441,10 +444,12 @@ func (s *shadowMap) Init(corr_dist float64, Rgen2 *rand.Rand) {
 		s.xsin[i] = Rgen2.Float64() * 2 * math.Pi
 		s.ysin[i] = Rgen2.Float64() * 2 * math.Pi
 
-		if !(s.xcos[i] > mval || s.xcos[i]< -mval) {
+		//if !(s.xcos[i] > mval || s.xcos[i]< -mval) {
+		if s.xcos[i] < mval  {
 			s.xcos[i] = 0
 		}
-		if !(s.ycos[i] > mval || s.ycos[i]< -mval) {
+		//if !(s.ycos[i] > mval || s.ycos[i]< -mval) {
+		if s.ycos[i] < mval  {
 			s.ycos[i] = 0
 		}
 		s.power += s.xcos[i] * s.xcos[i]
