@@ -27,6 +27,7 @@ func init() {
 	saveData.Push(CreateStart(DIV, s.M, "DIV"))
 	saveData.Push(CreateStart(Outage, s.M, "Outage"))
 	saveData.Push(CreateStart(Ptxr, s.M, "Ptxr"))
+	saveData.Push(CreateStart(PowerM, s.NCh, "PowerM"))
 	saveData.Push(CreateStart(PrMaster, s.M, "PrMaster"))
 	saveData.Push(CreateStart(TransferRate, s.M, "TransferRate"))
 	saveData.Push(CreateStart(NumARB, s.M, "NumARB"))
@@ -62,7 +63,8 @@ func InstSNR(t *s.Trace, i int) float64          { return t.Mobs[i].InstSNR }
 func CH(t *s.Trace, i int) float64           { return float64(t.Mobs[i].GetFirstRB()) }
 func DIV(t *s.Trace, i int) float64          { return float64(t.Mobs[i].Diversity) }
 func Outage(t *s.Trace, i int) float64       { return float64(t.Mobs[i].Outage) }
-func Ptxr(t *s.Trace, i int) float64         { return float64(t.Mobs[i].Power) }
+func Ptxr(t *s.Trace, i int) float64         { return float64(t.Mobs[i].GetMeanPower()) }
+func PowerM(t *s.Trace, i int) float64         { return float64(t.Mobs[10].Power[i]) }
 func PrMaster(t *s.Trace, i int) float64     { return float64(t.Mobs[i].PrMaster) }
 func TransferRate(t *s.Trace, i int) float64 { return float64(t.Mobs[i].TransferRate) }
 func NumARB(t *s.Trace, i int) float64       { return float64(t.Mobs[i].GetNumARB()) }
@@ -248,7 +250,7 @@ func SaveToFile(Mobiles []s.Mob, dbs []s.DBS) {
 
 	outF.WriteString(fmt.Sprintln("# name: Ptxr\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
 	for i := 0; i < s.M; i++ {
-		outF.WriteString(fmt.Sprintln(Mobiles[i].Power, " "))
+		outF.WriteString(fmt.Sprintln(Mobiles[i].GetMeanPower(), " "))
 
 	}
 	outF.WriteString("\n")
@@ -256,7 +258,7 @@ func SaveToFile(Mobiles []s.Mob, dbs []s.DBS) {
 	outF.WriteString(fmt.Sprintln("# name: Pr\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
 	for i := 0; i < s.M; i++ {
 		if Mobiles[i].GetMasterConnec() != nil {
-			outF.WriteString(fmt.Sprintln(Mobiles[i].GetMasterConnec().Pr, " "))
+			outF.WriteString(fmt.Sprintln(Mobiles[i].GetMasterConnec().GetMeanPr(), " "))
 		} else {
 			outF.WriteString(fmt.Sprintln(-1, " "))
 		}
