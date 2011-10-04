@@ -14,7 +14,7 @@ func init(){
 // This struct stores flat data to be directly output for serialization, i.e. no pointers, no channels
 type EmitterS struct {
 	geom.Pos
-	Power float64 // current emitted power
+	Power      [NCh]float64 // current emitted power
 
 	BERtotal   float64
 	Diversity  int
@@ -70,7 +70,7 @@ type EmitterInt interface {
 	BERT() float64
 	Req() float64
 	GetE() *Emitter
-	GetPower() float64
+
 
 	GetARB() []bool
 	GetFuturARB() []bool
@@ -79,13 +79,17 @@ type EmitterInt interface {
 	IsSetARB(i int) bool
 	IsFuturSetARB(i int) bool
 	GetFirstRB() int
+	GetFirstFutureRB() int
 	ReSetARB()
 	GetNumARB() int
 	CopyFuturARB() // presets the future allocation to the current one
 	ClearFuturARB()
 
-	PowerDelta(float64)
-	SetPower(float64)
+	GetPower(i int) float64
+	GetMeanPower() float64
+	PowerDelta(int, float64)
+	SetPowerRB( int , float64)
+	SetPower( float64) 
 	GetPos() geom.Pos
 
 	GetMasterConnec() *Connection
@@ -146,6 +150,18 @@ func (e *Emitter) IsFuturSetARB(i int) bool {
 }
 
 
+func (e *Emitter) GetFirstFutureRB() int {
+	for i, use := range e.ARBfutur {
+		if use {
+			return i
+		}
+	}
+	return -1
+}
+
+
+
+
 func (e *EmitterS) GetFirstRB() int {
 	for i, use := range e.ARB {
 		if use {
@@ -196,8 +212,17 @@ func (e *Emitter) GetE() *Emitter {
 	return e
 }
 
-func (e *Emitter) GetPower() float64 {
-	return e.Power
+func (e *EmitterS) GetPower(i int) float64 {
+	return e.Power[i]
+}
+
+func (e *EmitterS) GetMeanPower() (mp float64){
+	
+	for _,prb :=range e.Power{
+		mp+=prb
+	}
+	mp/=float64(len(e.Power))
+	return
 }
 
 
@@ -219,9 +244,9 @@ func (e *Emitter) AddConnection(c *Connection, dbs *DBS) {
 		e.MasterConnection = c
 		e.SMaxBER = lber
 		e.SMinDist = d
-		e.SInstMaxBER = math.Log10(c.BER + 1e-40)
-		e.SNRb = c.SNR
-		e.PrMaster = c.Pr
+		e.SInstMaxBER = math.Log10(c.meanBER.Get() + 1e-40)
+		e.SNRb = c.meanSNR.Get()
+		e.PrMaster = c.meanPr.Get()
 
 		//for test with selection diversity
 
@@ -246,19 +271,34 @@ func (e *Emitter) AddConnection(c *Connection, dbs *DBS) {
 func (e *Emitter) BERT() float64 { return e.BERtotal }
 func (e *Emitter) Req() float64  { return e.Requested }
 
-func (M *Emitter) PowerDelta(delta float64) {
-	M.SetPower(M.Power + delta)
+
+func (M *Emitter) PowerDelta(rb int, delta float64) {
+		M.SetPowerRB(rb, M.Power[rb] + delta)
 }
 
-func (M *Emitter) SetPower(P float64) {
+func (M *Emitter) SetPowerRB(rb int , P float64) {
 	if P > 1.0 {
 		P = 1.0
 	}
 	if P < 0.001 {
 		P = 0.001
 	}
-	M.Power = P
+	M.Power[rb] = P
 }
+
+// Sets power on all RBs
+func (M *Emitter) SetPower( P float64) {
+	if P > 1.0 {
+		P = 1.0
+	}
+	if P < 0.001 {
+		P = 0.001
+	}
+	for i := range M.Power{
+		M.Power[i] = P
+	}
+}
+
 
 
 // this function saves Resets temporary variable after saving the Emitter's connection status
@@ -284,7 +324,7 @@ func (M *Emitter) FetchData() {
 	if M.Diversity == 0 {
 
 		M.MasterConnection = nil
-		M.Power = 1
+		M.SetPower(1)
 		M.ReSetARB()
 		syncval = 0
 
