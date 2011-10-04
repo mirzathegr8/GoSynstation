@@ -19,11 +19,13 @@ figure(3+fign);
 
 load SNR.mat
 load NumARB.mat
-plot(10*log10( sort(mean( SNR./(NumARB+0.000001) .* (NumARB>0)  ,2 )      )   ))
+plot(10*log10( sort(mean( SNR./(NumARB+0.000001) .* (NumARB>0)  ,2 )      )   ),c)
 hold on;
-%load Ptxr.mat;
-%plot(sort(mean(Ptxr,2)),c);
-%hold on;
+
+figure(5+fign);
+load Ptxr.mat;
+plot(sort(mean(Ptxr,2)),c);
+hold on;
 
 
 figure(4+fign);
