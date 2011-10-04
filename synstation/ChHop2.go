@@ -135,7 +135,7 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 		E := co.GetE()
 		ratio := EvalRatio(E) * fact
 
-		chHop := FindFreeChan(dbs, E, ratio)	
+		chHop := FindFreeChan(dbs, E, ratio)
 		oldCh := E.GetFirstRB()
 
 		if chHop > 0 {
@@ -165,15 +165,15 @@ func FindFreeChan(dbs *DBS, E *Emitter, ratio float64) int {
 
 	var SNRs [NCh]float64
 
-	for i:= range SNRs{
-		SNRs[i]=E.GetSNRrb(i)
+	for i := range SNRs {
+		SNRs[i] = E.GetSNRrb(i)
 	}
 
-	r:=dbs.R.GetPos()
+	r := dbs.R.GetPos()
 
-	ICIM(&r,E,SNRs[:],dbs.Color)
+	ICIMfunc(&r, E, SNRs[:], dbs.Color)
 
-	for j := 1; j < NCh - subsetSize+1 ; j += subsetSize {
+	for j := 1; j < NCh-subsetSize+1; j += subsetSize {
 		i := j // dbs.RndCh[j]
 		if !dbs.IsInFuturUse(i) {
 			snr := 0.0
@@ -181,14 +181,17 @@ func FindFreeChan(dbs *DBS, E *Emitter, ratio float64) int {
 				snr += SNRs[j+l]
 			}
 			snr /= float64(subsetSize)
-				if snr > ratio {
-					ratio = snr
-					nch = i
-					//assign and exit
-				}
+			if snr > ratio {
+				ratio = snr
+				nch = i
+				//assign and exit
+			}
 		}
 	}
 
 	return nch
 
 }
+
+//   Reformatted by   lerouxp    Mon Oct 3 09:49:03 CEST 2011
+
