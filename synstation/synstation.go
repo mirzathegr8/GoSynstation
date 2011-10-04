@@ -37,6 +37,8 @@ type DBS struct {
 	Id int
 
 	DBS2,DBS3 *DBS
+
+	RBReuseFactor float64
 	
 }
 
@@ -68,7 +70,10 @@ func (dbs *DBS) Init() {
 	dbs.Rgen = rand.New(rand.NewSource(Rgen.Int63()))
 	dbs.R.Init(p, dbs.Rgen)
 
+	dbs.RBReuseFactor = 0.5	
+
 	SyncChannel <- 1
+	
 }
 
 // Physics : evaluate SNRs at receiver, evaluate BER of connections
@@ -182,10 +187,11 @@ func (dbs *DBS) RunAgent() {
 		dbs.connectionAgent()
 		ARBSchedulFunc(dbs, dbs.Rgen)
 		
-		PowerAllocation(dbs)
+		
 		
 		//dbs.optimizePowerAllocationSimple()
 	}
+	PowerAllocation(dbs)
 
 	SyncChannel <- 1.0
 
