@@ -1,47 +1,9 @@
 package synstation
 
 import "rand"
-import "container/vector"
+//import "container/vector"
 import "math"
 
-// Sorts channels in random order
-func (dbs *DBS) RandomChan() {
-
-	var SortCh vector.IntVector
-
-	for i := 0; i < NCh; i++ {
-		SortCh.Push(i)
-		dbs.RndCh[i] = i
-	}
-
-	//randomizesd reserved top canals
-	/*	for i := 10; i > 1; i-- {
-			j := dbs.Rgen.Intn(i) + NCh-10
-			SortCh.Swap(NCh-10+i-1, j)
-			dbs.RndCh[NCh-10+i-1] =SortCh.Pop()
-		}
-		dbs.RndCh[NCh-10]=SortCh.Pop()
-	*/
-	//randomizes other canals
-	/*	for i := NCh - 11; i > NChRes; i-- {
-			j := dbs.Rgen.Intn(i-NChRes) + NChRes 
-			SortCh.Swap(i, j)
-			dbs.RndCh[i] =SortCh.Pop()
-		}
-		dbs.RndCh[NChRes] = SortCh.Pop()
-		dbs.RndCh[0] = 0
-	*/
-	//fmt.Println(dbs.RndCh);
-
-	for i := NCh - 1; i > NChRes; i-- {
-		j := dbs.Rgen.Intn(i-NChRes) + NChRes
-		SortCh.Swap(i, j)
-		dbs.RndCh[i] = SortCh.Pop()
-	}
-	dbs.RndCh[NChRes] = SortCh.Pop()
-	dbs.RndCh[0] = 0
-
-}
 
 //
 //func (dbs *DBS) channelHopping2() {
@@ -204,7 +166,9 @@ func (dbs *DBS) RandomChan() {
 func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 
 	//pour trier les connections actives
-	var MobileList vector.Vector
+	//var MobileList vector.Vector
+	MobileList := make([]ConnecType, NConnec)
+	MobileList = MobileList[0:0]	
 
 	//pour trier les canaux
 	dbs.RandomChan()
@@ -248,20 +212,21 @@ func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 			} else {
 				ratio := c.EvalRatio(dbs.R)
 				var i int
-				for i = 0; i < MobileList.Len(); i++ {
-					co := MobileList.At(i).(ConnecType)
+				for i = 0; i < len(MobileList); i++ {
+					co := MobileList[i]
 					if ratio < co.EvalRatio(dbs.R) {
 						break
 					}
 				}
-				MobileList.Insert(i, c)
+				MobileList = append(MobileList[:i], append([]ConnecType{c}, MobileList[i:]...)...)
+				//MobileList.Insert(i, c)
 			}
 		}
 	}
 
 	// change channel to some mobiles
-	for k := 0; k < MobileList.Len() && k < 2; k++ {
-		co := MobileList.At(k).(ConnecType)
+	for k := 0; k < len(MobileList) && k < 2; k++ {
+		co := MobileList[k]
 		ratio := co.EvalRatio(dbs.R)
 		chHop := 0
 

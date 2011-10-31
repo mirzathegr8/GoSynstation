@@ -3,7 +3,7 @@ package main
 import s "synstation"
 import "os"
 import "fmt"
-import "container/vector"
+//import "container/vector"
 import "bytes"
 import "encoding/binary"
 import "unsafe"
@@ -12,26 +12,30 @@ var syncsavech chan int
 
 var fadingChan chan int
 
-var saveData vector.Vector
+var saveData []saveTraceItem
+
 
 func init() {
 
+	saveData = make([]saveTraceItem,100)
+	saveData = saveData[0:0]
+
 	syncsavech = make(chan int)
 
-//	saveData.Push(CreateStart(MaxBER, s.M, "BERMax"))
-//	saveData.Push(CreateStart(InstMaxBER, s.M, "InstMatBER"))
-	saveData.Push(CreateStart(BER, s.M, "BER"))
-	saveData.Push(CreateStart(SNR, s.M, "SNR"))
-	saveData.Push(CreateStart(InstSNR, s.M, "InstSNR"))
-//	saveData.Push(CreateStart(CH, s.M, "CH"))
-	saveData.Push(CreateStart(DIV, s.M, "DIV"))
-	saveData.Push(CreateStart(Outage, s.M, "Outage"))
-	saveData.Push(CreateStart(Ptxr, s.M, "Ptxr"))
-	saveData.Push(CreateStart(PowerM, s.NCh, "PowerM"))
-	saveData.Push(CreateStart(PrMaster, s.M, "PrMaster"))
-	saveData.Push(CreateStart(TransferRate, s.M, "TransferRate"))
-	saveData.Push(CreateStart(NumARB, s.M, "NumARB"))
-	saveData.Push(CreateStart(DataTransfer, s.M, "DataTransfer"))
+//	saveData = append(saveData, CreateStart(MaxBER, s.M, "BERMax"))
+//	saveData = append(saveData, CreateStart(InstMaxBER, s.M, "InstMatBER"))
+	saveData = append(saveData, CreateStart(BER, s.M, "BER"))
+	saveData = append(saveData, CreateStart(SNR, s.M, "SNR"))
+	saveData = append(saveData, CreateStart(InstSNR, s.M, "InstSNR"))
+//	saveData = append(saveData, CreateStart(CH, s.M, "CH"))
+	saveData = append(saveData, CreateStart(DIV, s.M, "DIV"))
+	saveData = append(saveData, CreateStart(Outage, s.M, "Outage"))
+	saveData = append(saveData, CreateStart(Ptxr, s.M, "Ptxr"))
+	saveData = append(saveData, CreateStart(PowerM, s.NCh, "PowerM"))
+	saveData = append(saveData, CreateStart(PrMaster, s.M, "PrMaster"))
+	saveData = append(saveData, CreateStart(TransferRate, s.M, "TransferRate"))
+	saveData = append(saveData, CreateStart(NumARB, s.M, "NumARB"))
+	saveData = append(saveData, CreateStart(DataTransfer, s.M, "DataTransfer"))
 
 	fadingChan = make(chan int)
 	go fadingSave(fadingChan)
@@ -103,7 +107,7 @@ func WriteDataToFile(method func(t *s.Trace, i int) float64, m int, channel chan
 
 func StopSave() {
 	for i := 0; i < len(saveData); i++ {
-		a := saveData.At(i).(saveTraceItem)
+		a := saveData[i]
 		a.Stop()
 	}
 
@@ -113,7 +117,7 @@ func StopSave() {
 func sendTrace(t *s.Trace) {
 
 	for i := 0; i < len(saveData); i++ {
-		a := saveData.At(i).(saveTraceItem)
+		a := saveData[i]
 		a.save <- t
 	}
 

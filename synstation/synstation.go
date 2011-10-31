@@ -1,7 +1,6 @@
 package synstation
 
 import "container/list"
-import "container/vector"
 import "rand"
 import "math"
 import "geom"
@@ -28,7 +27,7 @@ type DBS struct {
 
 	RndCh []int
 
-	ConnectionBank vector.Vector
+	ConnectionBank list.List
 
 	Color int // This value is used to store some colorisation of the eNodeB, that is for example to use inside schedulers in honeycomb layout, where it will use a subset of RBs for ICIM
 
@@ -47,7 +46,7 @@ var idtmp int
 func (dbs *DBS) Init() {
 
 	for i := 0; i < NConnec; i++ {
-		dbs.ConnectionBank.Push(new(Connection))
+		dbs.ConnectionBank.PushBack(new(Connection))
 	}
 
 	
@@ -123,7 +122,7 @@ func (dbs *DBS) FetchData() {
 
 func (dbs *DBS) disconnect(e *list.Element) {
 	dbs.Connec.Remove(e)
-	dbs.ConnectionBank.Push(e.Value.(*Connection))
+	dbs.ConnectionBank.PushBack(e.Value.(*Connection))
 	sens_disconnect++
 }
 
@@ -158,7 +157,8 @@ func (dbs *DBS) IsInFuturUse(i int) bool { //
 func (dbs *DBS) connect(e *Emitter, m float64) {
 	//Connection instance are now created once and reused for memory consumption purpose
 	// so the Garbage Collector needs not to lots of otherwise unessary work
-	Conn := dbs.ConnectionBank.Pop().(*Connection)
+	Conn := dbs.ConnectionBank.Back().Value.(*Connection)
+	dbs.ConnectionBank.Remove(dbs.ConnectionBank.Back())
 	// these connection instance of course need to be initialized
 	Conn.InitConnection(e, m, dbs.Rgen)
 	dbs.Connec.PushBack(Conn)

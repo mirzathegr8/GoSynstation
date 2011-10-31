@@ -5,7 +5,7 @@ import "gocairo"
 import "synstation"
 import "fmt"
 import "math"
-import "container/vector"
+//import "container/vector"
 import "geom"
 import "runtime"
 
@@ -239,8 +239,11 @@ func drawVoronoi(d *DataSave) {
 	L3 := geom.GeomLine{geom.Pos{synstation.Field + 1000, synstation.Field + 1000}, geom.Pos{10000, 0.0001}}
 	L4 := geom.GeomLine{geom.Pos{synstation.Field + 1000, synstation.Field + 1000}, geom.Pos{0.0001, 10000}}
 
-	var neighB vector.Vector
-	var Borders vector.Vector
+	//var neighB vector.Vector
+	//var Borders vector.Vector
+	//neighB := make([])
+	Borders := make([]*geom.GeomLine, 60)
+	Borders = Borders[0:0]
 
 	//channels := []int{ 10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,29,25,30}
 	channels := []int{0}
@@ -254,7 +257,7 @@ func drawVoronoi(d *DataSave) {
 			if m1.IsSetARB(Ch) {
 
 				d.cv.SetColor(0, 0, 0, 1)
-				neighB = neighB[0:0]
+				//neighB = neighB[0:0]
 				Borders = Borders[0:0]
 
 				for j := range d.t.Mobs {
@@ -279,18 +282,23 @@ func drawVoronoi(d *DataSave) {
 								l.Org = m1.Pos.Plus(vd.Times(q / dist))
 
 								l.Vect = m2.Minus(m1.Pos).Rot90()
-								Borders.Push(l)
+								//Borders.Push(l)
+								Borders= append(Borders,l)
 
-								neighB.Push(m2)
+								//neighB.Push(m2)
 
 							}
 						}
 					}
 				}
-				Borders.Push(&L1)
-				Borders.Push(&L2)
-				Borders.Push(&L3)
-				Borders.Push(&L4)
+				//Borders.Push(&L1)
+				//Borders.Push(&L2)
+				//Borders.Push(&L3)
+				//Borders.Push(&L4)
+				Borders= append(Borders, &L1)
+				Borders= append(Borders, &L2)
+				Borders= append(Borders, &L3)
+				Borders= append(Borders, &L4)
 
 				matP := make([][]geom.Pos, len(Borders))
 
@@ -300,7 +308,7 @@ func drawVoronoi(d *DataSave) {
 
 					for j := range Borders {
 						if i != j {
-							matP[i][j] = Borders[i].(*geom.GeomLine).Intersect(Borders[j].(*geom.GeomLine))
+							matP[i][j] = Borders[i].Intersect(Borders[j])
 						}
 					}
 				}
@@ -310,7 +318,7 @@ func drawVoronoi(d *DataSave) {
 				var I, J int
 
 				for i := range Borders {
-					gl := Borders[i].(*geom.GeomLine)
+					gl := Borders[i]
 					d := m1.Pos.Distance(gl.Org)
 					if d < max {
 						I = i
@@ -318,7 +326,7 @@ func drawVoronoi(d *DataSave) {
 					}
 				}
 
-				vOrg := Borders[I].(*geom.GeomLine).Org
+				vOrg := Borders[I].Org
 				max = float64(synstation.Field * 2.0)
 				for j := range Borders {
 					d := matP[I][j].Distance(vOrg)
@@ -329,16 +337,18 @@ func drawVoronoi(d *DataSave) {
 
 				}
 
-				var PathVoronoi vector.Vector
+				//var PathVoronoi vector.Vector
+				PathVoronoi := make([]*geom.Pos,60)
+				PathVoronoi = PathVoronoi[0:0]
 
 				PStart := &matP[I][J]
-				PathVoronoi.Push(PStart)
+				PathVoronoi=append(PathVoronoi,PStart)
 
 				// try if we start on I or J
 
 				vectO := m1.Pos.Minus(*PStart).Normalise()
-				vI := Borders[I].(*geom.GeomLine).Vect
-				vJ := Borders[J].(*geom.GeomLine).Vect
+				vI := Borders[I].Vect
+				vJ := Borders[J].Vect
 
 				c1 := vectO.Scalar(vI) / vI.Len()
 				s1 := vectO.Prodv(vI) / vI.Len()
@@ -407,13 +417,13 @@ func drawVoronoi(d *DataSave) {
 					j = a
 
 					PStart = &matP[i][j]
-					PathVoronoi.Push(PStart)
+					PathVoronoi = append( PathVoronoi, PStart)
 
 				}
 
-				d.cv.MoveTo(PathVoronoi[0].(*geom.Pos).Times(1 / 20.0).ToFloat())
+				d.cv.MoveTo(PathVoronoi[0].Times(1 / 20.0).ToFloat())
 				for i := 1; i < len(PathVoronoi); i++ {
-					d.cv.LineTo(PathVoronoi[i].(*geom.Pos).Times(1 / 20.0).ToFloat())
+					d.cv.LineTo(PathVoronoi[i].Times(1 / 20.0).ToFloat())
 
 				}
 				d.cv.ClosePath()

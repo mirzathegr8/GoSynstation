@@ -1,6 +1,6 @@
 package synstation
 
-import "container/vector"
+//import "container/vector"
 import "math"
 import "rand"
 import "fmt"
@@ -13,12 +13,13 @@ func init() {
 }
 
 // Sorts channels in random order
-func (dbs *DBS) RandomChan2() {
+func (dbs *DBS) RandomChan() {
 
-	var SortCh vector.IntVector
+	SortCh := make([]int, NCh)
+	SortCh = SortCh[0:0]
 
 	for i := NChRes; i < NCh; i += subsetSize {
-		SortCh.Push(i)
+		SortCh = append(SortCh, i)
 		dbs.RndCh[i] = i
 	}
 
@@ -41,12 +42,12 @@ func (dbs *DBS) RandomChan2() {
 	*/
 	//fmt.Println(dbs.RndCh);
 
-	for i := SortCh.Len() - 1; i > 0; i-- {
+	for i := len(SortCh) - 1; i > 0; i-- {
 		j := dbs.Rgen.Intn(i)
-		SortCh.Swap(i, j)
-		dbs.RndCh[i] = SortCh.Pop()
+		SortCh[i], SortCh[j] = SortCh[j], SortCh[i]
+		dbs.RndCh[i], SortCh = SortCh[len(SortCh)-1], SortCh[:len(SortCh)-1]
 	}
-	dbs.RndCh[0] = SortCh.Pop()
+	dbs.RndCh[0], SortCh = SortCh[len(SortCh)-1], SortCh[:len(SortCh)-1]
 
 }
 
@@ -55,11 +56,15 @@ func (dbs *DBS) RandomChan2() {
 func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 
 	//pour trier les connections actives
-	var MobileList vector.Vector
-	var MobileListRX vector.Vector
+	//var MobileList vector.Vector
+	MobileList := make([]ConnecType, NConnec)
+	MobileList = MobileList[0:0]
+	//var MobileListRX vector.Vector
+	MobileListRX := make([]ConnecType, NConnec)
+	MobileListRX = MobileListRX[0:0]
 
 	//pour trier les canaux
-	//	dbs.RandomChan2()
+	//	dbs.RandomChan()
 
 	var stop = 0
 
@@ -99,21 +104,23 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 				ratio := EvalRatio(c.GetE())
 				i := 0
 				if c.GetE().GetFirstRB() < NChRes+subsetSize*ChRX {
-					for i = 0; i < MobileListRX.Len(); i++ {
-						co := MobileListRX.At(i).(ConnecType)
+					for i = 0; i < len(MobileListRX); i++ {
+						co := MobileListRX[i]
 						if ratio < co.EvalRatio(dbs.R) {
 							break
 						}
 					}
-					MobileListRX.Insert(i, c)
+					MobileListRX = append(MobileListRX[:i], append([]ConnecType{c}, MobileListRX[i:]...)...)
+					//MobileListRX.Insert(i, c)
 				} else {
-					for i = 0; i < MobileList.Len(); i++ {
-						co := MobileList.At(i).(ConnecType)
+					for i = 0; i < len(MobileList); i++ {
+						co := MobileList[i]
 						if ratio < EvalRatio(co.GetE()) {
 							break
 						}
 					}
-					MobileList.Insert(i, c)
+					MobileList = append(MobileList[:i], append([]ConnecType{c}, MobileList[i:]...)...)
+					//MobileList.Insert(i, c)
 				}
 			}
 		}
@@ -122,16 +129,16 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 	// change channel to some mobiles
 
 	fact := 0.8
-	var MobileListUSE *vector.Vector
-	if MobileListRX.Len() > 0 {
-		MobileListUSE = &MobileListRX
+	var MobileListUSE []ConnecType
+	if len(MobileListRX) > 0 {
+		MobileListUSE = MobileListRX
 		fact = 0
 	} else {
-		MobileListUSE = &MobileList
+		MobileListUSE = MobileList
 	}
 
-	for k := 0; k < MobileListUSE.Len() && k < 1; k++ {
-		co := MobileListUSE.At(k).(ConnecType)
+	for k := 0; k < len(MobileListUSE) && k < 1; k++ {
+		co := MobileListUSE[k]
 		E := co.GetE()
 		ratio := EvalRatio(E) * fact
 
@@ -194,4 +201,6 @@ func FindFreeChan(dbs *DBS, E *Emitter, ratio float64) int {
 }
 
 //   Reformatted by   lerouxp    Mon Oct 3 09:49:03 CEST 2011
+
+//   Reformatted by   lerouxp    Mon Oct 31 15:43:58 CET 2011
 
