@@ -2,7 +2,7 @@
 package synstation
 
 
-import "rand"
+import rand "math/rand"
 import "math"
 //import "fmt"
 //import "geom"

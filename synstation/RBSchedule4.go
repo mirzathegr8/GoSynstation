@@ -1,7 +1,7 @@
 package synstation
 
 import "sort"
-import "rand"
+import rand "math/rand"
 import "math"
 import "fmt"
 
@@ -240,7 +240,7 @@ func Trimm(AL []int, Metric *[NConnec][NCh]float64, MasterMobs []*Emitter) (metr
 			}
 
 			m_m := MasterMobs[v].GetMeanTR()				
-			metricT += math.Log2(1 + m/(m_m+0.0001))
+			metricT += math.Log2(1 + m)/math.Log2(1+m_m+0.0001)
 
 			i += nARBmOrg
 		}
