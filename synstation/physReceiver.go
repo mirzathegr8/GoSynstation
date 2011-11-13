@@ -4,7 +4,7 @@ import "math"
 import "geom"
 import "container/list"
 import "fmt"
-import "rand"
+import rand "math/rand"
 
 // number of signal id saved in the list of the ChanReceiver
 const SizeES = 2

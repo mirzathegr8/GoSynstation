@@ -2,8 +2,8 @@ package synstation
 
 import "math"
 import "geom"
-import "rand"
-import "cmath"
+import rand "math/rand"
+import cmath "math/cmplx"
 //import "fmt"
 
 

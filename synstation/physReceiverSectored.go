@@ -2,7 +2,7 @@ package synstation
 
 import "geom"
 import "container/list"
-import "rand"
+import rand "math/rand"
 
 // structure to store evaluation of interference at a location
 // this has to be initialized with PhysReceiver.Init() function to init memory
