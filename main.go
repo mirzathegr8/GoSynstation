@@ -4,7 +4,7 @@ package main
 import "fmt"
 import s "synstation"
 import "runtime"
-import "draw"
+//import "draw"
 import "os"
 
 
@@ -20,7 +20,7 @@ func main() {
 
 	s.Init()
 
-	draw.Init(s.M, s.D*s.NConnec) // init drawing system
+	//draw.Init(s.M, s.D*s.NConnec) // init drawing system
 	//draw.DrawReceptionField(s.Synstations[:], "receptionLevel.png")
 
 	go printData() //launch thread to print output
@@ -113,7 +113,7 @@ func main() {
 
 	StopSave()
 
-	draw.Close()
+	//draw.Close()
 
 }
 
@@ -169,7 +169,7 @@ func readDataAndPrintToStd(save bool) {
 	if save {
 		outDs.Add(&outD)
 		t := s.CreateTrace(s.Mobiles[:], s.Synstations[:], s.Tti)
-		draw.Draw(t)
+		//draw.Draw(t)
 		sendTrace(t)
 	}
 
