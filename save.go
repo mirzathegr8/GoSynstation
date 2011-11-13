@@ -8,26 +8,27 @@ import "bytes"
 import "encoding/binary"
 import "unsafe"
 
+const MobileSaveID = 10
+
 var syncsavech chan int
 
 var fadingChan chan int
 
 var saveData []saveTraceItem
 
-
 func init() {
 
-	saveData = make([]saveTraceItem,100)
+	saveData = make([]saveTraceItem, 1000)
 	saveData = saveData[0:0]
 
 	syncsavech = make(chan int)
 
-//	saveData = append(saveData, CreateStart(MaxBER, s.M, "BERMax"))
-//	saveData = append(saveData, CreateStart(InstMaxBER, s.M, "InstMatBER"))
+	//	saveData = append(saveData, CreateStart(MaxBER, s.M, "BERMax"))
+	//	saveData = append(saveData, CreateStart(InstMaxBER, s.M, "InstMatBER"))
 	saveData = append(saveData, CreateStart(BER, s.M, "BER"))
 	saveData = append(saveData, CreateStart(SNR, s.M, "SNR"))
 	saveData = append(saveData, CreateStart(InstSNR, s.M, "InstSNR"))
-//	saveData = append(saveData, CreateStart(CH, s.M, "CH"))
+	//	saveData = append(saveData, CreateStart(CH, s.M, "CH"))
 	saveData = append(saveData, CreateStart(DIV, s.M, "DIV"))
 	saveData = append(saveData, CreateStart(Outage, s.M, "Outage"))
 	saveData = append(saveData, CreateStart(Ptxr, s.M, "Ptxr"))
@@ -63,16 +64,17 @@ func MaxBER(t *s.Trace, i int) float64       { return t.Mobs[i].MaxBER }
 func InstMaxBER(t *s.Trace, i int) float64   { return t.Mobs[i].InstMaxBER }
 func BER(t *s.Trace, i int) float64          { return t.Mobs[i].BERtotal }
 func SNR(t *s.Trace, i int) float64          { return t.Mobs[i].SNRb }
-func InstSNR(t *s.Trace, i int) float64          { return t.Mobs[i].InstSNR }
+func InstSNR(t *s.Trace, i int) float64      { return t.Mobs[i].InstSNR }
 func CH(t *s.Trace, i int) float64           { return float64(t.Mobs[i].GetFirstRB()) }
 func DIV(t *s.Trace, i int) float64          { return float64(t.Mobs[i].Diversity) }
 func Outage(t *s.Trace, i int) float64       { return float64(t.Mobs[i].Outage) }
 func Ptxr(t *s.Trace, i int) float64         { return float64(t.Mobs[i].GetMeanPower()) }
-func PowerM(t *s.Trace, i int) float64         { return float64(t.Mobs[10].Power[i]) }
+func PowerM(t *s.Trace, i int) float64       { return float64(t.Mobs[MobileSaveID].Power[i]) }
 func PrMaster(t *s.Trace, i int) float64     { return float64(t.Mobs[i].PrMaster) }
 func TransferRate(t *s.Trace, i int) float64 { return float64(t.Mobs[i].TransferRate) }
 func NumARB(t *s.Trace, i int) float64       { return float64(t.Mobs[i].GetNumARB()) }
-func DataTransfer(t *s.Trace, i int) float64       { return float64(t.Mobs[i].GetDataState()) }
+func DataTransfer(t *s.Trace, i int) float64 { return float64(t.Mobs[i].GetDataState()) }
+
 
 
 func WriteDataToFile(method func(t *s.Trace, i int) float64, m int, channel chan *s.Trace, file string) {
@@ -126,7 +128,6 @@ func sendTrace(t *s.Trace) {
 	<-fadingChan
 
 }
-
 
 // Header (one per file):
 // =====================
@@ -244,7 +245,6 @@ func save_binary_data(method func(t *s.Trace, i int) float64, m int, channel cha
 
 }
 
-
 func SaveToFile(Mobiles []s.Mob, dbs []s.DBS) {
 
 	os.Remove("out.mat")
@@ -327,7 +327,7 @@ func SaveToFile(Mobiles []s.Mob, dbs []s.DBS) {
 
 	outF.WriteString(fmt.Sprintln("# name: XYD\n# type: matrix\n# rows: ", s.D, "\n# columns: ", 3))
 	for i := 0; i < s.D; i++ {
-		outF.WriteString(fmt.Sprintln(dbs[i].R.GetPos().X, " ", dbs[i].R.GetPos().Y," ", dbs[i].Color," "))
+		outF.WriteString(fmt.Sprintln(dbs[i].R.GetPos().X, " ", dbs[i].R.GetPos().Y, " ", dbs[i].Color, " "))
 
 	}
 	outF.WriteString("\n")
@@ -336,18 +336,17 @@ func SaveToFile(Mobiles []s.Mob, dbs []s.DBS) {
 
 }
 
-
 func fadingSave(c chan int) {
 
 	os.Remove("fading.mat")
 	fadingF, err := os.OpenFile("fading.mat", os.O_WRONLY|os.O_CREATE, 0666)
 	fmt.Println(err)
-	fadingF.WriteString(fmt.Sprintln("# name: fading\n# type: matrix\n# rows: ", s.Duration, "\n# columns: ", s.NCh))
+	fadingF.WriteString(fmt.Sprintln("# name: fading\n# type: matrix\n# rows: ", s.Duration, "\n# columns: ", s.NCh))	
 
 	for _ = range c {
 
-		if s.Mobiles[1].MasterConnection != nil {
-			ffR := s.Mobiles[1].MasterConnection.GetInstantSNIR()
+		if s.Mobiles[MobileSaveID].MasterConnection != nil {
+			ffR := s.Mobiles[MobileSaveID].MasterConnection.GetInstantSNIR()
 			buffer := bytes.NewBufferString("")
 			for _, a := range ffR {
 				fmt.Fprint(buffer, a)
@@ -372,4 +371,6 @@ func fadingSave(c chan int) {
 	fadingF.Close()
 
 }
+
+//   Reformatted by   lerouxp    Tue Nov 1 11:50:34 CET 2011
 
