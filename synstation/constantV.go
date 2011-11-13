@@ -3,13 +3,14 @@ const BERThres= 0.15
 const SNRThresConnec= 0
 var ARBSchedulFunc=ChHopping2
 var estimateFactor=estimateFactor1
-const conservationFactor=2
+const conservationFactor=0.2
 const DiversityType=MRC
-const SetReceiverType=BEAM
+const SetReceiverType=SELECTION
 const NetLayout= HONEYCOMB
 
+const TransferRateTechnique=  MCSJOINT  // NormalTR //EFFECTIVESINR//, MCSJOINT //NormalTR   , MCSJOINT
 
-const ICIMtype=ICIMb
+const ICIMtype= ICIMb
 
 // ICIM Theta is for the moment deprecated,
 const ICIMTheta=false
@@ -24,12 +25,13 @@ const OneAgentPerBEAM =false // controls for beamforming or sectorisation the ab
 const mDf =1 // multiplies the number of eNodes for beamforming or SECTORED2 which creates one enode per sector  
 
 // The enodebclock, that sets the interval before reactivation
-const EnodeBClock = 1
+const EnodeBClock = 6
 
 //var ICIMfunc=ICIMSplitEdgeCenter2
 var ICIMfunc=ICIMNone
-var PowerAllocation =  optimizePowerAllocationAgent // optimizePowerNone //   optimizePowerAllocationAgentRB//  
-const PowerAgentFact = 0.8//0.2 
+var PowerAllocation =  optimizePowerAllocationAgent //optimizePowerNone //    optimizePowerAllocationAgentRB//  
+const PowerAgentFact = 0.8//0.8//0.2 
+const PowerAgentAlpha = 1 //0.8//0.2 
 
-var subsetSize=5
+var subsetSize=4
 

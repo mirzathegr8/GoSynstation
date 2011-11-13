@@ -147,3 +147,18 @@ const (
 	ICIMb=iota
 	ICIMc
 )
+
+// we can use three different ways to evaluate the capacity
+// the direct normal one, will be
+//	Sum_{RBs} effectiveBW * log2(1 + Sum_{b in eNodeBs} SINR_MRC(b, rb) )  where SINR(b,rb) the signal/(interference+noise) of the RB at TTI t for enodeb b
+// the EffectiveSINR methode for OFDM evaluate first an equivalent SINR over all sinr of all rbs
+// the capacity is
+//	effectiveBW * Card({RBs}) * log2 (1 + SINR_eff)
+// where SINR_eff is (the sum for each enodeb for MRC)  of - beta* ln( 1/Card({RBs}) Sum_{RBs} exp(- SINR(rb)/beta))
+// Finaly the MCSJoint method takes the potential spectral efficiency, rounds (floor) it at the nearest modulation/coding scheme and uses this MCS for the next TTI, if the SINR is too low for it, the paquet is considered lost. SINR_eff is used in this case
+const (
+	NormalTR= iota
+	EFFECTIVESINR
+	MCSJOINT 
+)
+
