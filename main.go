@@ -1,6 +1,5 @@
 package main
 
-
 import "fmt"
 import "synstation"
 import "runtime"
@@ -8,7 +7,6 @@ import "draw"
 import "os"
 //import "math"
 //import "geom"
-
 
 // Data to save for output during simulation
 type outputData struct {
@@ -31,7 +29,6 @@ func (o *outputData) Add(o2 *outputData) {
 	o.Diversity += o2.Diversity
 	o.HopCount += o2.HopCount
 }
-
 
 func (o *outputData) Div(k float64) {
 	o.connected /= k
@@ -60,9 +57,7 @@ func (o outputData) String() string {
 
 }
 
-
 var outChannel chan outputData
-
 
 func printData() {
 
@@ -72,10 +67,9 @@ func printData() {
 
 }
 
-
 func main() {
 
-	runtime.GOMAXPROCS(14)
+	runtime.GOMAXPROCS(15)
 
 	var outD outputData  // one to print
 	var outDs outputData // one to sum and take mean over simulation
@@ -348,7 +342,7 @@ func main() {
 
 func SaveToFile(mobiles []synstation.Mob) {
 
-	outF, err := os.Open("out.m", os.O_WRONLY, 0666)
+	outF, err := os.OpenFile("out.m", os.O_WRONLY, 0666)
 
 	fmt.Println(err)
 
@@ -422,4 +416,3 @@ func SaveToFile(mobiles []synstation.Mob) {
 	outF.Close()
 
 }
-

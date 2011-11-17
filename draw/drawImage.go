@@ -1,6 +1,5 @@
 package draw
 
-
 import "synstation"
 import "math"
 import "geom"
@@ -118,12 +117,12 @@ func DrawReceptionField(dbs []synstation.DBS, name string) {
 			if b > 255 {
 				b = 255
 			}
-			im.Pix[y*im.Stride+x] = image.NRGBAColor{uint8(r), uint8(g), uint8(b), 255}
+			im.Pix[y*im.Stride+x] = uint8(r) //image.NRGBAColor{uint8(r), uint8(g), uint8(b), uint8(255)}
 			//im.Pix[y*im.Stride+x] = image.NRGBAColor{uint8(v*255),uint8(v*255),uint8(v*255),255}
 		}
 	}
 
-	f, err := os.Open(name, os.O_CREATE|os.O_WRONLY, 0666)
+	f, err := os.Create(name)
 
 	if err = png.Encode(f, im); err != nil {
 		os.Exit(1)
@@ -135,4 +134,3 @@ func inField(x int) (a float64) {
 	a = synstation.Field / Size * float64(x)
 	return
 }
-
