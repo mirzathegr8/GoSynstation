@@ -14,7 +14,7 @@ func ARBScheduler(dbs *DBS, Rgen *rand.Rand) {
 	var MasterMobs [NConnec]*Emitter
 	Nmaster :=0
 
-	r:= dbs.R.GetPos()
+	r:= dbs.Pos
 
 
 	for _, e := 0, dbs.Connec.Front(); e != nil; e = e.Next() {	

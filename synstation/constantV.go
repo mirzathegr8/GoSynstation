@@ -1,4 +1,5 @@
 package synstation
+
 const BERThres= 0.15
 const SNRThresConnec= 0
 var ARBSchedulFunc=ChHopping2

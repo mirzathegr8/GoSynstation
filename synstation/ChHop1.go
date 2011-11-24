@@ -167,7 +167,7 @@ func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 
 	//pour trier les connections actives
 	//var MobileList vector.Vector
-	MobileList := make([]ConnecType, NConnec)
+	MobileList := make([]*Connection, NConnec)
 	MobileList = MobileList[0:0]	
 
 	//pour trier les canaux
@@ -188,13 +188,13 @@ func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 
 				//Parse channels in some order  given by dbs.RndCh to find a suitable channel 
 				for j := NChRes; j < NCh; j++ {
-					i := dbs.RndCh[j]
-					if dbs.IsInUse(i) == nil && !c.E.IsSetARB(i) {
-						_, snr, _, _ := dbs.R.EvalSignalSNR(c.E, i)
+					rb := dbs.RndCh[j]
+					if dbs.IsRBFree(rb)  && !c.E.IsSetARB(rb) {
+						snr := dbs.EvalSignalSNR(c.E, rb)
 						if 10*math.Log10(snr) > SNRThresChHop {
 							if snr > ratio {
 								ratio = snr
-								nch = i
+								nch = rb
 								//assign and exit
 							}
 						}
@@ -210,15 +210,15 @@ func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 
 				// sort mobile connection for channel hopping
 			} else {
-				ratio := c.EvalRatio(dbs.R)
+				ratio := c.EvalRatio()
 				var i int
 				for i = 0; i < len(MobileList); i++ {
 					co := MobileList[i]
-					if ratio < co.EvalRatio(dbs.R) {
+					if ratio < co.EvalRatio() {
 						break
 					}
 				}
-				MobileList = append(MobileList[:i], append([]ConnecType{c}, MobileList[i:]...)...)
+				MobileList = append(MobileList[:i], append([]*Connection{c}, MobileList[i:]...)...)
 				//MobileList.Insert(i, c)
 			}
 		}
@@ -227,20 +227,20 @@ func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 	// change channel to some mobiles
 	for k := 0; k < len(MobileList) && k < 2; k++ {
 		co := MobileList[k]
-		ratio := co.EvalRatio(dbs.R)
+		ratio := co.EvalRatio()
 		chHop := 0
 
 		for j := NChRes; j < NCh; j++ {
 
-			i := dbs.RndCh[j]
+			rb := dbs.RndCh[j]
 
-			if dbs.IsInUse(i) == nil && !co.GetE().IsSetARB(i) {
+			if dbs.IsRBFree(rb)  && !co.GetE().IsSetARB(rb) {
 
-				_, snr, _, _ := dbs.R.EvalSignalSNR(co.GetE(), i)
+				snr := dbs.EvalSignalSNR(co.GetE(), rb)
 
 				if snr > ratio {
 					ratio = snr
-					chHop = i
+					chHop = rb
 				}
 			}
 		}
@@ -253,7 +253,7 @@ func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 
 }
 
-func (dbs *DBS) changeChannel(co ConnecType, pch, nch int) {
+func (dbs *DBS) changeChannel(co *Connection, pch, nch int) {
 	co.GetE().UnSetARB(pch)
 	co.GetE().SetARB(nch)
 }

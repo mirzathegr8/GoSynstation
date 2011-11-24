@@ -100,8 +100,6 @@ func Init() {
 	Sync(D)
 
 	Dprim:=D
-	if OneAgentPerBEAM {Dprim/=3}
-
 
 	if NetLayout==HONEYCOMB{
 
@@ -128,65 +126,13 @@ func Init() {
 		for i:=0;i< xD ;i++{
 			for j:=0;j < yD;j++{
 				x:=deltaX + DDx*(float64(i)+ .5*float64(j%2) )
-				y:=deltaY + DDy*float64(j)
-				Synstations[d].R.SetPos(geom.Pos{x,y})
+				y:=deltaY + DDy*float64(j)				
+				Synstations[d].SetPos(geom.Pos{x,y})
 				Synstations[d].Color=( 2*(j%2) + i )%3
 				d++
 			}
 		}
-	}
-
-
-	if OneAgentPerBEAM {
-		for i:=0; i<Dprim;i++{		
-
-			switch ICIMtype{
-			case ICIMb:
-			Color:=Synstations[i].Color	
-			Synstations[i+Dprim].Color=Color		
-			Synstations[i+2*Dprim].Color=Color
-			case ICIMc:
-			Synstations[i].Color=0
-			Synstations[i+Dprim].Color=1
-			Synstations[i+2*Dprim].Color=2
-
-			}
-
-			R:=Synstations[i].R.GetPos()
-			Synstations[i+Dprim].R.(*PhysReceiver).SetPos(R)	
-			Synstations[i+2*Dprim].R.(*PhysReceiver).SetPos(R)
-
-			Synstations[i+Dprim].DBS2= &Synstations[i]
-			Synstations[i+2*Dprim].DBS2= &Synstations[i]
-			Synstations[i+2*Dprim].DBS3= &Synstations[i+Dprim]
-
-		}
-	
-		if SetReceiverType==SECTORED2 {		
-			for i:=0; i<Dprim;i++{
-				R:=Synstations[i].R.(*PhysReceiver)			
-				for i := 0; i < len(R.Orientation); i++ {
-					R.Orientation[i] = 0
-				}
-				R=Synstations[i+Dprim].R.(*PhysReceiver)
-				R.SetPos(Synstations[i].R.GetPos())
-				for i := 0; i < len(R.Orientation); i++ {
-					R.Orientation[i] = PI2/3.0
-				}
-				R = Synstations[i+2*Dprim].R.(*PhysReceiver)
-				R.SetPos(Synstations[i].R.GetPos())
-				for i := 0; i < len(R.Orientation); i++ {
-					R.Orientation[i] = PI2*2.0/3.0
-				}			
-		}
-	}
-	}
-
-
-
-
-
-
+	}	
 	ChannelHop() //Set Mobile's initial channel
 
 }

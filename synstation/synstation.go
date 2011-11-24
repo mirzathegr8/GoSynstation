@@ -1,11 +1,7 @@
 package synstation
 
 import "container/list"
-import rand "math/rand"
 import "math"
-import "geom"
-//import "fmt"
-//import "sort"
 
 // counters to observe connection agents health
 var sens_connect, sens_disconnect, sens_lostconnect int
@@ -20,10 +16,9 @@ func GetHopCount() int    { a := Hopcount; Hopcount = 0; return a }
 // it also is an agent and has a clock and internal random number generator
 // RndCh stores channels sequence used when parsing channels for allocation
 type DBS struct {
-	R      PhysReceiverInt
+	PhysReceiverBase
 	Connec *list.List
-	Clock  int
-	Rgen   *rand.Rand
+	Clock  int	
 
 	RndCh []int
 
@@ -33,9 +28,7 @@ type DBS struct {
 
 	ALsave [NCh]int
 
-	Id int
-
-	DBS2,DBS3 *DBS
+	Id int	
 
 	RBReuseFactor float64
 	
@@ -49,68 +42,29 @@ func (dbs *DBS) Init() {
 		dbs.ConnectionBank.PushBack(new(Connection))
 	}
 
-	
 	dbs.Id=idtmp
 	idtmp++
-
-	switch SetReceiverType {
-	case OMNI, BEAM:
-		dbs.R = new(PhysReceiver)
-	case SECTORED:
-		dbs.R = new(PhysReceiverSectored)
-	default:
-		dbs.R = new(PhysReceiver)
-	}
-	dbs.Connec = list.New()
-	dbs.RndCh = make([]int, NCh)
-	var p geom.Pos
-	p.X = Rgen.Float64() * Field
-	p.Y = Rgen.Float64() * Field
-	dbs.Rgen = rand.New(rand.NewSource(Rgen.Int63()))
-	dbs.R.Init(p, dbs.Rgen)
-
-	dbs.RBReuseFactor = 0.5	
+	
+	dbs.Connec = list.New()	
+	dbs.PhysReceiverBase.Init()
+	//dbs.RBReuseFactor = 0.5	
 
 	SyncChannel <- 1
 	
 }
 
+
 // Physics : evaluate SNRs at receiver, evaluate BER of connections
 func (dbs *DBS) RunPhys() {
 
-/*	var AL [NCh]int	
-	for i:= range AL {AL[i]=-1}
-	i:=0*/
-
-
-	dbs.R.Compute(dbs.Connec,dbs.DBS2,dbs.DBS3)
+	dbs.Compute(dbs.Connec)
 
 	dbs.Clock = dbs.Rgen.Intn(EnodeBClock)
 
-
-
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
-
-	/*	if (c.Status==0){		
-		for rb,v:= range c.GetE().GetARB(){
-			if v {
-//				if rb!=0 && AL[rb]!=-1 {fmt.Println("Double Assign")}
-				AL[rb]=i
-
-				}
-		}
-		i++
-		}*/
-		c.BitErrorRate(dbs.R.GetPhysReceiver(c.GetE().GetId()), dbs)
-	}
-		/*	AL[0]=-1
-			if i>0 && testSCFDMA(AL[:])==-1{
-				//for k:=range AL{  AL[k]=AL[k]-dbs.ALsave[k]}	
-					fmt.Println(AL)
-			}*/
-	
-	
+		c.BitErrorRate(dbs)
+	}		
 
 	SyncChannel <- 1
 }
@@ -126,26 +80,31 @@ func (dbs *DBS) disconnect(e *list.Element) {
 	sens_disconnect++
 }
 
-func (dbs *DBS) IsInUse(i int) *Connection { // 
 
+func (dbs *DBS) IsRBFree(rb int) bool { // 
+	used:=0
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
-		if c.E.IsSetARB(i) {
-			return c
+		if c.E.IsSetARB(rb) {
+			used++
+			if used>=mDf{
+				return false
+			}
 		}
 	}
-	return nil
+	return true
 
 }
 
-
-
 func (dbs *DBS) IsInFuturUse(i int) bool { // 
-
+	used:=0
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
 		if c.E.IsFuturSetARB(i) {
-			return true
+			used++
+			if used>= mDf{	
+				return true
+			}
 		}
 	}
 	return false
@@ -183,13 +142,8 @@ func (dbs *DBS) RunAgent() {
 	dbs.checkLinkViability()
 
 	if dbs.Clock == 0 {		
-
 		dbs.connectionAgent()
-		ARBSchedulFunc(dbs, dbs.Rgen)
-		
-		
-		
-		//dbs.optimizePowerAllocationSimple()
+		ARBSchedulFunc(dbs, dbs.Rgen)							
 	}
 	PowerAllocation(dbs)
 
@@ -203,27 +157,19 @@ func (dbs *DBS) checkLinkViability() {
 
 		if c.E.IsSetARB(0) {
 
-			Pr, _ := dbs.R.GetPr(c.E.GetId(), 0)
+			Pr := dbs.GetPr(c.E.GetId(),0)
 
 			if 10*math.Log10(Pr/WNoise) < SNRThresConnec-2 {
-
 				dbs.disconnect(e)
 				sens_disconnect--
 				sens_lostconnect++
 			}
-		} else if c.GetLogMeanBER() > math.Log10(BERThres) {	
-		//	fmt.Println("disconnect")
+		} else if c.GetLogMeanBER() > math.Log10(BERThres) {			
 			dbs.disconnect(e)
 			sens_disconnect--
 			sens_lostconnect++
 		}
-
-		/* for collocated eNodeB*/
-		if  (dbs.DBS2!=nil && dbs.DBS2.IsConnected(c.GetE())) || (dbs.DBS3!=nil && dbs.DBS3.IsConnected(c.GetE())){
-			dbs.disconnect(e)
-			sens_disconnect--
-
-		}
+	
 
 	}
 
@@ -261,8 +207,8 @@ func (dbs *DBS) connectionAgent() {
 		for i, j := 0, NConnec-dbs.Connec.Len(); j >= 0 && i < SizeES; j-- {
 
 			//var i=0
-			Rc, Eval := dbs.R.EvalChRSignalSNR(0, i)
-
+			Eval := dbs.EvalConnection(i)
+			Rc:=dbs.Channels[0]
 			if Rc.Signal[i] >= 0 {
 				if !dbs.IsConnected(&Mobiles[Rc.Signal[i]].Emitter) {
 					if 10*math.Log10(Eval) > SNRThresConnec {
@@ -283,14 +229,12 @@ func (dbs *DBS) connectionAgent() {
 			max = -10.0
 			var Rc *ChanReceiver
 			Rc = nil
-			for i := NChRes; i < NCh; i++ {
-				if dbs.IsInUse(i) == nil {
-					Rt, r, _ := dbs.R.EvalSignalConnection(i)
+			for rb := NChRes; rb < NCh; rb++ {
+				if dbs.IsRBFree(rb)  {
+					r := dbs.EvalSignalConnection(rb)
 					if r > max {
 						max = r
-						Rc = Rt
-						//	fmt.Println("attempt connect ",max,bb )
-						//BERe = e
+						Rc = &dbs.Channels[rb]				
 					}
 				}
 			}
@@ -307,59 +251,49 @@ func (dbs *DBS) connectionAgent() {
 
 }
 
-
-// deprecated, not used, will be removed in future
-//Minimum Area-Difference to the Envelope
-
-/*
-
-type vectorFloat64 struct {
-	f []float64
-	i []int
+// return  quality indicator for unconnected mobiles
+func (dbs *DBS) EvalConnection(k int) float64{
+ 	return dbs.pr[dbs.Channels[0].Signal[k]]
 }
+// return quality indicator for mobiles connected to other dbs
+func (dbs *DBS) EvalSignalConnection(rb int) (Eval float64) {
 
-func (v vectorFloat64) Len() int           { return len(v.f) }
-func (v vectorFloat64) Less(i, j int) bool { return v.f[i] < v.f[j] }
-func (v vectorFloat64) Swap(i, j int) {
-	v.f[i], v.f[j] = v.f[j], v.f[i]
-	v.i[i], v.i[j] = v.i[j], v.i[i]
-}
+	Rc := &dbs.Channels[rb]
+	Eval = -100 //Eval is in [0 inf[, -100 means no signal
 
-
-func max(v []float64) (a float64, i int) {
-	if len(v) > 0 {
-		a = v[0]
-		i = 0
+	if Rc.Signal[0] >= 0 {
+		E := &Mobiles[Rc.Signal[0]].Emitter
+		BER := dbs.EvalSignalBER(E, rb)
+		BER = math.Log10(BER)
+		Ptot := E.BERT() + BER
+		Eval = Ptot * math.Log(Ptot/BER)
 	}
-	for j := 1; j < len(v); j++ {
-		if v[j] > a {
-			i = j
-			a = v[j]
-		}
-	}
+
 	return
 }
 
-func (v vectorFloat64) min() (a float64, i int) {
-	if len(v.f) > 0 {
-		a = v.f[0]
-		i = 0
-	}
-	for j := 1; j < len(v.f); j++ {
-		if v.f[j] < a {
-			i = j
-			a = v.f[j]
-		}
-	}
+
+func (dbs *DBS) EvalSignalSNR(e *Emitter, rb int) (SNR float64) {
+	m := e.GetId()
+	Pr:= dbs.Channels[rb].pr[m]
+ 	Pint := dbs.Channels[rb].Pint
+	Psig:=0.0
+	if e.IsSetARB(rb) {Psig= Pr}
+	if rb==0 {Pint=0; Psig= 0}
+	SNR = Pr / GetNoisePInterference(Pint,Psig) 
 	return
-
 }
 
-func (v vectorFloat64) mean() float64 {
-	var a float64
-	for _, val := range v.f {
-		a += val
-	}
-	return a
+func (dbs *DBS) EvalSignalBER(e *Emitter, rb int) (BER float64) {
+
+	K := dbs.kk[e.GetId()]
+	SNR:=dbs.EvalSignalSNR(e,rb)
+ 		
+	sigma := SNR / (K + 1.0)
+	musqr := SNR - sigma
+	eta := 1.0/sigma + 1.0/L2
+
+	BER = math.Exp(-musqr/sigma) / (sigma * eta) * math.Exp(musqr/(sigma*sigma*eta))
+
+	return
 }
-*/

@@ -230,7 +230,7 @@ func (e *Emitter) AddConnection(c *Connection, dbs *DBS) {
 	c.Status = 1 //we set the status as slave, as master status will be set after all connections data has been recieved
 	num_con++
 
-	d := e.Pos.DistanceSquare(dbs.R.GetPos())
+	d := e.Pos.DistanceSquare(dbs.GetPos())
 
 	//if d < e.SMinDist {
 	if e.SMaxBER > lber { //evaluate which connection is the best and memorizes which will be masterconnection

@@ -13,26 +13,23 @@ func GetDiversity() int { a := num_con; num_con = 0; return a }
 
 type Connection struct {
 	E *Emitter
-
-	//	Pr     float64 // to store power level received	
-	//	SNR, K float64
-	//	BER    float64
-
+	
 	Status int //0 master ,1 slave
+
+	RBsReceiver   
 
 	meanPr   MeanData
 	meanSNR  MeanData
 	meanBER  MeanData
 	meanCapa MeanData
 
-	filterAr [NRB]FilterInt //filter ban to use for channel gain FF generator
+	filterAr [NCh]FilterInt //filter ban to use for channel gain FF generator
 	ff_R     [NCh]float64   // stores channel gain for every RB
 	SNRrb    [NCh]float64   //stores SNR per RB
 
 
-	IfilterAr [NRB]FilterInt //filter bank for first interferer
+	IfilterAr [NCh]FilterInt //filter bank for first interferer
 	Iff_R     [NCh]float64   //channel FF gain  for first interer if fading is generated
-
 
 	filterF FilterInt //Coherence Frequency filter	
 
@@ -60,33 +57,23 @@ func (c *ConnectionS) Copy(cc *Connection) {
 	c.Status = cc.Status
 }
 
-type ConnecType interface {
-	BitErrorRate(rx *PhysReceiver, dbs *DBS)
-	EvalRatioConnect() float64
-	EvalRatioDisconnect() float64
-	GetE() *Emitter
-	//GetPr() float64
-	EvalRatio(rx PhysReceiverInt) float64
-	//GetSNR() float64
-
-	GetInstantSNIR() []float64
-}
 
 func (co *Connection) GetE() *Emitter     { return co.E }
 func (co *Connection) GetMeanPr() float64 { return co.meanPr.Get() }
-//func (co *Connection) GetSNR() float64  { return co.SNR }
 
 
-func (co *Connection) BitErrorRate(rx *PhysReceiver, dbs *DBS) {
+func (co *Connection) BitErrorRate(dbs *DBS) {
 
-	co.evalInstantBER(co.GetE(), rx, dbs)
+	co.evalInstantSINR(&dbs.PhysReceiverBase)
+
+	co.evalInstantBER(dbs)
 
 	co.Status = 1 //let mobile set master state		
 	co.E.AddConnection(co, dbs)
 
 }
 
-func (co *Connection) EvalRatio(rx PhysReceiverInt) float64 {
+func (co *Connection) EvalRatio() float64 {
 	return co.meanSNR.Get()
 }
 
@@ -185,30 +172,27 @@ func (co *Connection) GetLogMeanBER() float64 {
 }
 
 //This function is only called once per iteration, so it is where the FF value is generated
-func (c *Connection) evalInstantBER(E *Emitter, rx *PhysReceiver, dbs *DBS) {
+func (c *Connection) evalInstantBER(dbs *DBS) {
 
-	ARB := E.GetARB()
+	ARB := c.E.GetARB()
 
-	//c.SNR = 0 //reset
-
-	K := rx.GetK(E.GetId())
+	rx:= dbs.PhysReceiverBase
+	K := rx.GetK(c.E.GetId())
 
 	//Generate DopplerFading
 	//pass some values to decorelate
-
-	for tdma := 0; tdma < NCh-NChRes; tdma += NRB {
 
 		for i := 0; i < 50; i++ {
 			c.filterF.nextValue(complex(c.Rgen.NormFloat64(), c.Rgen.NormFloat64()))
 		}
 
-		for i := 0; i < NRB; i++ {
+		for i := 0; i < NCh; i++ {
 			c.initz[i] = c.filterF.nextValue(complex(c.Rgen.NormFloat64(), c.Rgen.NormFloat64()))
 		}
 
-		for rb := 0; rb < NRB; rb++ {
+		for rb := 0; rb < NCh; rb++ {
 			a := c.filterAr[rb].nextValue(c.initz[rb]) + complex(K, 0)
-			c.ff_R[rb+tdma] = (real(a * cmath.Conj(a))) / (2 + K*K)
+			c.ff_R[rb] = (real(a * cmath.Conj(a))) / (2 + K*K)
 		}
 
 		if FadingOnPint1 == Fading {
@@ -218,34 +202,27 @@ func (c *Connection) evalInstantBER(E *Emitter, rx *PhysReceiver, dbs *DBS) {
 				c.filterF.nextValue(complex(c.Rgen.NormFloat64(), c.Rgen.NormFloat64()))
 			}
 
-			for i := 0; i < NRB; i++ {
+			for i := 0; i < NCh; i++ {
 				c.initz[i] = c.filterF.nextValue(complex(c.Rgen.NormFloat64(), c.Rgen.NormFloat64()))
 			}
 
-			for rb := 0; rb < NRB; rb++ {
+			for rb := 0; rb < NCh; rb++ {
 				a := c.filterAr[rb].nextValue(c.initz[rb]) + complex(K, 0)
-				c.Iff_R[rb+tdma] = (real(a * cmath.Conj(a))) / (2 + K*K)
+				c.Iff_R[rb] = (real(a * cmath.Conj(a))) / (2 + K*K)
 			}
 		}
 
-	}
+	
 
-	var touch bool
+	var touch bool	
 
-	prbase := rx.pr[E.GetId()]
+	for rb , use:= range ARB {
 
-	//RcBase := rx.GetRcBase(E.GetId())
-
-	var capaTTI float64
-
-	for rb := 1; rb < NCh; rb++ {
-
-		use := ARB[rb]
-
-		Rc := &rx.Channels[rb]
+		Rc := &c.Channels[rb]
 
 		NotPint1 := 0.0
-		if FadingOnPint1 == Fading { //if cancel, c.Iff_r =0 and total multiplied by -1, if fading, remove difference
+		if FadingOnPint1 == Fading { //if cancel, c.Iff_r =0 and total multiplied by -1, 
+						//if fading, remove difference
 			if Rc.Signal[1] >= 0 {
 				NotPint1 = Rc.pr[Rc.Signal[1]] * (c.Iff_R[rb] - 1)
 			}
@@ -255,80 +232,32 @@ func (c *Connection) evalInstantBER(E *Emitter, rx *PhysReceiver, dbs *DBS) {
 			}
 		}
 
+		Pr := Rc.pr[c.E.GetId()]
+
 		if use {
-
-			Pr := Rc.pr[E.GetId()]
-
-			//c.Pr = Pr // to save data to file
-
-
+			
 			c.SNRrb[rb] = Pr * c.ff_R[rb] / (GetNoisePInterference(Rc.Pint, Pr) + NotPint1)
 
 			BER := L1 * math.Exp(-c.SNRrb[rb]/2/L2) / 2.0
 
 			c.meanPr.Add(Pr)
 			c.meanSNR.Add(c.SNRrb[rb])
-			c.meanBER.Add(BER)
-			//c.SNR += c.SNRrb[rb]
-
-			//beta:= 1.5/-math.Log(5*c.meanBER.Get())
-
-			capaTTI += EffectiveBW * math.Log2(c.SNRrb[rb]+1)
+			c.meanBER.Add(BER)			
 
 			touch = true
 		} else {
+			c.SNRrb[rb] = Pr * c.ff_R[rb] / 
+				(GetNoisePInterference(Rc.Pint, 0) + NotPint1) 				
 
-			//In case not using the RB, we eval the SNR on this rb using the base power level
-			// that is the power received if not using beam forming
-			// TODO, evaluate what would happen if estimating Pr with 10db gain for beam forming
-			// thing is however, we can not evaluate interference with different beam shape
-			// maybe we can suppose *estimate* interference of Pint*size_beam/360 with +10dB
-			//_, Rc := rx.GetPr(E.GetId(), rb)
-
-			/*if !dbs.IsInUse(rb) && SetReceiverType == BEAM { //!dbs.IsInUse(rb) if orientation < 0, not in use
-				c.SNRrb[rb] = 9 * prbase * c.ff_R[rb] / (3.333*Rc.Pint + WNoise)
-			} else { // else in use
-
-				c.SNRrb[rb] = 9 * prbase * c.ff_R[rb] / (1.5*(Rc.Pint) + WNoise) // else it is in use
-				// and we can suppose that the first signal is listened too and of course will not be emitting on this RB 						anymore if it is assigned to the current mobiles
-			}*/
-
-			//we substract
-
-			Psig2 := 0.0          //value of received power of the first signal it it is used by the dbs
-			c2 := dbs.IsInUse(rb) //other signal
-			if c2 != nil {
-				Psig2 = Rc.pr[c2.GetE().GetId()]
-			}
-
-			c.SNRrb[rb] = c.E.Power[rb] * prbase * c.ff_R[rb] / (GetNoisePInterference(Rc.Pint, Psig2) + NotPint1) // WNoise // Wnoise check
-
-			//c.SNRrb[rb] = c.meanPr.Get() / ( GetNoisePInterference(Rc.Pint,Psig2) +NotPint1 ) // WNoise // Wnoise check
-
-			c.SNRrb[rb] *= estimateFactor(dbs, E)
-
+			c.SNRrb[rb] *= estimateFactor(dbs, c.E)
 		}
 	}
 
-	if E.IsSetARB(0) {
-
-		_, BER, SNR, Pr := rx.EvalSignalBER(E, 0)
-
-		c.meanBER.Add(BER)
-		c.meanSNR.Add(SNR)
-		c.meanPr.Add(Pr)
-		//c.SNR=0
-		//return
-	} else if !touch { // add null to mean BER
-
+	if !touch { // add null to mean BER
 		c.meanPr.Add(0)
 		c.meanSNR.Add(0)
-		//c.SNR = 0
 		c.meanBER.Add(1)
-
 	}
-
-	c.meanCapa.Add(capaTTI)
 
 	return
 }
@@ -346,13 +275,49 @@ func estimateFactor1(dbe *DBS, E *Emitter) (o float64) {
 		o = 1 / float64(div)
 	}
 
-	//if SetReceiverType == BEAM && !dbs.IsInUse(rb) {
-	o *= conservationFactor //}
+	o *= conservationFactor 
 
-	//c.SNRrb[rb] = 10 * prbase * c.ff_R[rb] / (3*Rc.Pint + WNoise)
 	return
 
 }
 
-//   Reformatted by   lerouxp    Mon Oct 3 09:49:19 CEST 2011
+
+func (co *Connection) evalInstantSINR(rx *PhysReceiverBase) {
+
+	Orientation := rx.AoA[co.E.GetId()]
+
+	for m,E  := range Mobiles{
+		
+		gain := float64(1)
+			
+				theta := rx.AoA[m] - Orientation
+
+				if theta > math.Pi {
+					theta -= PI2
+				} else if theta < -math.Pi {
+					theta += PI2
+				}
+
+				if math.Abs(theta) < BeamAngle/20 {
+					gain = 10
+				} else {
+					theta /= BeamAngle
+					g := 12 * theta * theta
+					if g > 20 {
+						g = 20
+					}
+					gain = math.Pow(10, (-g+10)/10)
+				}
+
+		for rb, use := range E.ARB { 
+			if use {
+				// Evaluate Beam Gain		
+				co.Channels[rb].pr[m] = rx.Channels[rb].pr[m] * gain 
+			}
+		}
+
+	}
+
+	co.RBsReceiver.SumInterference()
+}
 

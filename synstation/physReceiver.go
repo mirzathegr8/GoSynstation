@@ -76,10 +76,11 @@ type PhysReceiverInt interface {
 
 	// This is the main function to launch the calculation of interfernce (tracking/beam/received power),
 	// and save some information on interferer
-	Compute(Connec *list.List, dbs2, dbs3 *DBS)
+	Compute(Connec *list.List)
+	SDMA(Connec *list.List)
 
 	//Getters/Setters	
-	SetPos(p geom.Pos)
+	SetPos(p *geom.Pos)
 	GetPos() geom.Pos
 
 	GetPr(i, rb int) (p float64, Rc *ChanReceiver)
@@ -88,15 +89,14 @@ type PhysReceiverInt interface {
 
 	GetPhysReceiver(i int) *PhysReceiver
 
-	GetOrientation(rb int) float64 
-	SetOrientation(rb int, a float64)
+
 }
 
 
 // structure to store evaluation of interference at a location
 // this has to be initialized with PhysReceiver.Init() function to init memory
 type PhysReceiver struct {
-	geom.Pos
+	Pos	    *geom.Pos
 	Channels    []ChanReceiver
 	Orientation []float64 //angle of orientation for beamforming for each channel -1 indicates no beamforming
 	shadow      shadowMapInt
@@ -114,7 +114,7 @@ type PhysReceiver struct {
 //		so that the randomnumber generator is only called from the same go-routine
 //	Create the ChanReceiver objects for each resource blocks
 //	
-func (r *PhysReceiver) Init(p geom.Pos, Rgen *rand.Rand) {
+func (r *PhysReceiver) Init(p *geom.Pos, Rgen *rand.Rand) {
 	r.Pos = p
 	r.Rgen = Rgen
 	r.Channels = make([]ChanReceiver, NCh)
@@ -134,7 +134,7 @@ func (r *PhysReceiver) Init(p geom.Pos, Rgen *rand.Rand) {
 
 
 // Getters/Setters
-func (r *PhysReceiver) SetPos(p geom.Pos) {
+func (r *PhysReceiver) SetPos(p *geom.Pos) {
 	r.Pos = p
 }
 func (r *PhysReceiver) GetPos() geom.Pos {
@@ -247,50 +247,12 @@ func (r *PhysReceiver) EvalSignalBER(e *Emitter, rb int) (Rc *ChanReceiver, BER 
 }
 
 
-func (rx *PhysReceiver) Compute(Connec *list.List, dbs2, dbs3 *DBS) {
 
-	//*********************************
-	//Tracking per RB of all active connections
-	if SetReceiverType == BEAM {
-		for i := 0; i < len(rx.Orientation); i++ {
-			rx.Orientation[i] = -1
-		}
-		for e := Connec.Front(); e != nil; e = e.Next() {
-			c := e.Value.(*Connection)
-			for rb, use := range c.GetE().GetARB() {
-				if use {
-					p := c.GetE().GetPos().Minus(rx.Pos)
-					theta := math.Atan2(p.Y, p.X)
-					if theta < 0 {
-						theta = theta + PI2
-					}
-					rx.Orientation[rb] = theta //+ (dbs.Rgen.Float64()*30-15)
-				} else {
-					// this is to orient the beams in other directions than first beam
-					// such that receiver can catch other signals
-					if dbs3!=nil{
-					if dbs2.IsInUse(rb)!=nil{
-						theta:=dbs2.R.GetOrientation(rb) + PI2/3.0;
-						if theta>PI2{theta-=PI2}
-						rx.Orientation[rb]=theta
-					} else if dbs3.IsInUse(rb)!=nil{
-						theta:=dbs3.R.GetOrientation(rb) + PI2/3.0;
-						if theta>PI2{theta-=PI2}
-						rx.Orientation[rb]=theta
-					}
-					}else 	if (dbs2!=nil){
-					if dbs2.IsInUse(rb)!=nil{
-						theta:=dbs2.R.GetOrientation(rb) - PI2/3.0;
-						if theta<0 { theta+=PI2}
-						rx.Orientation[rb]=theta
-					}
-					}
-				}
+
+
+func (rx *PhysReceiver) Compute(Connec *list.List) {
+
 	
-			}
-		}
-
-	}
 
 	//*********************************
 	//Evaluate recevied power
@@ -389,134 +351,10 @@ func (rx *PhysReceiver) Compute(Connec *list.List, dbs2, dbs3 *DBS) {
 }
 
 
-//Slow Fading Generation
-//
-//
 
 func (rx *PhysReceiver) SlowFading(E geom.Pos) (c float64) {
 	return rx.shadow.evalShadowFading(E.Minus(rx.Pos))
 }
-
-
-type shadowMapInt interface {
-	Init(corr float64, Rgen *rand.Rand)
-	evalShadowFading(d geom.Pos) (val float64)
-}
-
-
-type noshadow struct{}
-
-func (s *noshadow) Init(f float64, rgen *rand.Rand) {
-}
-func (s *noshadow) evalShadowFading(d geom.Pos) (val float64) {
-	return 1.0
-}
-
-type shadowMap struct {
-	xcos []float64
-	ycos []float64
-
-	xsin []float64
-	ysin []float64
-
-	power float64
-
-	smap [][]float32
-}
-
-
-var mapres = mapsize / float64(maplength)
-
-func (s *shadowMap) Init(corr_dist float64, Rgen2 *rand.Rand) {
-
-	nval := int(Field / corr_dist / shadow_sampling)
-
-	s.xcos = make([]float64, nval)
-	s.ycos = make([]float64, nval)
-	s.xsin = make([]float64, nval)
-	s.ysin = make([]float64, nval)
-
-	for i := 0; i < nval; i++ {
-		s.xcos[i] = Rgen2.NormFloat64()
-		//s.xcos[i] *= s.xcos[i]
-		s.ycos[i] = Rgen2.NormFloat64()
-
-		s.xsin[i] = Rgen2.Float64() * 2 * math.Pi
-		s.ysin[i] = Rgen2.Float64() * 2 * math.Pi
-
-		//if !(s.xcos[i] > mval || s.xcos[i]< -mval) {
-		if s.xcos[i] < mval  {
-			s.xcos[i] = 0
-		}
-		//if !(s.ycos[i] > mval || s.ycos[i]< -mval) {
-		if s.ycos[i] < mval  {
-			s.ycos[i] = 0
-		}
-		s.power += s.xcos[i] * s.xcos[i]
-		s.power += s.ycos[i] * s.ycos[i]
-
-	}
-
-	s.power = math.Sqrt(s.power) / shadow_deviance
-
-	for i := 0; i < nval; i++ {
-		s.xcos[i] /= s.power
-		s.ycos[i] /= s.power
-	}
-
-	s.smap = make([][]float32, mapsize)
-	for i := 0; i < mapsize; i++ {
-		s.smap[i] = make([]float32, mapsize)
-		x := (float64(i) - mapsize/2) / mapres
-		for j := 0; j < mapsize; j++ {
-			d := geom.Pos{x, (float64(j) - mapsize/2) / mapres}
-			s.smap[i][j] = float32(s.evalShadowFadingDirect(d))
-			//lets not have -Inf here			
-			if s.smap[i][j] < 0.0000001 {
-				s.smap[i][j] = 0.0000001
-			}
-		}
-	}
-
-}
-
-func (s *shadowMap) interpolFading(d geom.Pos) (val float64) {
-
-	x := int(d.X*mapres + mapsize/2)
-	y := int(d.Y*mapres + mapsize/2)
-
-	if x < 0 || x >= mapsize || y < 0 || y >= mapsize {
-		return 1.0
-	}
-
-	return float64(s.smap[x][y])
-
-}
-
-var facr = float64(2.0 * math.Pi / Field)
-
-func (s *shadowMap) evalShadowFading(d geom.Pos) (val float64) {
-	return s.interpolFading(d)
-	//return s.evalShadowFadingDirect(d)
-}
-
-func (s *shadowMap) evalShadowFadingDirect(d geom.Pos) float64 {
-
-	posx := float64(d.X) * facr * shadow_sampling
-	posy := float64(d.Y) * facr * shadow_sampling
-	var rx, ry, val float64
-	for i := 0; i < len(s.xcos); i++ {
-		rx += posx
-		ry += posy
-		val += s.xcos[i]*(math.Cos((rx + s.xsin[i]))) + s.ycos[i]*(math.Cos((ry + s.ysin[i])))
-	}
-
-	return math.Pow(10, val/10)
-}
-
-
-const PI2 = 2 * math.Pi
-const PI = math.Pi
 
 
 //Returns K value and base level received power (used for estimating potential on other channels)
@@ -548,3 +386,5 @@ func (r *PhysReceiver) SetOrientation(rb int, a float64) {
 	r.Orientation[rb]=a
 }
 
+func(r *PhysReceiver) SDMA(Connec *list.List){
+}

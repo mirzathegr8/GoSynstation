@@ -1,5 +1,6 @@
 package synstation
 
+import "math"
 
 const Field = 6000 //length in meters
 
@@ -162,3 +163,8 @@ const (
 	MCSJOINT 
 )
 
+
+
+
+const PI2 = 2 * math.Pi
+const PI = math.Pi

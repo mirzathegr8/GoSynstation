@@ -151,13 +151,13 @@ func optimizePowerAllocationSimple(dbs *DBS) {
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
-		M := c.E
+		E := c.E
 
 		if c.Status == 0 {
 			if !c.E.IsSetARB(0) { // if master connection and transmitting data
 
 				L := float64(1500)
-				d := (L - dbs.R.GetPos().Distance(M.GetPos())) / L
+				d := (L - dbs.Pos.Distance(E.Pos)) / L
 				var p float64
 				if d > 0 {
 					//p=1-math.Pow(d,1)
@@ -168,10 +168,10 @@ func optimizePowerAllocationSimple(dbs *DBS) {
 
 				//p:=0.001*(math.Pow(dbs.R.GetPos().Distance(M.GetPos()),4)/100000)
 
-				M.SetPower(p)
+				E.SetPower(p)
 
 			} else {
-				M.SetPower(1)
+				E.SetPower(1)
 			}
 
 		}
@@ -183,7 +183,7 @@ func optimizePowerAllocationSimple(dbs *DBS) {
 func PowerICIM(dbs *DBS) {
 	//power allocation comes after RB setting
 
-	r := dbs.R.GetPos()
+	r := dbs.Pos
 	jMin := NChRes + ((1+dbs.Color)%3)*33 //for non priviledge band
 	jMax := jMin + 33
 

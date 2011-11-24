@@ -57,10 +57,10 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 
 	//pour trier les connections actives
 	//var MobileList vector.Vector
-	MobileList := make([]ConnecType, NConnec)
+	MobileList := make([]*Connection, NConnec)
 	MobileList = MobileList[0:0]
 	//var MobileListRX vector.Vector
-	MobileListRX := make([]ConnecType, NConnec)
+	MobileListRX := make([]*Connection, NConnec)
 	MobileListRX = MobileListRX[0:0]
 
 	//pour trier les canaux
@@ -106,11 +106,11 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 				if c.GetE().GetFirstRB() < NChRes+subsetSize*ChRX {
 					for i = 0; i < len(MobileListRX); i++ {
 						co := MobileListRX[i]
-						if ratio < co.EvalRatio(dbs.R) {
+						if ratio < co.EvalRatio() {
 							break
 						}
 					}
-					MobileListRX = append(MobileListRX[:i], append([]ConnecType{c}, MobileListRX[i:]...)...)
+					MobileListRX = append(MobileListRX[:i], append([]*Connection{c}, MobileListRX[i:]...)...)
 					//MobileListRX.Insert(i, c)
 				} else {
 					for i = 0; i < len(MobileList); i++ {
@@ -119,7 +119,7 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 							break
 						}
 					}
-					MobileList = append(MobileList[:i], append([]ConnecType{c}, MobileList[i:]...)...)
+					MobileList = append(MobileList[:i], append([]*Connection{c}, MobileList[i:]...)...)
 					//MobileList.Insert(i, c)
 				}
 			}
@@ -129,7 +129,7 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 	// change channel to some mobiles
 
 	fact := 0.8
-	var MobileListUSE []ConnecType
+	var MobileListUSE []*Connection
 	if len(MobileListRX) > 0 {
 		MobileListUSE = MobileListRX
 		fact = 0
@@ -176,7 +176,7 @@ func FindFreeChan(dbs *DBS, E *Emitter, ratio float64) int {
 		SNRs[i] = E.GetSNRrb(i)
 	}
 
-	r := dbs.R.GetPos()
+	r := dbs.Pos
 
 	ICIMfunc(&r, E, SNRs[:], dbs.Color)
 

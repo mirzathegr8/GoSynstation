@@ -327,7 +327,7 @@ func SaveToFile(Mobiles []s.Mob, dbs []s.DBS) {
 
 	outF.WriteString(fmt.Sprintln("# name: XYD\n# type: matrix\n# rows: ", s.D, "\n# columns: ", 3))
 	for i := 0; i < s.D; i++ {
-		outF.WriteString(fmt.Sprintln(dbs[i].R.GetPos().X, " ", dbs[i].R.GetPos().Y, " ", dbs[i].Color, " "))
+		outF.WriteString(fmt.Sprintln(dbs[i].Pos.X, " ", dbs[i].Pos.Y, " ", dbs[i].Color, " "))
 
 	}
 	outF.WriteString("\n")

@@ -25,7 +25,7 @@ func ARBScheduler5(dbs *DBS, Rgen *rand.Rand) {
 
 	//Get SNR for all master mobiles all rbs
 
-	r:= dbs.R.GetPos()
+	r:= dbs.Pos
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 

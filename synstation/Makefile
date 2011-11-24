@@ -12,11 +12,10 @@ channels.go\
 connection.go\
 mobile.go\
 synstation.go\
-physReceiverSectored.go\
 powerC.go\
 powerControl.go\
 trace.go\
-physReceiver.go\
+physReceiverBase.go\
 meanStruct.go\
 FadingGen.go\
 agent.go\
@@ -28,7 +27,9 @@ RBSchedule1.go\
 RBSchedule5.go\
 ChHop1.go\
 icim.go\
-ChHop3.go
+ChHop3.go\
+ChanReceiver.go\
+shadowing.go
 
 
 include $(GOROOT)/src/Make.pkg

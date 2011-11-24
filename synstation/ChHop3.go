@@ -22,6 +22,7 @@ type AssignedRB struct {
 	metric float64 //its metric
 }
 
+
 func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 
 	//pour trier les connections actives
@@ -36,7 +37,7 @@ func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 	numAll := 1   // number of RBs to allocate
 	NumTotalARB := 0
 	for rb := NChRes; rb < NCh; rb++ {
-		if dbs.IsInUse(rb) != nil {
+		if !dbs.IsRBFree(rb) {
 			NumTotalARB++
 		}
 	}
@@ -200,7 +201,7 @@ func FindFreeChannels(dbs *DBS, E *Emitter, ratio float64) []int {
 		SNRs[i] = E.GetSNRrb(i)
 	}
 
-	r := dbs.R.GetPos()
+	r := dbs.Pos
 
 	ICIMfunc(&r, E, SNRs[:], dbs.Color)
 
