@@ -2,7 +2,7 @@ package synstation
 
 import "math"
 //import "fmt"
-import rand "math/rand"
+import rand "rand"
 import "geom"
 //import "container/list"
 
@@ -100,7 +100,7 @@ func Init() {
 	Sync(D)
 
 	Dprim:=D
-	if OneAgentPerBEAM {Dprim/=3}
+	if OneAgentPerBEAM {Dprim/=mDf}
 
 
 	if NetLayout==HONEYCOMB{
@@ -140,22 +140,25 @@ func Init() {
 	if OneAgentPerBEAM {
 		for i:=0; i<Dprim;i++{		
 
+
 			switch ICIMtype{
 			case ICIMb:
 			Color:=Synstations[i].Color	
-			Synstations[i+Dprim].Color=Color		
-			Synstations[i+2*Dprim].Color=Color
+			for mdf:=1;mdf<mDf;mdf++{
+				Synstations[i+mdf*Dprim].Color=Color
+			}
 			case ICIMc:
 			Synstations[i].Color=0
-			Synstations[i+Dprim].Color=1
-			Synstations[i+2*Dprim].Color=2
+			for mdf:=1;mdf<mDf;mdf++{
+				Synstations[i+mdf*Dprim].Color=mdf
+			}
 
 			}
 
 			R:=Synstations[i].R.GetPos()
+
 			Synstations[i+Dprim].R.(*PhysReceiver).SetPos(R)	
 			Synstations[i+2*Dprim].R.(*PhysReceiver).SetPos(R)
-
 			Synstations[i+Dprim].DBS2= &Synstations[i]
 			Synstations[i+2*Dprim].DBS2= &Synstations[i]
 			Synstations[i+2*Dprim].DBS3= &Synstations[i+Dprim]

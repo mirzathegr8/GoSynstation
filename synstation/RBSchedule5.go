@@ -1,7 +1,7 @@
 package synstation
 
 import "sort"
-import rand "math/rand"
+import rand "rand"
 import "fmt"
 //import "geom"
 //import "math"

@@ -7,6 +7,11 @@ import "runtime"
 //import "draw"
 import "os"
 
+import  "runtime/pprof"
+import "flag"
+import "log"
+
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 
 // Data to save for output during simulation
 
@@ -16,7 +21,20 @@ var outDs outputData // one to sum and take mean over simulation
 
 func main() {
 
-	runtime.GOMAXPROCS(10)
+	
+    flag.Parse()
+    if *cpuprofile != "" {
+        f, err := os.Create(*cpuprofile)
+        if err != nil {
+            log.Fatal(err)
+        }
+        pprof.StartCPUProfile(f)
+        defer pprof.StopCPUProfile()
+    }
+
+
+
+	runtime.GOMAXPROCS(12)
 
 	s.Init()
 

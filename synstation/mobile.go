@@ -1,6 +1,6 @@
 package synstation
 
-import rand "math/rand"
+import rand "rand"
 import "math"
 
 

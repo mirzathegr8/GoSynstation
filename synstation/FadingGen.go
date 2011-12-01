@@ -2,7 +2,7 @@ package synstation
 
 //import c "cmath"
 import "math"
-import rand "math/rand"
+import rand "rand"
 
 const F = 1400 * 10e6 //fréquence du canal en Hz
 

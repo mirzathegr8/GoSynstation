@@ -1,7 +1,7 @@
 package synstation
 
 import "container/list"
-import rand "math/rand"
+import rand "rand"
 import "math"
 import "geom"
 //import "fmt"

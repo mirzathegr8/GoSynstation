@@ -4,7 +4,7 @@ import "math"
 import "geom"
 import "container/list"
 import "fmt"
-import rand "math/rand"
+import rand "rand"
 
 // number of signal id saved in the list of the ChanReceiver
 const SizeES = 2
@@ -514,9 +514,6 @@ func (s *shadowMap) evalShadowFadingDirect(d geom.Pos) float64 {
 	return math.Pow(10, val/10)
 }
 
-
-const PI2 = 2 * math.Pi
-const PI = math.Pi
 
 
 //Returns K value and base level received power (used for estimating potential on other channels)
