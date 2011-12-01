@@ -39,7 +39,7 @@ var idtmp int
 func (dbs *DBS) Init() {
 
 	for i := 0; i < NConnec; i++ {
-		dbs.ConnectionBank.PushBack(new(Connection))
+		dbs.ConnectionBank.PushBack(NewConnection())
 	}
 
 	dbs.Id=idtmp

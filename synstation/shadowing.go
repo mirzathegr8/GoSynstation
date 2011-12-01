@@ -3,7 +3,7 @@ package synstation
 
 import "math"
 import "geom"
-import rand "math/rand"
+import rand "rand"
 
 
 

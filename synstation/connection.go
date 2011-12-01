@@ -2,7 +2,7 @@ package synstation
 
 import "math"
 import "geom"
-import rand "math/rand"
+import rand "rand"
 //import cmath "math/cmplx"
 //import "fmt"
 
@@ -72,7 +72,6 @@ func (co *Connection) Interference(dbs *DBS) {
 	thres := dbs.pr[co.E.Id] / 10000
 
 	for m := range Mobiles {
-	//	go func(m int) {
 			co.gainM[m] = 0.0
 			if dbs.pr[m] > thres {
 
@@ -83,7 +82,7 @@ func (co *Connection) Interference(dbs *DBS) {
 				} else if theta < -math.Pi {
 					theta += PI2
 				}
-				theta = math.Abs(theta)
+				theta = math.Fabs(theta)
 				if theta < BeamAngle/20 {
 					co.gainM[m] = 10
 				} else {
@@ -92,43 +91,32 @@ func (co *Connection) Interference(dbs *DBS) {
 					if g > 0.44721 {
 						g = 0.44721
 					}
-
-					/*tmp:= (math.Float64bits(10) >>32 ) -1072632447;
-					tmp2:= math.Float64bits(-g* (math.Float64frombits(tmp)) + 1072632447 )
-					gain=20*math.Float64frombits( tmp2<<32)*/
+					
 					co.gainM[m] = 20 * math.Pow(10, -g)
 
 				}
 			}
-	//		co.paralel_sync <- 1
-	//	}(m)
 	}
-	//for _ = range Mobiles {	<-co.paralel_sync}
+
 
 	for rb := range co.Channels {
 		chR := &co.Channels[rb]
-		//go func(chR *ChanReceiver, rb int, co *Connection) {
 			chR.Clear()
 			for m := range Mobiles {
-				//if Mobiles[m].ARB[rb] {
+				if Mobiles[m].ARB[rb] {
 					// Evaluate Beam Gain	
 					f := dbs.Channels[rb].pr[m] * co.gainM[m]
 					chR.pr[m] = f
-				//	chR.Pint += f
-				/*	if f > chR.Pmax {
+					chR.Pint += f
+					if f > chR.Pmax {
 						chR.Pmax = f
 						chR.Signal[0] = m
-					}*/
-				//}
+					}
+				}
 			}
-			//co.paralel_sync<-1
-		//}(chR, rb,co)
-
-
 	}
-	//for _ = range co.Channels {  <- co.paralel_sync}
 	
-	co.SumInterference()
+	//co.SumInterference()
 
 }
 
@@ -177,15 +165,12 @@ func (co *Connection) Fading(dbs *DBS) {
 	K := dbs.GetK(co.E.Id)
 
 	for rb := range co.ff_R { //0; rb < NCh; rb++ {
-		//go func(rb int) {
 			a := co.filterAr[rb].nextValue(co.initz[rb]) //+ complex(K, 0)
 			ar := real(a) + K
 			ai := imag(a)
 			co.ff_R[rb] = (ar*ar + ai*ai) / (2 + K*K) //(real(a * cmath.Conj(a))) / (2 + K*K)
-			//co.paralel_sync <- 1
-		//}(rb)
 	}
-	//for _ = range co.ff_R {<-co.paralel_sync}
+
 
 	/*if FadingOnPint1 == Fading {
 		// Generate fading values for First Interferer
@@ -422,7 +407,7 @@ func (co *Connection) InitConnection(E *Emitter, v float64, Rgen *rand.Rand) {
 func NewConnection() (Conn *Connection) {
 
 	Conn = new(Connection)
-	Conn.paralel_sync = make(chan int, 10000)
+	Conn.paralel_sync = make(chan int)
 	return
 
 }

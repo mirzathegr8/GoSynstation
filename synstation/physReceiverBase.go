@@ -3,7 +3,7 @@ package synstation
 import "math"
 import "geom"
 import "container/list"
-import rand "math/rand"
+import rand "rand"
 
 // structure to store evaluation of interference at a location
 // this has to be initialized with PhysReceiver.Init() function to init memory
@@ -70,7 +70,7 @@ func (rx *PhysReceiverBase) Compute(Connec *list.List) {
 		if theta < 0 {	theta += PI2}	
 		rx.AoA[m]=theta
 
-		prRB := rx.pr[m] / math.Max(1.0,float64(E.GetNumARB()))
+		prRB := rx.pr[m] / math.Fmax(1.0,float64(E.GetNumARB()))
 		for rb, use := range Mobiles[m].ARB { 
 			if use {
 				rx.Channels[rb].pr[m] = prRB * E.Power[rb]

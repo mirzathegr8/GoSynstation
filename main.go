@@ -13,7 +13,7 @@ import "log"
 // Data to save for output during simulation
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
-var mpf = flag.String("mpf", "main.mpf", "write memory profile to file") 
+//var mpf = flag.String("mpf", "main.mpf", "write memory profile to file") 
 
 var outD outputData  // one to print
 var outDs outputData // one to sum and take mean over simulation
@@ -30,13 +30,13 @@ func main() {
         defer pprof.StopCPUProfile()
     }
 
-	var f *os.File
+	/*var f *os.File
 	if *mpf != "" {
       	  fo,err := os.Create(*mpf)
 		f=fo		
         	if err != nil { log.Fatal(err) }
         	
- 	   } 
+ 	   } */
 
 
 	runtime.GOMAXPROCS(18)
@@ -98,7 +98,7 @@ func main() {
 		s.GoFetchData()
 		readDataAndPrintToStd(true)
 		
-		pprof.WriteHeapProfile(f)
+	//	pprof.WriteHeapProfile(f)
 
 		s.GoRunAgent()
 		s.ChannelHop()
@@ -139,7 +139,7 @@ func main() {
 
 	//draw.Close()
 
-	        	f.Close()
+	        //	f.Close()
 }
 
 func readDataAndPrintToStd(save bool) {

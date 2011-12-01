@@ -1,7 +1,6 @@
 package draw
 
 import (
-	"image/color"
 	"synstation"
 )
 import "math"
@@ -86,7 +85,7 @@ func DrawReceptionField(dbs []synstation.DBS, name string) {
 	// -5 -115
 	// -9 -117
 
-	im := image.NewNRGBA(image.Rect(0, 0, Size, Size))
+	im := image.NewNRGBA( Size, Size)
 	for x := 0; x < Size; x++ {
 		for y := 0; y < Size; y++ {
 			var r, g, b float64
@@ -124,7 +123,7 @@ func DrawReceptionField(dbs []synstation.DBS, name string) {
 			if b > 255 {
 				b = 255
 			}
-			im.Set(x, y, color.NRGBA{uint8(r), uint8(g), uint8(b), uint8(255)})
+			im.Set(x, y, image.NRGBAColor{uint8(r), uint8(g), uint8(b), uint8(255)})
 			//im.Pix[y*im.Stride+x] = image.NRGBAColor{uint8(v*255),uint8(v*255),uint8(v*255),255}
 		}
 	}

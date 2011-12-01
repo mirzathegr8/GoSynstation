@@ -415,7 +415,7 @@ func (M *Emitter) FetchData() {
 			exp := M.SNRb
 
 			exp = math.Log2(1 + exp   )
-			M.MCSjoint = math.Min(5.0, 0.65*math.Floor(exp*3.0)/3.0)
+			M.MCSjoint = math.Fmin(5.0, 0.65*math.Floor(exp*3.0)/3.0)
 
 		}
 
