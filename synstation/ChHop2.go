@@ -86,7 +86,7 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 
 				nch := FindFreeChan(dbs, c.E, math.Pow10(SNRThresChHop/10.0))
 
-				if nch != 0 {
+				if nch != 0 {				
 					c.E.UnSetARB(0)
 					for l := 0; l < subsetSize; l++ {
 						c.E.SetARB(nch + l)
@@ -166,37 +166,31 @@ func EvalRatio(E EmitterInt) float64 {
 	return ratio
 }
 
-func FindFreeChan(dbs *DBS, E *Emitter, ratio float64) int {
-
-	nch := 0
+func FindFreeChan(dbs *DBS, E *Emitter, ratio float64) (nch int) {	
 
 	var SNRs [NCh]float64
 
-	for i := range SNRs {
-		SNRs[i] = E.GetSNRrb(i)
-	}
-
+	copy(SNRs[:],E.SNRrb[:])
 	r := dbs.Pos
-
 	ICIMfunc(&r, E, SNRs[:], dbs.Color)
 
 	for j := 1; j < NCh-subsetSize+1; j += subsetSize {
-		i := j // dbs.RndCh[j]
-		if !dbs.IsInFuturUse(i) {
+		rb := j // dbs.RndCh[j]
+		if !dbs.IsInFuturUse(rb) {			
 			snr := 0.0
 			for l := 0; l < subsetSize; l++ {
-				snr += SNRs[j+l]
+				snr += SNRs[rb+l]
 			}
-			snr /= float64(subsetSize)
+			snr /= float64(subsetSize)			
 			if snr > ratio {
 				ratio = snr
-				nch = i
+				nch = rb
 				//assign and exit
 			}
 		}
 	}
 
-	return nch
+	return 
 
 }
 

@@ -19,6 +19,7 @@ func Sync(k int) {
 
 func GoRunPhys() {
 
+
 	for i := range Synstations {
 		go func(i int) {
 			Synstations[i].RunPhys()

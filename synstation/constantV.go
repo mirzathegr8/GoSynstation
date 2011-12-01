@@ -1,10 +1,10 @@
 package synstation
 
 const BERThres= 0.15
-const SNRThresConnec= 0
+const SNRThresConnec= 5
 var ARBSchedulFunc=ChHopping2
 var estimateFactor=estimateFactor1
-const conservationFactor=0.2
+const conservationFactor=2
 const DiversityType=MRC
 const SetReceiverType=SELECTION
 const NetLayout= HONEYCOMB
@@ -30,7 +30,7 @@ const EnodeBClock = 6
 
 //var ICIMfunc=ICIMSplitEdgeCenter2
 var ICIMfunc=ICIMNone
-var PowerAllocation =  optimizePowerAllocationAgent //optimizePowerNone //    optimizePowerAllocationAgentRB//  
+var PowerAllocation =  optimizePowerNone //    optimizePowerAllocationAgentRB//  optimizePowerAllocationAgent //
 const PowerAgentFact = 0.8//0.8//0.2 
 const PowerAgentAlpha = 1 //0.8//0.2 
 

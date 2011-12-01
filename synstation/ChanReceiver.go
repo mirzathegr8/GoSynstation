@@ -6,7 +6,7 @@ import "fmt"
 
 
 // number of signal id saved in the list of the ChanReceiver
-const SizeES = 2
+const SizeES = 1
 
 // Structure to hold interference level for a RB, and multilevel interference with overlaping channels calculation
 // as well as a list of ordered strongest signal received 
@@ -17,6 +17,7 @@ type ChanReceiver struct {
 	Signal [SizeES]int // used to store ordered list of ids of most important emitters interfering in this RB
 
 	pr [M]float64 //stores received power with shadowing and power-level and distance atenuation
+	Pmax float64
 }
 
 //This function is called to reset the list of received signals
@@ -27,6 +28,7 @@ func (chR *ChanReceiver) Clear() {
 	}
 	chR.Pint = 0
 	chR.Pint1lvl = 0
+	chR.Pmax=0
 }
 
 //This function is called by the interference evaluation while summing the received power,
@@ -66,18 +68,34 @@ type RBsReceiver struct {
 
 func (rbs * RBsReceiver) SumInterference(){
 
-	for  i:= range rbs.Channels {
-		rbs.Channels[i].Clear()
+	for  rb:= range rbs.Channels {
+		rbs.Channels[rb].Clear()
 	}
 
-	for i := range rbs.Channels {
-		chR := &rbs.Channels[i]
-		for e := SystemChan[i].Emitters.Front(); e != nil; e = e.Next() {
+	/*for m := range Mobiles{
+	
+		for rb,use :=range Mobiles[m].ARB{
+			if use{
+				rbs.Channels[rb].Pint += rbs.Channels[rb].pr[m]
+				rbs.Channels[rb].Push(m, rbs.Channels[rb].pr[m])
+			}
+		}
+	}*/
+
+	for rb := range rbs.Channels {
+		chR := &rbs.Channels[rb]
+		Pmax:=-1.0
+		for e := SystemChan[rb].Emitters.Front(); e != nil; e = e.Next() {
 			c := e.Value.(*Emitter)
-			m := c.GetId()
+			m := c.Id
 			//chR.Pint1lvl += chR.pr[m]
 			chR.Pint += chR.pr[m]
-			chR.Push(m, chR.pr[m])
+			if Pmax< chR.pr[m]{
+				Pmax=chR.pr[m]
+				chR.Signal[0] = m
+			}
+			//chR.Push(m, chR.pr[m])
+
 		}
 	}
 

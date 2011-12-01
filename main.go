@@ -1,22 +1,45 @@
 package main
 
+import  "runtime/pprof"
 
 import "fmt"
 import s "synstation"
 import "runtime"
 //import "draw"
 import "os"
-
+import "flag"
+import "log"
 
 // Data to save for output during simulation
 
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+var mpf = flag.String("mpf", "main.mpf", "write memory profile to file") 
 
 var outD outputData  // one to print
 var outDs outputData // one to sum and take mean over simulation
 
 func main() {
 
-	runtime.GOMAXPROCS(10)
+    flag.Parse()
+    if *cpuprofile != "" {
+        f, err := os.Create(*cpuprofile)
+        if err != nil {
+            log.Fatal(err)
+        }
+        pprof.StartCPUProfile(f)
+        defer pprof.StopCPUProfile()
+    }
+
+	var f *os.File
+	if *mpf != "" {
+      	  fo,err := os.Create(*mpf)
+		f=fo		
+        	if err != nil { log.Fatal(err) }
+        	
+ 	   } 
+
+
+	runtime.GOMAXPROCS(18)
 
 	s.Init()
 
@@ -43,22 +66,21 @@ func main() {
 		fmt.Println("fut ",s.Mobiles[0].ARBfutur)*/
 
 		s.GoFetchData()
-	/*	fmt.Print("---- 3---- ", s.Mobiles[0].Diversity, " ")
-		fmt.Print( &s.Mobiles[0].MasterConnection)
-		fmt.Println()
-		fmt.Println("ARB ",s.Mobiles[0].ARB)
-		fmt.Println("fut ",s.Mobiles[0].ARBfutur)*/
+		/*	fmt.Print("---- 3---- ", s.Mobiles[0].Diversity, " ")
+			fmt.Print( &s.Mobiles[0].MasterConnection)
+			fmt.Println()
+			fmt.Println("ARB ",s.Mobiles[0].ARB)
+			fmt.Println("fut ",s.Mobiles[0].ARBfutur)*/
 
 		readDataAndPrintToStd(false)
 
 		s.GoRunAgent()
 
-
-	/*	fmt.Print("---- 4---- ", s.Mobiles[0].Diversity, " ")
-		fmt.Print( &s.Mobiles[0].MasterConnection)
-		fmt.Println()
-		fmt.Println("ARB ",s.Mobiles[0].ARB)
-		fmt.Println("fut ",s.Mobiles[0].ARBfutur)*/
+		/*	fmt.Print("---- 4---- ", s.Mobiles[0].Diversity, " ")
+			fmt.Print( &s.Mobiles[0].MasterConnection)
+			fmt.Println()
+			fmt.Println("ARB ",s.Mobiles[0].ARB)
+			fmt.Println("fut ",s.Mobiles[0].ARBfutur)*/
 
 		s.ChannelHop()
 		/*fmt.Print("---- 5---- ", s.Mobiles[0].Diversity, " ")
@@ -66,7 +88,6 @@ func main() {
 		fmt.Println()
 		fmt.Println("ARB ",s.Mobiles[0].ARB)
 		fmt.Println("fut ",s.Mobiles[0].ARBfutur)*/
-
 
 		//s.PowerC(s.Synstations[:]) //centralized PowerAllocation
 	}
@@ -76,6 +97,9 @@ func main() {
 		s.GoRunPhys()
 		s.GoFetchData()
 		readDataAndPrintToStd(true)
+		
+		pprof.WriteHeapProfile(f)
+
 		s.GoRunAgent()
 		s.ChannelHop()
 		//s.PowerC(s.Synstations[:]) // centralized PowerAllocation
@@ -84,14 +108,14 @@ func main() {
 	// Print some status data
 	outDs.Div(float64(s.Duration))
 	fmt.Println("Mean", outDs.String())
-	
+
 	os.Remove("Mean.mat")
 	outF, err := os.OpenFile("Mean.mat", os.O_WRONLY|os.O_CREATE, 0666)
 
 	fmt.Println(err)
 
 	outF.WriteString(fmt.Sprintln("# name: Mean\n# type: matrix\n# rows: ", 1, "\n# columns: ", 11))
-	outF.WriteString(fmt.Sprintln(outDs.String(), " "))	
+	outF.WriteString(fmt.Sprintln(outDs.String(), " "))
 	outF.WriteString("\n")
 	outF.Close()
 
@@ -104,7 +128,7 @@ func main() {
 	}
 	fmt.Println()
 
-	SaveToFile(s.Mobiles[:],s.Synstations[:])
+	SaveToFile(s.Mobiles[:], s.Synstations[:])
 
 	//And finaly close channels and background processes
 
@@ -115,8 +139,8 @@ func main() {
 
 	//draw.Close()
 
+	        	f.Close()
 }
-
 
 func readDataAndPrintToStd(save bool) {
 
@@ -162,9 +186,9 @@ func readDataAndPrintToStd(save bool) {
 		outChannel <- outD //sent data to print to  stdout			
 	}
 
-	if s.Tti%200 == 0 {
-		runtime.GC()
-	}
+	//if s.Tti%200 == 0 {
+	//	runtime.GC()
+	//}
 
 	if save {
 		outDs.Add(&outD)
@@ -173,5 +197,6 @@ func readDataAndPrintToStd(save bool) {
 		sendTrace(t)
 	}
 
-}
+	
 
+}

@@ -206,15 +206,15 @@ func (r *PhysReceiver) EvalSignalSNR(e *Emitter, rb int) (Rc *ChanReceiver, SNR 
 
 	Rc = &r.Channels[rb]
 	SNR = 0
-	K = r.kk[e.GetId()]
+	K = r.kk[e.Id]
 
 	if e.IsSetARB(rb) {
-		Pr = Rc.pr[e.GetId()]
+		Pr = Rc.pr[e.Id]
 
 	} else { //we supose we will get the same power out of the other channel (fading aside)
 		//RcO := &r.Channels[e.GetFirstRB()]
 		//Pr = RcO.pr[e.GetId()]
-		Pr = r.pr[e.GetId()]
+		Pr = r.pr[e.Id]
 
 	}
 	switch {
@@ -333,7 +333,7 @@ func (rx *PhysReceiver) Compute(Connec *list.List) {
 
 		for e := SystemChan[i].Emitters.Front(); e != nil; e = e.Next() {
 			c := e.Value.(*Emitter)
-			m := c.GetId()
+			m := c.Id
 			chR.Pint1lvl += chR.pr[m]
 			chR.Push(m, chR.pr[m], rx)
 

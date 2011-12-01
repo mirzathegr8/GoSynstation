@@ -51,8 +51,8 @@ func (rx *PhysReceiverBase) Compute(Connec *list.List) {
 
 	//*********************************
 	//Evaluate recevied power
-	for m,E := range Mobiles{	
-
+	for m := range Mobiles{	
+		E:=&Mobiles[m]
 		// inline minus
 		p := geom.Pos{E.X - rx.X, E.Y - rx.Y}
 		//Calculate Distance, Fading parameter K, and Fading
@@ -70,8 +70,8 @@ func (rx *PhysReceiverBase) Compute(Connec *list.List) {
 		if theta < 0 {	theta += PI2}	
 		rx.AoA[m]=theta
 
-		prRB := rx.pr[m] / float64(E.GetNumARB())
-		for rb, use := range E.ARB { 
+		prRB := rx.pr[m] / math.Max(1.0,float64(E.GetNumARB()))
+		for rb, use := range Mobiles[m].ARB { 
 			if use {
 				rx.Channels[rb].pr[m] = prRB * E.Power[rb]
 			}

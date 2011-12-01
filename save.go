@@ -47,11 +47,13 @@ type saveTraceItem struct {
 	save chan *s.Trace
 }
 
+
+
 func CreateStart(method func(t *s.Trace, i int) float64, m int, file string) saveTraceItem {
 	var a saveTraceItem
 	a.save = make(chan *s.Trace, 1000)
 	//go WriteDataToFile(method, m, a.save, file)
-	go save_binary_data(method, m, a.save, file)
+	go a.save_binary_data(method, m, file)
 	return a
 }
 
@@ -107,8 +109,8 @@ func WriteDataToFile(method func(t *s.Trace, i int) float64, m int, channel chan
 
 }
 
-func StopSave() {
-	for i := 0; i < len(saveData); i++ {
+func StopSave() {	
+	for i := 0; i < len(saveData); i++ {		
 		a := saveData[i]
 		a.Stop()
 	}
@@ -117,15 +119,18 @@ func StopSave() {
 }
 
 func sendTrace(t *s.Trace) {
-
-	for i := 0; i < len(saveData); i++ {
-		a := saveData[i]
-		a.save <- t
-	}
-
-	//
+	
+	go func(t *s.Trace){
+		for i := 0; i < len(saveData); i++ {
+			 saveData[i].save <- t
+			 <- t.Done
+		}
+		s.ReturnTrace <- t
+	}(t)
+	
 	fadingChan <- 1
 	<-fadingChan
+
 
 }
 
@@ -185,7 +190,7 @@ func sendTrace(t *s.Trace) {
 // Except for "data type" equal 5 that requires special treatment, these
 // old style "data type" value also cause the specific load/save functions
 // to be called. FILENAME is used for error messages.
-func save_binary_data(method func(t *s.Trace, i int) float64, m int, channel chan *s.Trace, file string) {
+func (sT *saveTraceItem) save_binary_data(method func(t *s.Trace, i int) float64, m int, file string) {
 
 	os.Remove(file + ".mat")
 	os, err := os.OpenFile(file+".mat", os.O_WRONLY|os.O_CREATE, 0666)
@@ -225,7 +230,7 @@ func save_binary_data(method func(t *s.Trace, i int) float64, m int, channel cha
 
 	var bb2 [4]byte
 
-	for t := range channel {
+	for t := range sT.save {
 
 		buffer := bytes.NewBufferString("")
 
@@ -236,6 +241,8 @@ func save_binary_data(method func(t *s.Trace, i int) float64, m int, channel cha
 		}
 
 		os.Write(buffer.Bytes())
+
+		t.Done <- 1
 
 	}
 

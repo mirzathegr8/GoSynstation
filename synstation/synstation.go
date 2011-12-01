@@ -96,11 +96,11 @@ func (dbs *DBS) IsRBFree(rb int) bool { //
 
 }
 
-func (dbs *DBS) IsInFuturUse(i int) bool { // 
+func (dbs *DBS) IsInFuturUse(rb int) bool { // 
 	used:=0
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
-		if c.E.IsFuturSetARB(i) {
+		if c.E.IsFuturSetARB(rb) {
 			used++
 			if used>= mDf{	
 				return true
@@ -157,7 +157,7 @@ func (dbs *DBS) checkLinkViability() {
 
 		if c.E.IsSetARB(0) {
 
-			Pr := dbs.GetPr(c.E.GetId(),0)
+			Pr := dbs.GetPr(c.E.Id,0)
 
 			if 10*math.Log10(Pr/WNoise) < SNRThresConnec-2 {
 				dbs.disconnect(e)
@@ -207,9 +207,10 @@ func (dbs *DBS) connectionAgent() {
 		for i, j := 0, NConnec-dbs.Connec.Len(); j >= 0 && i < SizeES; j-- {
 
 			//var i=0
-			Eval := dbs.EvalConnection(i)
+			
 			Rc:=dbs.Channels[0]
 			if Rc.Signal[i] >= 0 {
+				Eval := dbs.EvalConnection(i)
 				if !dbs.IsConnected(&Mobiles[Rc.Signal[i]].Emitter) {
 					if 10*math.Log10(Eval) > SNRThresConnec {
 						dbs.connect(&Mobiles[Rc.Signal[i]].Emitter, 0.001)
@@ -253,7 +254,7 @@ func (dbs *DBS) connectionAgent() {
 
 // return  quality indicator for unconnected mobiles
 func (dbs *DBS) EvalConnection(k int) float64{
- 	return dbs.pr[dbs.Channels[0].Signal[k]]
+ 	return dbs.pr[dbs.Channels[0].Signal[k]]/ WNoise
 }
 // return quality indicator for mobiles connected to other dbs
 func (dbs *DBS) EvalSignalConnection(rb int) (Eval float64) {
@@ -274,7 +275,7 @@ func (dbs *DBS) EvalSignalConnection(rb int) (Eval float64) {
 
 
 func (dbs *DBS) EvalSignalSNR(e *Emitter, rb int) (SNR float64) {
-	m := e.GetId()
+	m := e.Id
 	Pr:= dbs.Channels[rb].pr[m]
  	Pint := dbs.Channels[rb].Pint
 	Psig:=0.0
@@ -286,7 +287,7 @@ func (dbs *DBS) EvalSignalSNR(e *Emitter, rb int) (SNR float64) {
 
 func (dbs *DBS) EvalSignalBER(e *Emitter, rb int) (BER float64) {
 
-	K := dbs.kk[e.GetId()]
+	K := dbs.kk[e.Id]
 	SNR:=dbs.EvalSignalSNR(e,rb)
  		
 	sigma := SNR / (K + 1.0)

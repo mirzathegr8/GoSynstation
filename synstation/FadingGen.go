@@ -11,7 +11,7 @@ const cel = 3 * 10e8 //vitesse de propagation en m/s
 
 type FilterInt interface {
 	nextValue(input complex128) (output complex128)
-	nextValues(input []complex128) []complex128
+	nextValues(input []complex128)
 	InitRandom(Rgen *rand.Rand)
 	InitZ(z []complex128)
 	Copy() FilterInt
@@ -23,12 +23,12 @@ type PassNull struct{}
 func (p *PassNull) nextValue(input complex128) (output complex128) {
 	return 1 // to compensate  
 }
-func (p *PassNull) nextValues(input []complex128) []complex128 {
-	return input
+func (p *PassNull) nextValues(input []complex128) {
+	return 
 }
 
 func (p *PassNull) InitRandom(Rgen *rand.Rand) {}
-func (f *PassNull) InitZ(z []complex128)          {}
+func (f *PassNull) InitZ(z []complex128)       {}
 
 func (p *PassNull) Copy() (fo FilterInt) {
 	return p
@@ -42,6 +42,49 @@ type Filter struct {
 	b []complex128
 	z []complex128
 }
+
+type FilterBank struct {
+	a []complex128
+	b []complex128
+	z []complex128	
+	size int
+}
+
+
+func (f *FilterBank) Build(fo *Filter){
+	f.a=make([]complex128,len(fo.a))
+	f.b=make([]complex128,len(fo.b))
+	copy(f.a,fo.a)
+	copy(f.b,fo.b)
+	f.size=len(fo.z)
+	f.z=make([]complex128,len(fo.z)*NCh)
+	for i,z:=range fo.z{
+	for rb:=0;rb<NCh;rb++{
+		f.z[rb*f.size+i]=z	
+	}
+	}
+
+
+}
+
+func (f *FilterBank) nextValues(Input *[NCh]complex128) {
+	bk:=0
+	for k, input := range Input {
+		f.z[bk] = input 
+		for i := 1; i < len(f.a); i++ {
+			f.z[bk] -= f.a[i] * f.z[bk+i]
+		}
+		for i := 0; i < len(f.b); i++ {
+			Input[k] += f.b[i] * f.z[bk+i]
+		}
+		for i := f.size - 1; i > 0; i-- {
+			f.z[bk+i] = f.z[bk+i-1]
+		}
+		bk+=f.size
+	}
+	return 
+}
+
 
 func (f *Filter) nextValue(input complex128) (output complex128) {
 	f.z[0] = input //* f.a[0]
@@ -59,7 +102,7 @@ func (f *Filter) nextValue(input complex128) (output complex128) {
 }
 
 
-func (f *Filter) nextValues(Input []complex128) []complex128 {
+func (f *Filter) nextValues(Input []complex128)  {
 
 	for k, input := range Input {
 		f.z[0] = input //* f.a[0]
@@ -73,7 +116,7 @@ func (f *Filter) nextValues(Input []complex128) []complex128 {
 			f.z[i] = f.z[i-1]
 		}
 	}
-	return Input
+	return
 }
 
 
@@ -94,6 +137,8 @@ func (f *Filter) InitZ(z []complex128) {
 
 	return
 }
+
+
 
 
 func Butter(W float64) (f *Filter) {

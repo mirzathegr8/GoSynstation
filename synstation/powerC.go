@@ -42,7 +42,7 @@ func powerch(ch int, dbsA []DBS, maxMob int) {
 		for i, tx := 0, SystemChan[ch].Emitters.Front(); tx != nil; tx, i = tx.Next(), i+1 {
 			txx := tx.Value.(*Emitter)
 			for j := 0; j < D; j++ {
-				Gij[i][j] = dbsA[j].GetPr(txx.GetId(), 0)
+				Gij[i][j] = dbsA[j].GetPr(txx.Id, 0)
 				ConnectMat[i][j] = dbsA[j].IsConnected(txx)
 			}
 		}
