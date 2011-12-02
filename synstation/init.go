@@ -17,7 +17,7 @@ var Mobiles [M]Mob
 
 var Agents [D + M]Agent
 
-var CoherenceFilter FilterInt
+var CoherenceFilter *Filter
 
 func init() {
 

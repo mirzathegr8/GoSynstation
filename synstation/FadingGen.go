@@ -17,6 +17,29 @@ type FilterInt interface {
 	Copy() FilterInt
 }
 
+/*var RgenFading *rand.Rand  //used to generate fading 
+var ComplexRand chan complex128
+
+func init(){
+
+
+	RgenFading =rand.New(rand.NewSource(123813541954235))
+
+	ComplexRand = make(chan complex128, 100000)
+
+
+}
+
+func feedComplex(){
+
+	for true{
+		ComplexRand <- complex(RgenFading.NormFloat64(), RgenFading.NormFloat64())
+
+	}
+
+}
+*/
+
 
 type PassNull struct{}
 
@@ -30,7 +53,7 @@ func (p *PassNull) nextValues(input []complex128) {
 func (p *PassNull) InitRandom(Rgen *rand.Rand) {}
 func (f *PassNull) InitZ(z []complex128)       {}
 
-func (p *PassNull) Copy() (fo FilterInt) {
+func (p *PassNull) Copy() (fo *PassNull) {
 	return p
 }
 
@@ -41,7 +64,7 @@ type Filter struct {
 	a []complex128
 	b []complex128
 	z []complex128
-	io chan complex128
+//	io chan complex128
 }
 
 type FilterBank struct {
@@ -88,7 +111,7 @@ func (f *FilterBank) nextValues(Input *[NCh]complex128) {
 
 
 
-func (f *filter) gonext(){
+/*func (f *Filter) gonext(){
 
 	for input := range f.io{
 		f.z[0] = input //* f.a[0]
@@ -104,7 +127,7 @@ func (f *filter) gonext(){
 			f.z[i] = f.z[i-1]
 		}
 	}
-}
+}*/
 
 func (f *Filter) nextValue(input complex128) (output complex128) {
 	f.z[0] = input //* f.a[0]
@@ -164,7 +187,7 @@ func (f *Filter) InitZ(z []complex128) {
 func Butter(W float64) (f *Filter) {
 
 	f = new(Filter)
-	f.io=make(chan complex128)
+	//f.io=make(chan complex128)
 	// Prewarp to the band edges to s plane
 
 	var T = complex128(2) //      # sampling frequency of 2 Hz
@@ -218,7 +241,7 @@ func Butter(W float64) (f *Filter) {
 		f.b[j] *= complex(math.Sqrt(1/W) * .96, 0) //scale input to compensate for lowpass and have same output power as input
 	}
 
-	go f.gonext()
+	//go f.gonext()
 	return
 }
 
@@ -251,7 +274,7 @@ func Sreal(x []complex128) (y []complex128) {
 func Cheby(Rp, W float64) (f *Filter) {
 
 	f = new(Filter)
-	f.io=make(chan complex128)
+	//f.io=make(chan complex128)
 
 	var T = complex128(2) //      # sampling frequency of 2 Hz
 	Wt := math.Tan(math.Pi * W / 2.0)
@@ -316,7 +339,7 @@ func Cheby(Rp, W float64) (f *Filter) {
 
 	}
 
-	go f.gonext()
+	//go f.gonext()
 	return
 
 }
@@ -335,7 +358,7 @@ func (f *Filter) PassNull() {
 func MultFilter(f1, f2 *Filter) (fo *Filter) {
 
 	fo = new(Filter)
-	fo.io=make(chan complex128)
+	//fo.io=make(chan complex128)
 	fo.a = conv(f1.a, f2.a)
 	fo.b = conv(f1.b, f2.b)
 	lz := len(fo.a)
@@ -351,7 +374,7 @@ func MultFilter(f1, f2 *Filter) (fo *Filter) {
 		//f.z2[i] = 1 //init stream to non null
 	}
 	
-	go f.gonext()
+	//go fo.gonext()
 	return
 }
 
@@ -375,20 +398,20 @@ func conv(a, b []complex128) (y []complex128) {
 }
 
 
-func (f *Filter) Copy() (fb FilterInt) {
+func (f *Filter) Copy() (fb *Filter) {
 
-	fo := new(Filter)
-	fo.a = f.a
-	fo.b = f.b
-	fo.z = make([]complex128, len(f.z))
-	fo.io = make(chan complex128)
+	fb = new(Filter)
+	fb.a = f.a
+	fb.b = f.b
+	fb.z = make([]complex128, len(f.z))
+	//fb.io = make(chan complex128)
 
-	for i := range fo.z {
-		fo.z[i] = complex(1,0) //init stream to non null
+	for i := range fb.z {
+		fb.z[i] = f.z[i] //init stream to non null
 		//f.z2[i] = 1 //init stream to non null
 	}
 
-	go f.gonext()
-	return fo
+	//go fb.gonext()
+	return 
 }
 
