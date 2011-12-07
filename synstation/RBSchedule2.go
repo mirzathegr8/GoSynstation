@@ -80,15 +80,15 @@ func createDesc(ppO allocSet, pool []allocSet, Rgen *rand.Rand) {
 				if v2 >= 0 {
 					if v1 != v2 { //swap values
 
-						for ; rnd1 > 0 && pp[rnd] == v1; rnd1-- {
+						for ; rnd1 > 0 && pp[rnd1] == v1; rnd1-- {
 						}
-						for ; rnd2 > 0 && pp[rnd] == v2; rnd2-- {
+						for ; rnd2 > 0 && pp[rnd2] == v2; rnd2-- {
 						}
 
 						for ; rnd1 < nCh && pp[rnd1] == v1; rnd1++ {
 							pp[rnd1] = v2
 						}
-						for ; rnd2 < nCh && pp[rnd2] == v2; rnd1++ {
+						for ; rnd2 < nCh && pp[rnd2] == v2; rnd2++ {
 							pp[rnd2] = v1
 						}
 					}
