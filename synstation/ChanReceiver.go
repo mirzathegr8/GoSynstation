@@ -6,7 +6,7 @@ import "fmt"
 
 
 // number of signal id saved in the list of the ChanReceiver
-const SizeES = 1
+const SizeES = 4
 
 // Structure to hold interference level for a RB, and multilevel interference with overlaping channels calculation
 // as well as a list of ordered strongest signal received 
