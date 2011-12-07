@@ -186,9 +186,9 @@ func readDataAndPrintToStd(save bool) {
 		outChannel <- outD //sent data to print to  stdout			
 	}
 
-	//if s.Tti%200 == 0 {
-	//	runtime.GC()
-	//}
+	if s.Tti%200 == 0 {
+		runtime.GC()
+	}
 
 	if save {
 		outDs.Add(&outD)
