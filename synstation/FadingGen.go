@@ -17,28 +17,6 @@ type FilterInt interface {
 	Copy() FilterInt
 }
 
-/*var RgenFading *rand.Rand  //used to generate fading 
-var ComplexRand chan complex128
-
-func init(){
-
-
-	RgenFading =rand.New(rand.NewSource(123813541954235))
-
-	ComplexRand = make(chan complex128, 100000)
-
-
-}
-
-func feedComplex(){
-
-	for true{
-		ComplexRand <- complex(RgenFading.NormFloat64(), RgenFading.NormFloat64())
-
-	}
-
-}
-*/
 
 
 type PassNull struct{}
