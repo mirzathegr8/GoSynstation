@@ -363,7 +363,7 @@ func (M *Emitter) FetchData() {
 
 				if 100 < TransferRate {
 
-					M.Outage = 0
+					//M.Outage = 0
 					if TransferRate > 10000 {
 						TransferRate = 10000
 					}
@@ -423,6 +423,12 @@ func (M *Emitter) FetchData() {
 			syncval = M.BERtotal
 		}
 
+	}
+
+	if M.TransferRate>float64(100*nARB){
+		M.Outage=0
+	}else{
+		M.TransferRate=0	
 	}
 
 	M.meanTR.Add(M.TransferRate)
