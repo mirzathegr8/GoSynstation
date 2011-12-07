@@ -7,7 +7,6 @@ import "fmt"
 
 
 
-const uARBcost = 0.00000 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)
 
 func init() {
 
@@ -91,8 +90,8 @@ func ARBScheduler4(dbs *DBS, Rgen *rand.Rand) {
 	var Popul [popsize]allocSet
 	for i:=range Popul{ Popul[i].vect=PopulAr[i][:]}
 
-	var poolAr [(popsize+1)*generations][NCh]int
-	var pool [(popsize+1)*10]allocSet
+	var poolAr [popsize*11][NCh]int
+	var pool [popsize*11]allocSet
 	for i:=range pool{ pool[i].vect=poolAr[i][:]}
 
 	//First assign RB to best Metric
