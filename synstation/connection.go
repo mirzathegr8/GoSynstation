@@ -64,15 +64,12 @@ func (co *ConnectionS) Copy(cc *Connection) {
 func (co *Connection) GetE() *Emitter     { return co.E }
 func (co *Connection) GetMeanPr() float64 { return co.meanPr.Get() }
 
-func (co *Connection) EvalGains(dbs *DBS) {
+func (co *Connection) BitErrorRate(dbs *DBS) {
 
-	Orientation := dbs.AoA[co.E.GetId()]
-
-	//thres := dbs.pr[co.E.Id] / 1000
+	Orientation := dbs.AoA[co.E.GetId()]	
 
 	for m := range Mobiles {
-		co.gainM[m] = 0.0
-		//if dbs.pr[m] > thres {
+		co.gainM[m] = 0.0		
 
 		theta := dbs.AoA[m] - Orientation
 
@@ -93,28 +90,8 @@ func (co *Connection) EvalGains(dbs *DBS) {
 			}
 			co.gainM[m] = math.Pow(10, (-g+10)/10)
 		}
-
-		//co.gainM[m]= math.Fmax(0.5,10-8*theta*theta)
-
-		/*if theta < BeamAngle/20 {
-			co.gainM[m] = 10
-		} else {
-			theta /= BeamAngle
-			g := 0.34641 * theta
-			if g > 0.44721 {
-				g = 0.44721
-			}
-
-			co.gainM[m] = 20 * math.Pow(10, -g)
-
-		}*/
-		//}else{ co.gainM[m]=0}
+	
 	}
-
-}
-
-func (co *Connection) Interference(dbs *DBS) {
-	//co.evalInstantSINR(&dbs.PhysReceiverBase)
 
 
 	if co.Status == 0 {
@@ -159,106 +136,30 @@ func (co *Connection) Interference(dbs *DBS) {
 
 	}
 
-	//co.SumInterference()
+	
 
-}
-
-func (co *Connection) Fading(dbs *DBS) {
-	//co.evalInstantBER(dbs)
-
-	//Generate DopplerFading
-	//pass some values to decorelate
-
-	//refactored not functional
-	/*for i := 0; i < 50; i++ {
-		co.initz[i] = complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())
-	}
-	co.filterF.nextValues(co.initz[0:50])
-
-	for i := 0; i < NCh; i++ {
-		co.initz[i] = complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())
-	}
-	co.filterF.nextValues(co.initz[0:NCh])
-
-	/*	if FadingOnPint1 == Fading {
-		// Generate fading values for First Interferer
-		//
-		for i := 0; i < 50; i++ {
-			co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))
-		}
-
-		for i := 0; i < NCh; i++ {
-			co.initz[i] = co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))
-		}
-
-		for rb := 0; rb < NCh; rb++ {
-			a := co.filterAr[rb].nextValue(co.initz[rb]) + complex(K, 0)
-			co.Iff_R[rb] = (real(a * cmath.Conj(a))) / (2 + K*K)
-		}
-	}*/
 
 	for i := 0; i < 50*corrF; i++ {
-		co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))
-		//co.filterF.nextValue( <- co.ComplexRand)
-		//co.filterF.io <- complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())
-		//<- co.filterF.io
+		co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))	
 	}
 
 	for rb := range co.filterAr {
-		//co.initz[rb] = co.filterF.nextValue( <- co.ComplexRand)	
-		co.initz[rb] = co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))
-
-		//co.filterF.io <- complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())
-		//a:= <- co.filterF.io
-		//co.filterAr[rb].io <-a
+		co.initz[rb] = co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))		
 	}
-
-	/*if FadingOnPint1 == Fading {
-		// Generate fading values for First Interferer
-		//
-		for i := 0; i < 50; i++ {
-			co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))
-		}
-
-		for i := 0; i < NCh; i++ {
-			co.initz[i] = co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))
-		}
-
-		for rb := 0; rb < NCh; rb++ {
-			a := co.filterAr[rb].nextValue(co.initz[rb]) + complex(K, 0)
-			co.Iff_R[rb] = (real(a * cmath.Conj(a))) / (2 + K*K)
-		}
-	}*/
-
-}
-
-func (co *Connection) Fading2(K float64) {
-
-	//K := dbs.GetK(co.E.Id)
-
-	for rb := range co.ff_R { //0; rb < NCh; rb++ {
+	
+	for rb := range co.ff_R { 
 		co.initz[rb] = co.filterAr[rb].nextValue(co.initz[rb])
 	}
-	for rb := range co.ff_R {
-		//a := <- co.filterAr[rb].io 
+	K:=dbs.kk[co.E.Id]
+	for rb := range co.ff_R {	
 		ar := real(co.initz[rb]) + K
 		ai := imag(co.initz[rb])
 		co.ff_R[rb] = (ar*ar + ai*ai) / (2 + K*K) //(real(a * cmath.Conj(a))) / (2 + K*K)
 	}
-	/*K := dbs.GetK(co.E.Id)
 
-	co.filterAr.nextValues(&co.initz) 	
 
-	var ar,ai float64
 
-	for rb, v := range co.initz {
-		ar= real(v) + K
-		ai = imag(v) 
-		co.ff_R[rb] = (ar*ar+ai*ai) / (2 + K*K)
-	}*/
-}
 
-func (co *Connection) SNR(dbs *DBS) {
 	var touch bool
 
 	for rb, use := range co.E.ARB {
@@ -304,15 +205,9 @@ func (co *Connection) SNR(dbs *DBS) {
 		co.meanBER.Add(1)
 	}
 
-}
 
-func (co *Connection) BitErrorRate(dbs *DBS) {
 
-	co.EvalGains(dbs)
-	co.Interference(dbs)
-	co.Fading(dbs)
-	co.Fading2(dbs.kk[co.E.Id])
-	co.SNR(dbs)
+	
 	co.Status = 1 //let mobile set master state		
 	co.E.AddConnection(co, dbs)
 
@@ -355,32 +250,9 @@ func (co *Connection) InitConnection(E *Emitter, v float64, Rgen *rand.Rand) {
 	for i := 0; i < NCh; i++ {
 		co.filterAr[i] = C.Copy()
 	}
-	//	co.filterAr.Build(C)
+	
 
-	// initalize filters : sent some values to prevent having empty values z^-n in filters 
-	// 1.5/DopplerF gives a good number of itterations to decorelate initial null variables
-	// and set the channel to a steady state		
-
-	//refactored not functional
-	/*for l := 0; l < int(2.5/DopplerF); l++ {
-
-
-		// for speed optimization, decorelation samples or not used, it makes little difference 
-		for i := 0; i < 50; i++ {
-			co.initz[i] = complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())
-		}
-		co.filterF.nextValues(co.initz[0:50])
-
-		for i := 0; i < NCh; i++ {
-			co.initz[i] = complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())
-		}
-		co.filterF.nextValues(co.initz[0:NCh])		
-
-		co.filterAr.nextValues(&co.initz)
-
-
-	}
-
+	/*
 	if FadingOnPint1 == Fading {
 			co.IfilterAr.Build(C)	
 
@@ -411,30 +283,10 @@ func (co *Connection) InitConnection(E *Emitter, v float64, Rgen *rand.Rand) {
 
 		// for speed optimization, decorelation samples or not used, it makes little difference 
 		for i := 0; i < 50; i++ {
-			//co.filterF.nextValue( <- co.ComplexRand)
-
-			co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))
-			//co.filterF.io <- complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())
-			//<-co.filterF.io
-		}
-		//for rb := 0; rb < NCh; rb++ {
-
-		//co.filterF.io <- complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())
-		//a:= <- co.filterF.io
-		//co.filterAr[rb].io <- a
-		//<- co.filterAr[rb].io
-		//}
-
-		//for rb := range co.ff_R { //0; rb < NCh; rb++ {
-		//	go func(rb int) {
-		//	co.filterAr[rb].nextValue(co.initz[rb])
-		//		co.paralel_sync <- 1
-		//	}(rb)
-		//}
-		//for _ = range co.ff_R {<-co.paralel_sync}
+			co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))			
+		}		
 
 		for i := 0; i < NCh; i++ {
-			//co.filterAr[i].nextValue(co.filterF.nextValue(<- co.ComplexRand))
 			co.filterAr[i].nextValue(co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())))
 		}
 
@@ -467,20 +319,10 @@ func (co *Connection) InitConnection(E *Emitter, v float64, Rgen *rand.Rand) {
 }
 
 func NewConnection() (Conn *Connection) {
-
 	Conn = new(Connection)
-	//Conn.ComplexRand = make(chan complex128, 10000)
-	//Conn.Rgen = rand.New(rand.NewSource(rand.Int63() ) )
-	//go Conn.feedComplex()
 	return
-
 }
 
-/*func CreateConnection(E *Emitter, v float64, Rgen *rand.Rand) *Connection {
-	Conn := new(Connection)
-	Conn.InitConnection(E, v, Rgen)
-	return Conn
-}*/
 
 func (co *Connection) GetLogMeanBER() float64 {
 	return math.Log10(co.meanBER.Get() + 1e-10) //prevent saturation
@@ -503,14 +345,4 @@ func estimateFactor1(dbe *DBS, E *Emitter) (o float64) {
 	return
 
 }
-
-/*func (co *Connection) feedComplex(){
-
-	for true{
-		co.ComplexRand <- complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())
-	}
-
-}*/
-
-//   Reformatted by   lerouxp    Thu Dec 1 18:42:31 EST 2011
 
