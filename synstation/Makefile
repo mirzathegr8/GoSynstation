@@ -29,7 +29,8 @@ ChHop1.go\
 icim.go\
 ChHop3.go\
 ChanReceiver.go\
-shadowing.go
+shadowing.go\
+RBScheduleSDMA.go
 
 
 include $(GOROOT)/src/Make.pkg
