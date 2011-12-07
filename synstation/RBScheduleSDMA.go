@@ -24,7 +24,7 @@ continue
 */
 
 type SDMA_alloc struct {
-	vect *[mDf][NCh]int
+	vect [mDf][NCh]int
 	subSize [mDf]int
 }
 
@@ -69,25 +69,23 @@ func ARBSchedulerSDMA(dbs *DBS, Rgen *rand.Rand) {
 		return
 	}
 
-	var PopulAr [popsize][mDf][NCh]int
-	var Popul [popsize]SDMA_alloc 
-	for i := range Popul {
-		Popul[i].vect = &PopulAr[i]
-	}
-
-	var poolAr [(popsize + 1) * generations][mDf][NCh]int
-	var pool [(popsize + 1) * 10]SDMA_alloc 
-	for i := range pool {
-		pool[i].vect = &poolAr[i]
-	}
+	var PopulAr [popsize]SDMA_alloc
+	var poolAr [popsize * (10+1)]SDMA_alloc
+	
 
 	// create the initial random partitions on mDf levels
 	for i := 0; i < popsize; i++ {
 
 		//first, create subgroups
 		var subGroups [mDf][NConnec]int
-		a := Rgen.Perm(Nmaster)
+		for s:=0;s<mDf;s++{
+			for c:=0;c<NConnec;c++{
+				subGroups[s][c]=-1
+			}
+		}
 
+		a := Rgen.Perm(Nmaster)
+		
 		var k,l int
 		for _, v := range a {			
 			subGroups[k][l] = v
@@ -95,32 +93,45 @@ func ARBSchedulerSDMA(dbs *DBS, Rgen *rand.Rand) {
 			if k>=mDf {k=0; l++}
 			
 		}
+	
+	//fmt.Println(Nmaster)
+	
+	//fmt.Println(subGroups)
 		
 
 		for s := 0; s < mDf; s++ {
 			
-			NSubMaster := Nmaster/mDf + int(math.Ceil( float64((Nmaster - i)%mDf)/float64(mDf)))
+			NSubMaster := Nmaster/mDf +
+	 int(math.Ceil( float64(Nmaster%mDf-s) /float64(mDf) ))
 			
-			nbrb := int(float64(NCh) / (float64(NSubMaster)))
+			nbrb := 4//int(float64(NCh) / (float64(NSubMaster))) /5
+			//if nbrb==0 {nbrb=1}
 			a := Rgen.Perm(NSubMaster)
 			//expand
-			pp := &Popul[i].vect[s]
-			Popul[i].subSize[s]=NSubMaster
+			pp := &PopulAr[i].vect[s]
+			PopulAr[i].subSize[s]=NSubMaster
 			// first dealocate everything
 			for j := 0; j < NCh; j++ {
 				pp[j] = -1
 			}
 			//second alocate contiguous chanel subsets
+
+			if NSubMaster>0{			
+
+			shift:= Rgen.Intn((NCh-NSubMaster*nbrb)/NSubMaster-1)
 			for j := 0; j < NSubMaster; j++ {
-				index := int(float64(NCh) / float64(NSubMaster) * float64(j))
+				index := int(float64(NCh) / float64(NSubMaster) * float64(j)) 
 				for k := 0; k < nbrb; k++ {
-					pp[index+k] = subGroups[s][a[j]]
+					pp[index+k+shift] = subGroups[s][a[j]] 
 				}
-			}
+			}}
 
 		}
+
+		//fmt.Println(Popul[i].vect, Popul[i].subSize)
 	}
 
+	
 
 
 	// TODO
@@ -128,14 +139,13 @@ func ARBSchedulerSDMA(dbs *DBS, Rgen *rand.Rand) {
 	for gen := 0; gen < generations; gen++ {
 
 		for j := 0; j < popsize; j++ {
-			createDescSDMA(Popul[j], pool[j*10:(j+1)*10], Rgen)
+			createDescSDMA(&PopulAr[j], poolAr[j*10:(j+1)*10], Rgen)
 		}
 
-		for i := range Popul {
-			for s := 0; s < mDf; s++ {
+		for i := range PopulAr[:] {
 				//copy(pool[popsize*10+i].vect[s], Popul[i].vect[s])
-				pool[popsize*10+i].vect[s]=Popul[i].vect[s]
-			}
+				poolAr[popsize*10+i]= PopulAr[i]
+			
 		}
 
 		//select the new population
@@ -143,21 +153,21 @@ func ARBSchedulerSDMA(dbs *DBS, Rgen *rand.Rand) {
 
 		for i := 0; i < popsize*11; i++ {
 			for s := 0; s < mDf; s++ {
-				pool[i].vect[s][0] = -1
+				poolAr[i].vect[s][0] = -1
 			}
-			metricpool[i] = MetricSDMA(pool[i].vect,&SNRrbAll, &Pr, MasterConnec[0:Nmaster])
+			metricpool[i] = MetricSDMA(&poolAr[i].vect,&SNRrbAll, &Pr, MasterConnec[0:Nmaster])
 		}
 
 		//find the best 100
 		S := initSequence(metricpool[:])
 		sort.Sort(S)
-		for i := 0; i < len(Popul); i++ {
-			Popul[i] = pool[S.index[i]]
+		for i := 0; i < len(PopulAr); i++ {
+			PopulAr[i] = poolAr[S.index[i]]
 		}
 
 	}
 
-	AL := Popul[0].vect
+	AL := &PopulAr[0].vect
 
 	//fmt.Println(Nmaster, AL)
 
@@ -263,6 +273,14 @@ func MetricSDMA(AL *[mDf][NCh]int, SNRrbAll *[NConnec][NCh]float64, Pr *[NConnec
 
 		metric += math.Log2(1 + metricM[v])/math.Log2(1+m_m+0.0001)
 	}
+	//add cost for unused RB
+	for rb:=0;rb<NCh;rb++{
+		s:=0	
+		for ;s<mDf;s++{
+			if AL[s][rb]>-1 { break}
+		}
+		if s==mDf {metric+= uARBcost}
+	}
 
 	return 
 }
@@ -286,22 +304,25 @@ func AllocateSDMA(ALv *[mDf][NCh]int, MasterMobs []*Emitter) {
 
 }
 
-func createDescSDMA(ppO SDMA_alloc, pool []SDMA_alloc, Rgen *rand.Rand) {
+func createDescSDMA(ppO *SDMA_alloc, pool []SDMA_alloc, Rgen *rand.Rand) {
 
 	nCh := len(ppO.vect)
 
-	for s := 0; s < mDf; s++ {
+	
 
-		for i := 0; i < 10; i++ {
+	for i := 0; i < 10; i++ {
 
-			//copy
-
-			//copy(pool[i].vect[s], ppO.vect[s]) // copies value since arraytype
-			pool[i].vect[s]= ppO.vect[s]
+		//copy
+		pool[i]= *ppO
 			
+		//for each branch modify 
+		for s := 0; s < mDf; s++ {
+
 			pp := pool[i].vect[s][:] //short name to consider that array descendant
-			//modify
+
 			if pool[i].subSize[s]>0{			
+
+			//modify :
 			//take a random location
 			v := -1
 			rnd := 0
@@ -320,7 +341,7 @@ func createDescSDMA(ppO SDMA_alloc, pool []SDMA_alloc, Rgen *rand.Rand) {
 					}
 					if rnd < nCh { //copy prev or next
 						a := Rgen.Float64()
-						if a < .5 {
+						if a < .9 {
 							pp[rnd] = pp[rnd-1]
 						} else {
 							pp[rnd-1] = pp[rnd]
@@ -332,7 +353,7 @@ func createDescSDMA(ppO SDMA_alloc, pool []SDMA_alloc, Rgen *rand.Rand) {
 					}
 					if rnd > 0 {
 						a := Rgen.Float64()
-						if a < .5 {
+						if a < .9 {
 							pp[rnd] = pp[rnd+1]
 						} else {
 							pp[rnd+1] = pp[rnd]
@@ -388,12 +409,12 @@ func createDescSDMA(ppO SDMA_alloc, pool []SDMA_alloc, Rgen *rand.Rand) {
 
 	for i := 0; i < 10; i++ {
 
-		//copy		
+		
 	
 		if pool[i].subSize[b1] >0 && pool[i].subSize[b2]>0 {
 
-		pp1 := pool[i].vect[b1] //short name to consider that array descendant
-		pp2 := pool[i].vect[b2] //short name to consider that array descendant
+		pp1 := pool[i].vect[b1][:] //short name to consider that array descendant
+		pp2 := pool[i].vect[b2][:] //short name to consider that array descendant
 		//modify
 
 		
@@ -436,4 +457,5 @@ func createDescSDMA(ppO SDMA_alloc, pool []SDMA_alloc, Rgen *rand.Rand) {
 }
 
 //   Reformatted by   lerouxp    Tue Dec 6 11:01:19 EST 2011
+
 
