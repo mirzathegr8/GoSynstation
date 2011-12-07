@@ -187,8 +187,6 @@ func (dbs *DBS) RunAgent() {
 		dbs.connectionAgent()
 		ARBSchedulFunc(dbs, dbs.Rgen)
 		
-		
-		
 		//dbs.optimizePowerAllocationSimple()
 	}
 	PowerAllocation(dbs)

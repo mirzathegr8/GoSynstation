@@ -191,7 +191,7 @@ func (c *Connection) evalInstantBER(E *Emitter, rx *PhysReceiver, dbs *DBS) {
 
 	//c.SNR = 0 //reset
 
-	K := rx.GetK(E.GetId())
+	K := rx.kk[E.Id]
 
 	//Generate DopplerFading
 	//pass some values to decorelate

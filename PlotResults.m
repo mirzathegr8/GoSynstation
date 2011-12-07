@@ -61,3 +61,5 @@ hold on;
 #'Fairness square error2'
 #tm=(tt-median(tt));
 #sum(tm(tm<0).^2)
+
+end
