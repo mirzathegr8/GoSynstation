@@ -1,8 +1,10 @@
-
+function PlotResults(c,fign)
 
 figure(1+fign);
 load TransferRate.mat ;
+TransferRate(isnan(TransferRate))=0;
 plot(sort(sum(TransferRate,2)/size(TransferRate,2)*1000/1e6),c);
+axis([0 size(TransferRate,1)]);
 %ylabel ("capacity")
 xlabel("mobiles")
 hold on;
@@ -18,22 +20,27 @@ hold on;
 figure(3+fign);
 
 load SNR.mat
+SNR(isnan(SNR))=0;
+SNR(isinf(SNR))=0;
 load NumARB.mat
 %plot(10*log10( sort(mean( SNR./(NumARB+0.000001) .* (NumARB>0)  ,2 )      )   ),c)
-plot(10*log10( sort(mean( SNR ,2 )      )   ),c)
+plot(10*log10( sort(mean( SNR ,2 )      )   ),c);
+axis([0 size(TransferRate,1)]);
 hold on;
 
 figure(4+fign);
 
 load InstSNR.mat
 load NumARB.mat
-%plot(10*log10( sort(mean( SNR./(NumARB+0.000001) .* (NumARB>0)  ,2 )      )   ),c)
-plot(10*log10( sort(mean( InstSNR ,2 )      )   ),c)
+%plot(10*log10( sort(mean( SNRs./(NumARB+0.000001) .* (NumARB>0)  ,2 )      )   ),c)
+plot(10*log10( sort(mean( InstSNR ,2 )      )   ),c);
+axis([0 size(TransferRate,1)]);
 hold on;
 
 figure(6+fign);
 load Ptxr.mat;
 plot(sort(mean(Ptxr,2)),c);
+axis([0 size(TransferRate,1)])
 hold on;
 
 
@@ -41,6 +48,7 @@ figure(5+fign);
 load NumARB.mat;
 [V,I]=sort(mean(NumARB,2));
 plot(V,c);
+axis([0 size(TransferRate,1)])
 hold on;
 
 #figure(5);
@@ -57,3 +65,5 @@ hold on;
 #'Fairness square error2'
 #tm=(tt-median(tt));
 #sum(tm(tm<0).^2)
+
+end
