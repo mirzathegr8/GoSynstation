@@ -104,8 +104,8 @@ func ARBSchedulerSDMA(dbs *DBS, Rgen *rand.Rand) {
 			NSubMaster := Nmaster/mDf +
 	 int(math.Ceil( float64(Nmaster%mDf-s) /float64(mDf) ))
 			
-			nbrb := 4//int(float64(NCh) / (float64(NSubMaster))) /5
-			//if nbrb==0 {nbrb=1}
+			nbrb := int(float64(NCh) / (float64(NSubMaster))) /2
+			if nbrb==0 {nbrb=1}
 			a := Rgen.Perm(NSubMaster)
 			//expand
 			pp := &PopulAr[i].vect[s]
@@ -118,7 +118,7 @@ func ARBSchedulerSDMA(dbs *DBS, Rgen *rand.Rand) {
 
 			if NSubMaster>0{			
 
-			shift:= Rgen.Intn((NCh-NSubMaster*nbrb)/NSubMaster-1)
+			shift:= Rgen.Intn( (NCh-NSubMaster*nbrb)/ NSubMaster - 1 )
 			for j := 0; j < NSubMaster; j++ {
 				index := int(float64(NCh) / float64(NSubMaster) * float64(j)) 
 				for k := 0; k < nbrb; k++ {
@@ -155,7 +155,9 @@ func ARBSchedulerSDMA(dbs *DBS, Rgen *rand.Rand) {
 			for s := 0; s < mDf; s++ {
 				poolAr[i].vect[s][0] = -1
 			}
-			metricpool[i] = MetricSDMA(&poolAr[i].vect,&SNRrbAll, &Pr, MasterConnec[0:Nmaster])
+
+			ALtmp:=poolAr[i].vect
+			metricpool[i] = MetricSDMA(&ALtmp,&SNRrbAll, &Pr, MasterConnec[0:Nmaster])
 		}
 
 		//find the best 100
@@ -167,11 +169,14 @@ func ARBSchedulerSDMA(dbs *DBS, Rgen *rand.Rand) {
 
 	}
 
-	AL := &PopulAr[0].vect
+	ALtmp := PopulAr[0].vect
+	//for trimming	
+	MetricSDMA(&ALtmp,&SNRrbAll, &Pr, MasterConnec[0:Nmaster])
 
-	//fmt.Println(Nmaster, AL)
+	//fmt.Println("before ",PopulAr[0].vect)
+	//fmt.Println("after ", ALtmp)
 
-	AllocateSDMA(AL, MasterMobs[0:Nmaster])
+	AllocateSDMA(&ALtmp, MasterMobs[0:Nmaster])
 
 }
 
@@ -256,7 +261,42 @@ func MetricSDMA(AL *[mDf][NCh]int, SNRrbAll *[NConnec][NCh]float64, Pr *[NConnec
 		}
 	}
 
-	// rememeber the number of allocated RB with the porposed allocation
+
+
+	//Trim	
+	
+/*	for s:=0;s<mDf;s++{
+		for rb:=0;rb<NCh; {
+			v:=AL[s][rb]
+			if v>-1	{
+			//find max
+				max:=SNRres[v][rb]
+				s_m :=rb
+				rb2:=rb
+				for ;rb2<NCh && AL[s][rb2]==v;rb2++{
+					if max<SNRres[v][rb2] {max=SNRres[v][rb2]; s_m = rb2}
+				}
+				rb3:=s_m+1
+				for ;rb3<rb2;rb3++{
+					if SNRres[v][rb3] < max/50 {break}
+				}
+				for ;rb3<rb2;rb3++{
+					AL[s][rb3]=-1
+				}
+
+				for rb3 =s_m-1;rb3>=rb;rb3--{
+					if SNRres[v][rb3] < max/50 { break}
+				}
+				for rb3 =s_m-1;rb3>=rb;rb3--{	AL[s][rb3]=-1}
+			
+				//fmt.Println(rb,rb2)
+				rb=rb2
+			}else {rb++}
+		}
+	}*/
+
+
+	// eval capacity per mobiles
 	for m, ALsub := range AL {
 		for rb, v := range ALsub {
 			if v > -1 {
@@ -265,22 +305,25 @@ func MetricSDMA(AL *[mDf][NCh]int, SNRrbAll *[NConnec][NCh]float64, Pr *[NConnec
 		}
 	}
 
-	//fmt.Println(Pr)	
-	//fmt.Println(metricM)			
 
-	for v,C:=range MasterConn{
+	mean_mm:=0.0
+	for v,C :=range MasterConn{
 		m_m := C.E.GetMeanTR()	
-
-		metric += math.Log2(1 + metricM[v])/math.Log2(1+m_m+0.0001)
-	}
+		mean_mm+=m_m
+		//o := math.Fmax(1,float64(C.E.Outage-100))
+		//* math.Log2(1+float64(o)) 
+		metric += math.Log2(1 + metricM[v])  / math.Log2(1 + m_m + 0.0001)
+	}	
 	//add cost for unused RB
 	for rb:=0;rb<NCh;rb++{
 		s:=0	
 		for ;s<mDf;s++{
 			if AL[s][rb]>-1 { break}
 		}
-		if s==mDf {metric+= uARBcost}
+		if s==mDf {metric+= 1/math.Log2(1+mean_mm/float64(len(MasterConn))+0.0001)/NCh}
 	}
+
+	//fmt.Print(metric," ", len(MasterConn)," ")
 
 	return 
 }
@@ -341,10 +384,10 @@ func createDescSDMA(ppO *SDMA_alloc, pool []SDMA_alloc, Rgen *rand.Rand) {
 					}
 					if rnd < nCh { //copy prev or next
 						a := Rgen.Float64()
-						if a < .9 {
+						if a < .5 {
 							pp[rnd] = pp[rnd-1]
 						} else {
-							pp[rnd-1] = pp[rnd]
+							pp[rnd-1] = -1//pp[rnd]
 						}
 					}
 				} else if a < 0.50 { // or to the left						
@@ -353,10 +396,10 @@ func createDescSDMA(ppO *SDMA_alloc, pool []SDMA_alloc, Rgen *rand.Rand) {
 					}
 					if rnd > 0 {
 						a := Rgen.Float64()
-						if a < .9 {
+						if a < .5 {
 							pp[rnd] = pp[rnd+1]
 						} else {
-							pp[rnd+1] = pp[rnd]
+							pp[rnd+1] = -1//pp[rnd]
 						}
 
 					}
