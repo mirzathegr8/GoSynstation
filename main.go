@@ -20,7 +20,7 @@ var outDs outputData // one to sum and take mean over simulation
 
 func main() {
 
-    flag.Parse()
+    flag.Parse()  // Scan the arg list and sets up flags 
     if *cpuprofile != "" {
         f, err := os.Create(*cpuprofile)
         if err != nil {
@@ -41,7 +41,12 @@ func main() {
 
 	runtime.GOMAXPROCS(18)
 
+
 	s.Init()
+
+/* Init() function is in init.go file (be careful with the capital "I" in Init() function, it is different from init() function). It initialize different parameters. s is of type package synstation. Package synstation is defined in synstation.go file. */
+
+ 
 
 	//draw.Init(s.M, s.D*s.NConnec) // init drawing system
 	//draw.DrawReceptionField(s.Synstations[:], "receptionLevel.png")
