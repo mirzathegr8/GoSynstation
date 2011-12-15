@@ -240,28 +240,25 @@ func (e *Emitter) AddConnection(c *Connection, dbs *DBS) {
 		e.SMaxBER = lber
 		e.SMinDist = d
 		e.SInstMaxBER = math.Log10(c.meanBER.Get() + 1e-40)
-		//e.SSNRb = c.meanSNR.Get()
+		
 		e.PrMaster = c.meanPr.Get()
 
 		//for test with selection diversity
-
 		if DiversityType == SELECTION {
 			sumSNRrb := 0.0
 			nARB := 0
 			for rb, use := range e.ARB {
+				if c.SNRrb[rb]>500 {c.SNRrb[rb]=500}				
 				e.SSNRrb[rb] = c.SNRrb[rb]
-				if use {
-					sumSNRrb += math.Exp(-c.SNRrb[rb] / betae)
-					//e.SSNRb += math.Exp(-c.SNRrb[rb] / betae)
+				if use {					
+					sumSNRrb += math.Exp(-c.SNRrb[rb] / betae)					
 					nARB++
 				}
 			}
-			sumSNRrb /= float64(nARB)
-			//if sumSNRrb > 0 && sumSNRrb < 1 {
-			e.SSNRb = -betae * math.Log(sumSNRrb)
-			//} else {
-			//	e.SSNRb = 0
-			//}
+			if nARB>0{
+				//sumSNRrb /= float64(nARB)
+				e.SSNRb = sumSNRrb//-betae * math.Log(sumSNRrb)
+			}			
 		}
 
 	}
@@ -271,18 +268,23 @@ func (e *Emitter) AddConnection(c *Connection, dbs *DBS) {
 		sumSNRrb := 0.0
 		nARB := 0
 		for rb, use := range e.ARB {
+			if c.SNRrb[rb]>500 {c.SNRrb[rb]=500}
+			//SNR 500 implies 256QAM 8 bits transmitted and is in any case maximum imaginable today. 
+			//however more than 500 SNR implies rounding error with exp and log leading to +Inf. so max = 500			
 			e.SSNRrb[rb] += c.SNRrb[rb]
-			if use && c.SNRrb[rb]>0{				
+			if e.SSNRrb[rb]>500 {e.SSNRrb[rb]=500}
+		
+			if use{
 				sumSNRrb += math.Exp(-c.SNRrb[rb] / betae)
-			//	e.SSNRb += math.Exp(-c.SNRrb[rb] / betae)
 				nARB++
 			}
+			
 		}
-		sumSNRrb /= float64(nARB)
-		//if sumSNRrb > 0 && sumSNRrb < 1 {		
-			bt := (betae * math.Log(sumSNRrb))
-			e.SSNRb += -bt
-		//}
+		if nARB>0{
+			//sumSNRrb /= float64(nARB)
+			//bt := betae * math.Log(sumSNRrb)
+			e.SSNRb += sumSNRrb//-bt
+		}
 	}
 
 }
@@ -387,13 +389,15 @@ func (M *Emitter) FetchData() {
 		//		M.InstSNR/=float64(M.GetNumARB());
 
 		effectSNR /= float64(nARB)
-		//if effectSNR > 0 && effectSNR<1{
 
 		if TransferRateTechnique == EFFECTIVESINR {
-			if M.SNRb > 0 {
-				//M.SNRb= -math.Log(effectSNR)
-				M.TransferRate = //EffectiveBW * float64(nARB) * math.Log2(1- betae*math.Log(effectSNR))
-					EffectiveBW * float64(nARB) * math.Log2(1+M.SNRb)
+			if M.SNRb > 0 {		
+				//divf:=	float64(nARB)
+				//if DiversityType == MRC { divf*=float64(M.Diversity)}
+				M.TransferRate = EffectiveBW * float64(nARB) * math.Log2(1 - betae*math.Log(effectSNR))
+				//	EffectiveBW * float64(nARB) * math.Log2(1+M.SNRb)
+				//EffectiveBW * divf * math.Log2(1 - betae * math.Log( M.SNRb/divf ))
+
 			} else {
 				M.SNRb = 0
 				M.TransferRate = 0.0
