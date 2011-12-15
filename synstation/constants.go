@@ -6,7 +6,7 @@ const Field = 6000 //length in meters
 
 const Duration =1000// in iterations 
 
-const M = 2000 //numbers of mobiles
+const M = 1000 //numbers of mobiles
 const D =  143// numbers of DBS
 
 //for M-QAM, km*km=M
@@ -16,14 +16,14 @@ const L1 = 2.0/km*(1.0-1.0/km)
 
 const beta=1 // SNR Gap
 
-const NRB=75
+const NRB=100
 const NTDMA=1
 const DivCh=1
 const NCh = NRB*NTDMA/DivCh + NChRes // number of channels
 const EffectiveBW =  90  * DivCh
 
 // Here we define the Coherence bandwith as a ratio of the total bandwith (20MHz)
-const corrF = 0.2
+const corrF = 0.5
 
 // 10 0 11 .1 12 .2 19 .5 37 .75
 const roverlap = 0.0 // ratio of overlaping of two adjacent channels

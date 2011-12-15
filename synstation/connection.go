@@ -318,6 +318,15 @@ func (co *Connection) InitConnection(E *Emitter, v float64, Rgen *rand.Rand) {
 
 }
 
+func (co *Connection) clear(){
+	// free some memory . perhaps need to rethink this and have a filterbank
+	for rb :=range co.filterAr {
+		co.filterAr[rb]=nil
+		co.IfilterAr[rb]=nil
+	}
+
+}
+
 func NewConnection() (Conn *Connection) {
 	Conn = new(Connection)
 	return

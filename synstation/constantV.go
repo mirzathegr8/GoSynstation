@@ -2,14 +2,14 @@ package synstation
 
 const BERThres= 0.15
 const SNRThresConnec= 0
-var ARBSchedulFunc=ARBSchedulerSDMA //ChHopping2//
-var estimateFactor=estimateFactor0
-const conservationFactor=0.2
-const DiversityType=MRC
+var ARBSchedulFunc=ChHopping2// ARBSchedulerSDMA //
+var estimateFactor=estimateFactor1
+const conservationFactor=2
+const DiversityType=SELECTION
 const SetReceiverType=BEAM
 const NetLayout= HONEYCOMB
 
-const TransferRateTechnique=    MCSJOINT //NormalTR  //EFFECTIVESINR//, MCSJOINT //NormalTR   , MCSJOINT
+const TransferRateTechnique=  EFFECTIVESINR//  MCSJOINT //NormalTR  //EFFECTIVESINR//, MCSJOINT //NormalTR   , MCSJOINT
 
 const ICIMtype= ICIMb
 
@@ -26,7 +26,7 @@ const ICIMdistRatio=0.3
 const mDf =1 // multiplies the number of eNodes for beamforming or SECTORED2 which creates one enode per sector  
 
 // The enodebclock, that sets the interval before reactivation
-const EnodeBClock = 6
+const EnodeBClock = 1
 
 //var ICIMfunc=ICIMSplitEdgeCenter2
 var ICIMfunc=ICIMNone
@@ -34,6 +34,6 @@ var PowerAllocation =      optimizePowerAllocationAgent // optimizePowerAllocati
 const PowerAgentFact = 0.8//0.8//0.2 
 const PowerAgentAlpha = 1 //0.8//0.2 
 
-var subsetSize=4
+var subsetSize=5
 
 const uARBcost = 0.10000 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)

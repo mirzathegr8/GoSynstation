@@ -76,6 +76,7 @@ func (dbs *DBS) FetchData() {
 
 func (dbs *DBS) disconnect(e *list.Element) {
 	dbs.Connec.Remove(e)
+	e.Value.(*Connection).clear()
 	dbs.ConnectionBank.PushBack(e.Value.(*Connection))
 	sens_disconnect++
 }
