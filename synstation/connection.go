@@ -99,7 +99,7 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 			chR := &co.Channels[rb]
 			chR.Clear()
 			for m, g := range co.gainM { //Mobiles {
-				if Mobiles[m].ARB[rb] {
+				if Mobiles[m].ARB[rb] && (m==co.E.Id || !dbs.IsConnectedMaster(co.E))  {
 					// Evaluate Beam Gain	
 					f := dbs.Channels[rb].pr[m] * g //co.gainM[m]
 					chR.pr[m] = f
@@ -119,7 +119,7 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 				chR.Clear()
 				for m, g := range co.gainM { //Mobiles {
 					//if g>0 {//dbs.pr[m] > thres {
-					if Mobiles[m].ARB[rb] {
+					if Mobiles[m].ARB[rb] && (m==co.E.Id || !dbs.IsConnectedMaster(co.E)) {
 						// Evaluate Beam Gain	
 						f := dbs.Channels[rb].pr[m] * g //co.gainM[m]
 						chR.pr[m] = f

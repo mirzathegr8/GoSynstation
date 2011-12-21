@@ -6,8 +6,8 @@ const Field = 6000 //length in meters
 
 const Duration =1000// in iterations 
 
-const M = 1000 //numbers of mobiles
-const D =  143// numbers of DBS
+const M = 2000 //numbers of mobiles
+const D =  75// numbers of DBS
 
 //for M-QAM, km*km=M
 const km = 4.0
@@ -31,7 +31,7 @@ const roverlap = 0.0 // ratio of overlaping of two adjacent channels
 // thermal noise per RB 121.45dBm normalized per maximum terminal power output 21dBm and divided for one TTI
 const WNoise = DivCh * 5.6885e-15 //7.1614e-16 // White noise at reciever //21.484e-16
 const NChRes = 1              //numbers of reserved channels, not used yet, but chan 0 must be reserved
-const NConnec = 40          // numbers of connections per dbs
+const NConnec = 75          // numbers of connections per dbs
 
 
 //const BERThres = 0.30 //0.16//0.4/log2*(16)
@@ -52,7 +52,7 @@ const (
 )
 
 //const BeamAngle = 1.1345 // for 120degre lobe (half lob size + 10% =65deg in rad)
-const BeamAngle = 1.1345
+
 //const SetReceiverType = BEAM
 // 
 const (
@@ -168,3 +168,35 @@ const (
 
 const PI2 = 2 * math.Pi
 const PI = math.Pi
+
+
+
+const TransferRateTechnique=  EFFECTIVESINR//  MCSJOINT //NormalTR  //EFFECTIVESINR//, MCSJOINT //NormalTR   , MCSJOINT
+
+const ICIMtype= ICIMb
+
+// ICIM Theta is for the moment deprecated,
+const ICIMTheta=false
+// ICIMdistRatio sets the ratio of distance (emiter-enode/neighboring enode) for reusing all RB in the cell's center
+const ICIMdistRatio=0.3
+
+
+// These two parameters allows arranging eNodeBs to colocate 3 into one and allow RB reuse
+// a hack is being used to prevent the 3 colocated enodes to connect more than once to one emitter
+// this is a work in progress and the architecture needs to be rethought TODO
+//const OneAgentPerBEAM =false // controls for beamforming or sectorisation the ability to reuse RB accross different beam
+
+
+
+
+// The enodebclock, that sets the interval before reactivation
+const EnodeBClock = 1
+
+//var ICIMfunc=ICIMSplitEdgeCenter2
+var ICIMfunc=ICIMNone
+var PowerAllocation =      optimizePowerAllocationAgent // optimizePowerAllocationAgentRB//  optimizePowerAllocationAgent // optimizePowerNone // 
+const PowerAgentFact = 0.8//0.8//0.2 
+const PowerAgentAlpha = 1 //0.8//0.2 
+
+
+const uARBcost = 0.10000 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)

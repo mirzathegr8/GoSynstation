@@ -138,6 +138,21 @@ func (dbs *DBS) IsConnected(tx *Emitter) bool {
 }
 
 
+func (dbs *DBS) IsConnectedMaster(tx *Emitter) bool {
+
+	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
+		c := e.Value.(*Connection)
+		if c.E == tx{
+			if  c.Status==0{
+			return true
+			}else{return false}
+		}
+	}
+	return false
+
+}
+
+
 func (dbs *DBS) RunAgent() {
 
 	dbs.checkLinkViability()
