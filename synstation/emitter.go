@@ -245,45 +245,18 @@ func (e *Emitter) AddConnection(c *Connection, dbs *DBS) {
 
 		//for test with selection diversity
 		if DiversityType == SELECTION {
-			sumSNRrb := 0.0
-			nARB := 0
-			for rb, use := range e.ARB {
-				if c.SNRrb[rb]>500 {c.SNRrb[rb]=500}				
+			for rb := range e.ARB {
 				e.SSNRrb[rb] = c.SNRrb[rb]
-				if use {					
-					sumSNRrb += math.Exp(-c.SNRrb[rb] / betae)					
-					nARB++
-				}
 			}
-			if nARB>0{
-				//sumSNRrb /= float64(nARB)
-				e.SSNRb = sumSNRrb//-betae * math.Log(sumSNRrb)
-			}			
 		}
 
 	}
 
 	// for maximal RC
 	if DiversityType == MRC {
-		sumSNRrb := 0.0
-		nARB := 0
-		for rb, use := range e.ARB {
-			if c.SNRrb[rb]>500 {c.SNRrb[rb]=500}
-			//SNR 500 implies 256QAM 8 bits transmitted and is in any case maximum imaginable today. 
-			//however more than 500 SNR implies rounding error with exp and log leading to +Inf. so max = 500			
+		for rb := range e.ARB {
 			e.SSNRrb[rb] += c.SNRrb[rb]
-			if e.SSNRrb[rb]>500 {e.SSNRrb[rb]=500}
-		
-			if use{
-				sumSNRrb += math.Exp(-c.SNRrb[rb] / betae)
-				nARB++
-			}
-			
-		}
-		if nARB>0{
-			//sumSNRrb /= float64(nARB)
-			//bt := betae * math.Log(sumSNRrb)
-			e.SSNRb += sumSNRrb//-bt
+			e.SSNRb+= math.Exp(-c.SNRrb[rb] / betae)
 		}
 	}
 
@@ -343,8 +316,8 @@ func (M *Emitter) FetchData() {
 	//beta:= 1.//1.5/ -(M.BERtotal*2.3026)
 
 	effectSNR := 0.0
+	minSNR :=100000000.0
 	nARB := 0
-
 	if M.Diversity == 0 {
 
 		M.MasterConnection = nil
@@ -354,29 +327,28 @@ func (M *Emitter) FetchData() {
 
 	} else {
 
+		M.MasterConnection.Status = 0 // flag the best connection as master
+
 		for rb := 1; rb < NCh; rb++ {
 
-			if M.IsSetARB(rb) {
+			if M.ARB[rb] {
 
-				TransferRate := EffectiveBW * math.Log2(1+beta*M.SNRrb[rb])
-
-				effectSNR += math.Exp(-M.SNRrb[rb] / betae)
-				nARB++
-
-				if 100 < TransferRate {
-
-					//M.Outage = 0
-					if TransferRate > 10000 {
-						TransferRate = 10000
-					}
-
-				} else {
-
-					TransferRate = 0
-
+				switch TRATETECH {
+					case OFDM :
+						effectSNR += math.Exp(-M.SNRrb[rb] / betae)
+					case SCFDM :
+						effectSNR += M.SNRrb[rb]
+					case NORMAL :
+						s := EffectiveBW*math.Log2(1+beta*M.SNRrb[rb])
+						s=math.Fmin(s,10000)
+						if s> 100{
+							effectSNR+=s
+						} 							
 				}
 
-				M.TransferRate += TransferRate
+				if minSNR> M.SNRrb[rb] {minSNR=M.SNRrb[rb]}		
+
+				nARB++
 
 				if M.InstSNR < M.SNRrb[rb] {
 					M.InstSNR = M.SNRrb[rb]
@@ -384,52 +356,41 @@ func (M *Emitter) FetchData() {
 			}
 		}
 
-		M.MasterConnection.Status = 0 // we are master
+		if nARB>0{
+		switch TRATETECH {
+			case OFDM2 :
+				//this hack is to prevent overflow in the exponential /logarithm leading otherwise to +Inf transferrate
+				// at high SINR the TR is anyways limited by the RB's lowest SINR
+				M.SNRb = -betae*math.Log(M.SNRb/(float64(nARB)*float64(M.Diversity)) )
+				if M.SNRb>600 {M.SNRb=minSNR}			
+				M.TransferRate = EffectiveBW * float64(M.Diversity) * float64(nARB) * math.Log2(1 + M.SNRb)
+				if M.TransferRate < float64(100*nARB) {M.TransferRate=0}			
 
-		//		M.InstSNR/=float64(M.GetNumARB());
-
-		effectSNR /= float64(nARB)
-
-		if TransferRateTechnique == EFFECTIVESINR {
-			if M.SNRb > 0 {		
-				//divf:=	float64(nARB)
-				//if DiversityType == MRC { divf*=float64(M.Diversity)}
-				M.TransferRate = EffectiveBW * float64(nARB) * math.Log2(1 - betae*math.Log(effectSNR))
-				//	EffectiveBW * float64(nARB) * math.Log2(1+M.SNRb)
-				//EffectiveBW * divf * math.Log2(1 - betae * math.Log( M.SNRb/divf ))
-
-			} else {
-				M.SNRb = 0
-				M.TransferRate = 0.0
-			}
-
-		} else if TransferRateTechnique == MCSJOINT {
-			/*divf:= 0.0
-			if DiversityType == MRC { divf =float64(nARB*M.Diversity)
-			} else {divf= float64(nARB)}
-
-			
-			exp:=0.0
-			if M.SNRb>0{
-			exp=  - betae*math.Log( M.SNRb/ divf )
-			}*/
-			divf:= float64(nARB)
-			M.TransferRate = divf *  180 * M.MCSjoint
-
-			exp := M.SNRb
-
-			exp = math.Log2(1 + exp   )
-			M.MCSjoint = math.Fmin(5.0, 0.65*math.Floor(exp*3.0)/3.0)
-
+			case OFDM :
+					//this hack is to prevent overflow in the exponential /logarithm leading otherwise to +Inf transferrate
+					// at high SINR the TR is anyways limited by the RB's lowest SINR
+				M.SNRb = -betae*math.Log(effectSNR/float64(nARB))
+				if M.SNRb>600 {M.SNRb=minSNR}			
+				M.TransferRate = EffectiveBW * float64(nARB) * math.Log2(1 + M.SNRb)
+				if M.TransferRate < float64(100*nARB) {M.TransferRate=0}	
+			case SCFDM :
+				effectSNR /= float64(nARB)
+				M.SNRb=effectSNR
+				M.TransferRate = EffectiveBW * float64(nARB) * math.Log2(1 + M.SNRb)			
+				if M.TransferRate < float64(100*nARB) {M.TransferRate=0}
+			case NORMAL :
+				M.SNRb=math.Pow(2,effectSNR/EffectiveBW/float64(nARB))-1					
+				M.TransferRate = effectSNR
 		}
 
 		if M.TransferRate != 0 {
 			syncval = M.BERtotal
 		}
+		}	
 
 	}
 
-	if M.TransferRate>float64(100*nARB){
+	if M.TransferRate > 100{
 		M.Outage=0
 	}else{
 		M.TransferRate=0	
@@ -440,14 +401,4 @@ func (M *Emitter) FetchData() {
 	SyncChannel <- syncval
 
 }
-
-//   Reformatted by   lerouxp    Tue Nov 1 11:45:53 CET 2011
-
-//   Reformatted by   lerouxp    Thu Nov 3 11:52:33 CET 2011
-
-//   Reformatted by   lerouxp    Fri Nov 4 08:32:38 CET 2011
-
-//   Reformatted by   lerouxp    Wed Nov 9 12:01:34 CET 2011
-
-//   Reformatted by   lerouxp    Wed Nov 9 18:25:52 CET 2011
 

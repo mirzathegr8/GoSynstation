@@ -171,7 +171,7 @@ const PI = math.Pi
 
 
 
-const TransferRateTechnique=  EFFECTIVESINR//  MCSJOINT //NormalTR  //EFFECTIVESINR//, MCSJOINT //NormalTR   , MCSJOINT
+//const TransferRateTechnique=  EFFECTIVESINR//  NormalTR  //EFFECTIVESINR//, MCSJOINT //NormalTR   , MCSJOINT
 
 const ICIMtype= ICIMb
 
@@ -200,3 +200,12 @@ const PowerAgentAlpha = 1 //0.8//0.2
 
 
 const uARBcost = 0.10000 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)
+
+const TRATETECH = OFDM
+const (
+	OFDM = iota
+	OFDM2	
+	SCFDM
+	NORMAL
+)
+
