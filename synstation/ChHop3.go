@@ -30,6 +30,10 @@ func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 
 	var MobilesRate [NConnec]float64
 	var AssignedRBs [NConnec * 50]AssignedRB //should not assigne more than 50 RBs to one mobile
+
+	var S Sequence
+	S.index = make([]int, mDf*NCh)
+
 	var numAsRB int
 	var numMaster int
 
@@ -55,7 +59,7 @@ func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 
 		c := e.Value.(*Connection)
-		M := c.GetE()
+		M := c.E
 
 		if c.Status == 0 { // only change if master
 
@@ -64,10 +68,10 @@ func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 
 			for rb := 1; rb < NCh; rb++ {
 
-				if M.IsSetARB(rb) {
+				if M.ARB[rb] {
 					AssignedRBs[numAsRB].E = numMaster
 					AssignedRBs[numAsRB].rb = rb
-					snr := M.GetSNRrb(rb)
+					snr := M.SNRrb[rb]
 					AssignedRBs[numAsRB].snr = snr
 					capa := 80 * math.Log2(1+snr)
 					if capa < 100 {
@@ -87,10 +91,7 @@ func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 
 	//make sur noone emits on rb 0
 	for i := range eMobilesList {
-		if MobilesList[i].IsSetARB(0) {
-			MobilesList[i].UnSetARB(0)
-		}
-
+			MobilesList[i].ARBfutur[0]=false
 	}
 
 	// remove any RB with too low capa	
@@ -99,20 +100,23 @@ func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 	for i := range eAssignedRBs {
 		ARB := &eAssignedRBs[i]
 		if ARB.metric < 100 { // remove allocation
-			eMobilesList[ARB.E].UnSetARB(ARB.rb)
+			eMobilesList[ARB.E].ARBfutur[ARB.rb]=false
 			ARB.E = -1
 			ARB.metric = 0
 		} else {
-			ARB.metric = math.Log2(1+ARB.metric) / math.Log2(2+MobilesRate[ARB.E]) / math.Log2(2+eMobilesList[ARB.E].GetMeanTR())
+			ARB.metric = math.Log2(1+ARB.metric) / math.Log2(2+MobilesRate[ARB.E]) / math.Log2(2+eMobilesList[ARB.E].meanTR.Get())
 		}
 	}
 
 	// Sort mobiles
 	var RBmetrics [NConnec * 100]float64
+
 	for i := range eAssignedRBs {
 		RBmetrics[i] = eAssignedRBs[i].metric
 	}
-	S := initSequence(RBmetrics[0:numAsRB])
+
+	S.index=S.index[0:numAsRB]
+	initSequence(RBmetrics[0:numAsRB],&S)
 	sort.Sort(S)
 	//fmt.Print("disconnect"); S.PrintOrder(); fmt.Println();
 
@@ -120,7 +124,7 @@ func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 	for ir, irm := 0, 0; ir < numAsRB && irm < numDeAll; ir++ {
 		ARB := &eAssignedRBs[S.index[ir]]
 		if ARB.E >= 0 {
-			eMobilesList[ARB.E].UnSetARB(ARB.rb)
+			eMobilesList[ARB.E].ARBfutur[ARB.rb]=false
 			irm++
 		}
 	}
@@ -136,7 +140,7 @@ func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 			for j, M := range eMobilesList {
 				NonAssignedRBs[numNAsRB].E = j
 				NonAssignedRBs[numNAsRB].rb = rb
-				snr := M.GetSNRrb(rb)
+				snr := M.SNRrb[rb]
 				NonAssignedRBs[numNAsRB].snr = snr
 				capa := 80 * math.Log2(1+snr)
 				if capa < 100 {
@@ -155,7 +159,7 @@ func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 	for i := range eNonAssignedRBs {
 		ARB := &eNonAssignedRBs[i]
 		ARB.metric =  math.Log2(1+ARB.metric) / math.Log2(2+MobilesRate[ARB.E]+ARB.metric) /
-							 math.Log2(2+eMobilesList[ARB.E].GetMeanTR())
+							 math.Log2(2+eMobilesList[ARB.E].meanTR.Get())
 	}
 
 	//sort
@@ -164,26 +168,27 @@ func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 		RBmetrics[i] =  eNonAssignedRBs[i].metric //negative to sort the other way arround
 	}
 	//fmt.Println(RBmetrics[0:numNAsRB])
-	S = initSequence(RBmetrics[0:numNAsRB])
+	S.index=S.index[0:numAsRB]
+	initSequence(RBmetrics[0:numNAsRB],&S)
 	sort.Sort(S)
 	//fmt.Print("connect"); S.PrintOrder(); fmt.Println();
 
 	for ir := 0; ir < numNAsRB && ir < numAll; ir++ {
 		ARB := &eNonAssignedRBs[S.index[ir]]
 		//if ARB.metric <= 0.0 {break} // snr insufficient
-		eMobilesList[ARB.E].SetARB(ARB.rb)
+		eMobilesList[ARB.E].ARBfutur[ARB.rb]=true
 		Hopcount++
 	}
 
 }
 
-func EvalRatio2(E EmitterInt) float64 {
+func EvalRatio2(E *Emitter) float64 {
 
 	ratio := 0.0
 	numarb := 0
-	for rb, use := range E.GetARB() {
+	for rb, use := range E.ARB {
 		if use {
-			ratio += E.GetSNRrb(rb)
+			ratio += E.SNRrb[rb]
 			numarb++
 		}
 	}
@@ -194,18 +199,24 @@ func EvalRatio2(E EmitterInt) float64 {
 func FindFreeChannels(dbs *DBS, E *Emitter, ratio float64) []int {
 
 	var nch [20]int //maximum 20RBs allocated
+	
+	var index [NCh]int
+	var S Sequence
+	S.index = index[0:NCh]
+
 
 	var SNRs [NCh]float64
 
 	for i := range SNRs {
-		SNRs[i] = E.GetSNRrb(i)
+		SNRs[i] = E.SNRrb[i]
 	}
 
 	r := dbs.Pos
 
 	ICIMfunc(&r, E, SNRs[:], dbs.Color)
 
-	S := initSequence(SNRs[:])
+
+	initSequence(SNRs[:],&S)
 	sort.Sort(S)
 
 	NumARB := int(float64(NCh) / float64(dbs.Connec.Len()) * dbs.RBReuseFactor)
