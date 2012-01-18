@@ -16,6 +16,8 @@ type outputData struct {
 	lost                                     float64
 	Diversity                                float64
 	HopCount                                 float64
+	Fairness				float64
+	SumTR					float64
 }
 
 func (o *outputData) Add(o2 *outputData) {
@@ -30,6 +32,8 @@ func (o *outputData) Add(o2 *outputData) {
 	o.lost += o2.lost
 	o.Diversity += o2.Diversity
 	o.HopCount += o2.HopCount
+	o.Fairness += o2.Fairness
+	o.SumTR += o2.SumTR
 }
 
 
@@ -45,19 +49,23 @@ func (o *outputData) Div(k float64) {
 	o.Diversity /= k
 	o.d_lost /= k
 	o.HopCount /= k
+	o.Fairness/=k
+	o.SumTR /=k
+
 }
 
 func (o outputData) String() string {
 	return fmt.Sprint(o.listened, "	", o.connected, "	",
-		o.BER1, "	",
-		o.BER2, "	",
+		o.BER1, "	",		
 		o.BER3, "	",
 		o.d_connec, "	",
 		o.d_discon, "	",
 		o.lost, "	",
 		o.d_lost, "	",
 		o.Diversity, "	",
-		o.HopCount)
+		o.HopCount, "	",
+		o.Fairness, "	",
+		o.SumTR)
 
 }
 
