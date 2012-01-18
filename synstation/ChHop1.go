@@ -67,7 +67,7 @@ import "math"
 //		co := MobileList.At(k).(ConnecType)
 //		//ratio := co.EvalRatio(&dbs.R)		
 //
-//		d := co.GetE().GetPos().Distance(dbs.R.GetPos())
+//		d := co.E.GetPos().Distance(dbs.R.GetPos())
 //
 //		//if (10*math.Log10(co.GetSNR())< SNRThres){
 //		//var ir int
@@ -81,12 +81,12 @@ import "math"
 //
 //		ir := 5
 //		if d < 300 {
-//			if !(co.GetE().GetARB()[0] > NCh-ir) || (co.GetSNR() < SNRThresChHop-3) {
+//			if !(co.E.GetARB()[0] > NCh-ir) || (co.GetSNR() < SNRThresChHop-3) {
 //				for j := NCh - ir; j < NCh; j++ {
 //
 //					i := dbs.RndCh[j]
-//					if !dbs.IsInUse(i) && i != co.GetE().GetARB()[0] {
-//						_, snr, _, _ := dbs.R.EvalSignalSNR(co.GetE(), i)
+//					if !dbs.IsInUse(i) && i != co.E.GetARB()[0] {
+//						_, snr, _, _ := dbs.R.EvalSignalSNR(co.E, i)
 //						if snr > SNRThresChHop {
 //							dbs.changeChannel(co, i)
 //							Hopcount++
@@ -97,13 +97,13 @@ import "math"
 //			}
 //		} else {
 //
-//			if !(co.GetE().GetARB()[0] < NCh-ir) || (co.GetSNR() < SNRThresChHop-3) {
+//			if !(co.E.GetARB()[0] < NCh-ir) || (co.GetSNR() < SNRThresChHop-3) {
 //				for j := NChRes; j < NCh-ir; j++ {
 //
 //					i := dbs.RndCh[j]
 //
-//					if !dbs.IsInUse(i) && i != co.GetE().GetARB()[0] {
-//						_, snr, _, _ := dbs.R.EvalSignalSNR(co.GetE(), i)
+//					if !dbs.IsInUse(i) && i != co.E.GetARB()[0] {
+//						_, snr, _, _ := dbs.R.EvalSignalSNR(co.E, i)
 //						if snr > SNRThresChHop {
 //							dbs.changeChannel(co, i)
 //							Hopcount++
@@ -124,14 +124,14 @@ import "math"
 //			ratio := co.EvalRatio(&dbs.R)
 //
 //
-//			if (Pr<8e-9) && co.GetE().GetCh()>NCh-3{
+//			if (Pr<8e-9) && co.E.GetCh()>NCh-3{
 //
 //		//push down		
 //			for j := NChRes; j < NCh; j++ {
 //
 //				i := dbs.RndCh[j]
 //
-//				if !dbs.IsInUse(i) && i != co.GetE().GetCh() {
+//				if !dbs.IsInUse(i) && i != co.E.GetCh() {
 //					Rnew, ev, Pr:=dbs.R.EvalSignalBER(co.E,i)
 //					if Pr/(Rnew.Pint+WNoise) > ratio/2 {
 //						dbs.changeChannel(co, i)
@@ -145,7 +145,7 @@ import "math"
 //			for j := NCh-2; j < NCh; j++ {
 //
 //				i := dbs.RndCh[j]			
-//				if !dbs.IsInUse(i) && i != co.GetE().GetCh() {
+//				if !dbs.IsInUse(i) && i != co.E.GetCh() {
 //					Rnew, ev, Pr:=dbs.R.EvalSignalBER(co.E,i)
 //					if Pr/(Rnew.Pint+WNoise) > ratio/2 {
 //						dbs.changeChannel(co, i)
@@ -181,7 +181,7 @@ func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 
 		if c.Status == 0 { // only change if master
 
-			if c.E.IsSetARB(0) { //if the mobile is waiting to be assigned a proper channel
+			if c.E.ARB[0] { //if the mobile is waiting to be assigned a proper channel
 
 				var ratio float64
 				nch := 0
@@ -189,7 +189,7 @@ func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 				//Parse channels in some order  given by dbs.RndCh to find a suitable channel 
 				for j := NChRes; j < NCh; j++ {
 					rb := dbs.RndCh[j]
-					if dbs.IsRBFree(rb)  && !c.E.IsSetARB(rb) {
+					if dbs.IsRBFree(rb)  && !c.E.ARB[rb] {
 						snr := dbs.EvalSignalSNR(c.E, rb)
 						if 10*math.Log10(snr) > SNRThresChHop {
 							if snr > ratio {
@@ -234,9 +234,9 @@ func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 
 			rb := dbs.RndCh[j]
 
-			if dbs.IsRBFree(rb)  && !co.GetE().IsSetARB(rb) {
+			if dbs.IsRBFree(rb)  && !co.E.ARB[rb] {
 
-				snr := dbs.EvalSignalSNR(co.GetE(), rb)
+				snr := dbs.EvalSignalSNR(co.E, rb)
 
 				if snr > ratio {
 					ratio = snr
@@ -245,7 +245,7 @@ func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 			}
 		}
 		if chHop > 0 {
-			dbs.changeChannel(co, co.GetE().GetFirstRB(), chHop)
+			dbs.changeChannel(co, co.E.GetFirstRB(), chHop)
 			Hopcount++
 		}
 
@@ -254,8 +254,8 @@ func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 }
 
 func (dbs *DBS) changeChannel(co *Connection, pch, nch int) {
-	co.GetE().UnSetARB(pch)
-	co.GetE().SetARB(nch)
+	co.E.ARBfutur[pch]=false
+	co.E.ARBfutur[nch]=true
 }
 
 //   Reformatted by   lerouxp    Mon Oct 3 09:49:11 CEST 2011
