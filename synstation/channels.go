@@ -53,7 +53,7 @@ func (ch *channel) HopChans() {
 		} else if M.ARBfutur[ch.i]==true{
 	
 			if M.ARB[ch.i]==false{
-				M.ARBe[ch.i]= ch.Emitters.PushBack(M.GetE())
+				M.ARBe[ch.i]= ch.Emitters.PushBack(&M.Emitter)
 				M.ARB[ch.i]=true				
 				ch.added++		
 			}
