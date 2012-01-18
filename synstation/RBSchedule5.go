@@ -16,6 +16,10 @@ func init() {
 func ARBScheduler5(dbs *DBS, Rgen *rand.Rand) {
 
 	var Metric [NConnec][NCh]float64
+	var metricpool [popsize * 11]float64
+	var index [popsize*11]int
+	var S Sequence
+	S.index = index[0:popsize*11]
 
 	var MasterMobs [NConnec]*Emitter
 
@@ -30,7 +34,7 @@ func ARBScheduler5(dbs *DBS, Rgen *rand.Rand) {
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 
 		c := e.Value.(*Connection)
-		E := c.GetE()
+		E := c.E
 
 		if c.Status == 0 {
 
@@ -40,7 +44,7 @@ func ARBScheduler5(dbs *DBS, Rgen *rand.Rand) {
 				if DiversityType == SELECTION {
 					snrrb = c.SNRrb[rb]
 				} else {
-					snrrb = E.GetSNRrb(rb)
+					snrrb = E.SNRrb[rb]
 				}
 				Metric[Nmaster][rb] = snrrb
 			}
@@ -105,7 +109,7 @@ func ARBScheduler5(dbs *DBS, Rgen *rand.Rand) {
 		//copy(pool[popsize*10:popsize*11].vect, Popul[:].vect)
 
 		//select the new population
-		var metricpool [popsize * 11]float64
+		
 
 		for i := 0; i < popsize*11; i++ {
 			var AL [NCh]int
@@ -115,7 +119,7 @@ func ARBScheduler5(dbs *DBS, Rgen *rand.Rand) {
 		}
 
 		//find the best 100
-		S := initSequence(metricpool[:])
+		initSequence(metricpool[:],&S)
 		sort.Sort(S)
 		for i := 0; i < len(Popul); i++ {
 			Popul[i] = pool[S.index[i]]
