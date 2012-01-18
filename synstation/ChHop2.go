@@ -8,8 +8,24 @@ import "fmt"
 
 const ChRX = 0
 
+
+
 func init() {
-	fmt.Println("init")
+	fmt.Println("init to keep fmt")
+}
+
+// memory for the scheduler
+type ChHopping2 struct {
+	MobileList []*Connection 	
+	MobileListRX []*Connection
+	SNR [NCh] float64
+}
+
+func initChHopping2() Scheduler {
+	d := new(ChHopping2)	
+	d.MobileList = make([]*Connection, NConnec)
+	d.MobileListRX = make([]*Connection, NConnec)
+	return d
 }
 
 // Sorts channels in random order
@@ -53,20 +69,16 @@ func (dbs *DBS) RandomChan() {
 
 //var plus int
 
-func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
+func (d *ChHopping2) Schedule(dbs *DBS, Rgen *rand.Rand) {
 
-	//pour trier les connections actives
-	//var MobileList vector.Vector
-	MobileList := make([]*Connection, NConnec)
-	MobileList = MobileList[0:0]
-	//var MobileListRX vector.Vector
-	MobileListRX := make([]*Connection, NConnec)
-	MobileListRX = MobileListRX[0:0]
-
+	
 	//pour trier les canaux
 	//	dbs.RandomChan()
 
 	var stop = 0
+	var nMLRX=0
+	var nML=0
+
 
 	// find a mobile
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
@@ -80,16 +92,16 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 			//c.E.CopyFuturARB()
 
 			//if c.E.GetFirstRB()<NChRes {
-			if c.E.IsSetARB(0) { //if the mobile is waiting to be assigned a proper channel				
+			if c.E.ARB[0] { //if the mobile is waiting to be assigned a proper channel				
 
 				//Parse channels in some order  given by dbs.RndCh to find a suitable channel 
 
-				nch := FindFreeChan(dbs, c.E, math.Pow10(SNRThresChHop/10.0))
+				nch := FindFreeChan(dbs, c.E, math.Pow10(SNRThresChHop/10.0),&d.SNR)
 
 				if nch != 0 {				
-					c.E.UnSetARB(0)
+					c.E.ARBfutur[0]=false
 					for l := 0; l < subsetSize; l++ {
-						c.E.SetARB(nch + l)
+						c.E.ARBfutur[nch + l]=true
 						Hopcount++
 					}
 					stop++
@@ -101,78 +113,88 @@ func ChHopping2(dbs *DBS, Rgen *rand.Rand) {
 				// sort mobile connection for channel hopping
 			} else {
 				//ratio := c.EvalRatio(dbs.R)
-				ratio := EvalRatio(c.GetE())
+				ratio := EvalRatio(c.E)
 				i := 0
-				if c.GetE().GetFirstRB() < NChRes+subsetSize*ChRX {
-					for i = 0; i < len(MobileListRX); i++ {
-						co := MobileListRX[i]
+				if c.E.GetFirstRB() < NChRes+subsetSize*ChRX {
+					for i = 0; i < nMLRX; i++ {
+						co := d.MobileListRX[i]
 						if ratio < co.EvalRatio() {
 							break
 						}
 					}
-					MobileListRX = append(MobileListRX[:i], append([]*Connection{c}, MobileListRX[i:]...)...)
-					//MobileListRX.Insert(i, c)
+					nMLRX++
+					for j:= nMLRX; j>i; j--{
+						d.MobileListRX[j]=d.MobileListRX[j-1]
+					}
+					d.MobileListRX[i] = c
+					
 				} else {
-					for i = 0; i < len(MobileList); i++ {
-						co := MobileList[i]
-						if ratio < EvalRatio(co.GetE()) {
+					for i = 0; i < nML; i++ {
+						co := d.MobileList[i]
+						if ratio < EvalRatio(co.E) {
 							break
 						}
 					}
-					MobileList = append(MobileList[:i], append([]*Connection{c}, MobileList[i:]...)...)
-					//MobileList.Insert(i, c)
+					nML++
+					for j:= nML; j>i; j--{
+						d.MobileList[j]=d.MobileList[j-1]
+					}
+					d.MobileList[i] = c
+
+//					d.MobileList = append(d.MobileList[:i], append([]*Connection{c}, d.MobileList[i:]...)...)
+					
 				}
 			}
 		}
 	}
 
 	// change channel to some mobiles
-
+	
 	fact := 0.8
 	var MobileListUSE []*Connection
-	if len(MobileListRX) > 0 {
-		MobileListUSE = MobileListRX
+	if nMLRX > 0 {
+		MobileListUSE = d.MobileListRX[0:nMLRX]
 		fact = 0
 	} else {
-		MobileListUSE = MobileList
+		MobileListUSE = d.MobileList[0:nML]
 	}
 
 	for k := 0; k < len(MobileListUSE) && k < 1; k++ {
 		co := MobileListUSE[k]
-		E := co.GetE()
+		E := co.E
 		ratio := EvalRatio(E) * fact
 
-		chHop := FindFreeChan(dbs, E, ratio)
+		chHop := FindFreeChan(dbs, E, ratio,&d.SNR)
 		oldCh := E.GetFirstRB()
 
 		if chHop > 0 {
 			for l := 0; l < subsetSize; l++ {
-				E.UnSetARB(oldCh + l)
-				E.SetARB(chHop + l)
+				E.ARBfutur[oldCh + l]=false
+				E.ARBfutur[chHop + l]=true
 				Hopcount++
 			}
 		}
 	}
 }
 
-func EvalRatio(E EmitterInt) float64 {
+func EvalRatio(E *Emitter) float64 {
 
 	ratio := 0.0
 	oldCh := E.GetFirstRB()
 	for l := 0; l < subsetSize; l++ {
-		ratio += E.GetSNRrb(oldCh + l)
+		ratio += E.SNRrb[oldCh + l]
 	}
 	ratio /= float64(subsetSize)
 	return ratio
 }
 
-func FindFreeChan(dbs *DBS, E *Emitter, ratio float64) (nch int) {	
+func FindFreeChan(dbs *DBS, E *Emitter, ratio float64, SNRs *[NCh]float64) (nch int) {	
 
-	var SNRs [NCh]float64
+
 
 	copy(SNRs[:],E.SNRrb[:])
-	r := dbs.Pos
-	ICIMfunc(&r, E, SNRs[:], dbs.Color)
+
+	ICIMfunc(&dbs.Pos, E, SNRs[:], dbs.Color)
 
 	for j := 1; j < NCh-subsetSize+1; j += subsetSize {
 		rb := j // dbs.RndCh[j]
@@ -193,8 +215,4 @@ func FindFreeChan(dbs *DBS, E *Emitter, ratio float64) (nch int) {
 	return 
 
 }
-
-//   Reformatted by   lerouxp    Mon Oct 3 09:49:03 CEST 2011
-
-//   Reformatted by   lerouxp    Mon Oct 31 15:43:58 CET 2011
 
