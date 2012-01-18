@@ -93,7 +93,7 @@ var IntereNodeBDist float64
 func Init() {
 
 	for i := range Synstations {
-		go Synstations[i].Init()
+		go Synstations[i].Init(i)
 	}
 
 	//sync
@@ -133,6 +133,16 @@ func Init() {
 			}
 		}
 	}	
+
+
+	//scenario for random positioned dbs
+	for i := D*3/4; i<D ; i++ {
+		Synstations[i].SetPos(geom.Pos{Rgen.Float64() * Field, Rgen.Float64() * Field})
+		Synstations[i].scheduler = initChHopping2()
+		Synstations[i].NMaxConnec = 0//NConnec/3
+	}
+
+
 	ChannelHop() //Set Mobile's initial channel
 
 }
