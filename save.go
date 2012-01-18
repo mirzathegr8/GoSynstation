@@ -37,9 +37,10 @@ func init() {
 	saveData = append(saveData, CreateStart(TransferRate, s.M, "TransferRate"))
 	saveData = append(saveData, CreateStart(NumARB, s.M, "NumARB"))
 	saveData = append(saveData, CreateStart(DataTransfer, s.M, "DataTransfer"))
+	saveData = append(saveData, CreateStart(MasterBSID, s.M, "MasterBSID"))
 
-	fadingChan = make(chan int)
-	go fadingSave(fadingChan)
+	//fadingChan = make(chan int)
+	//go fadingSave(fadingChan)
 
 }
 
@@ -76,6 +77,7 @@ func PrMaster(t *s.Trace, i int) float64     { return float64(t.Mobs[i].PrMaster
 func TransferRate(t *s.Trace, i int) float64 { return float64(t.Mobs[i].TransferRate) }
 func NumARB(t *s.Trace, i int) float64       { return float64(t.Mobs[i].GetNumARB()) }
 func DataTransfer(t *s.Trace, i int) float64 { return float64(t.Mobs[i].GetDataState()) }
+func MasterBSID(t *s.Trace, i int) float64 { return float64(t.Mobs[i].IdB) }
 
 
 
@@ -115,7 +117,7 @@ func StopSave() {
 		a.Stop()
 	}
 
-	close(fadingChan)
+	//close(fadingChan)
 }
 
 func sendTrace(t *s.Trace) {
@@ -128,8 +130,8 @@ func sendTrace(t *s.Trace) {
 		s.ReturnTrace <- t
 	}(t)
 	
-	fadingChan <- 1
-	<-fadingChan
+	//fadingChan <- 1
+	//<-fadingChan
 
 
 }
@@ -268,8 +270,8 @@ func SaveToFile(Mobiles []s.Mob, dbs []s.DBS) {
 
 	outF.WriteString(fmt.Sprintln("# name: Pr\n# type: matrix\n# rows: ", s.M, "\n# columns: ", 1))
 	for i := 0; i < s.M; i++ {
-		if Mobiles[i].GetMasterConnec() != nil {
-			outF.WriteString(fmt.Sprintln(Mobiles[i].GetMasterConnec().GetMeanPr(), " "))
+		if Mobiles[i].MasterConnection != nil {
+			outF.WriteString(fmt.Sprintln(Mobiles[i].MasterConnection.GetMeanPr(), " "))
 		} else {
 			outF.WriteString(fmt.Sprintln(-1, " "))
 		}
