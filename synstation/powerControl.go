@@ -16,11 +16,11 @@ func optimizePowerAllocationAgent(dbs *DBS) {
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
 		M := c.E
-		meanPtotPd += M.BERT() / M.Req()
-		meanPePd += c.meanBER.Get() / M.Req()
-		meanPtot += M.BERT()
+		meanPtotPd += M.BERtotal / M.Requested
+		meanPePd += c.meanBER.Get() / M.Requested
+		meanPtot += M.BERtotal
 		meanPe += c.meanBER.Get()
-		meanPd += M.Req()
+		meanPd += M.Requested
 		meanPr += c.meanPr.Get()
 	}
 
@@ -39,11 +39,11 @@ func optimizePowerAllocationAgent(dbs *DBS) {
 			c := e.Value.(*Connection)
 			M := c.E
 
-			if c.Status == 0 && !c.E.IsSetARB(0) { // if master connection	
+			if c.Status == 0 && !c.E.ARB[0] { // if master connection	
 
 				var b, need, delta float64
 
-				b = M.BERT() / M.Req() // meanPtotPd
+				b = M.BERtotal / M.Requested // meanPtotPd
 				//b = M.BERT() / M.Req() / meanPtotPd
 				b = b * PowerAgentFact
 				need = 2.0*math.Exp(-b)*(b+1.0) - 1.0
@@ -51,22 +51,22 @@ func optimizePowerAllocationAgent(dbs *DBS) {
 				//need = .5 - math.Atan(5*(b-1))/math.Pi
 
 				delta = math.Pow(geom.Abs(need), 1) *
-					math.Pow(M.GetPower(rb), 1) *
-					geom.Sign(need-M.GetPower(rb)) * PowerAgentAlpha *
-					math.Pow(geom.Abs(need-M.GetPower(rb)), 1.5)
+					math.Pow(M.Power[rb], 1) *
+					geom.Sign(need-M.Power[rb]) * PowerAgentAlpha *
+					math.Pow(geom.Abs(need-M.Power[rb]), 1.5)
 
 				if math.IsNaN(delta) {
-					fmt.Println("delta NAN", need, M.GetPower(rb), b, M.BERT())
+					fmt.Println("delta NAN", need, M.Power[rb], b, M.BERtotal)
 					delta = -1
 				}
 
 				if delta > 0 {
-					v := (1.0 - M.GetPower(rb)) / 2.0
+					v := (1.0 - M.Power[rb]) / 2.0
 					if delta > v {
 						delta = v
 					}
 				} else {
-					v := -M.GetPower(rb) / 2.0
+					v := -M.Power[rb] / 2.0
 					if delta < v {
 						delta = v
 					}
@@ -92,15 +92,15 @@ func optimizePowerAllocationAgentRB(dbs *DBS) {
 		c := e.Value.(*Connection)
 		M := c.E
 
-		if c.Status == 0 && !M.IsSetARB(0) { // if master connection	
+		if c.Status == 0 && !M.ARB[0] { // if master connection	
 
 			for rb := 1; rb < NCh; rb++ {
 
-				if M.IsSetARB(rb) {
+				if M.ARB[rb] {
 
 					var b, need, delta float64
 
-					b = -M.SNRrb[rb] / M.Req()
+					b = -M.SNRrb[rb] / M.Requested
 					b = b * PowerAgentFact
 					//PowerAgentAlpha = 1.0
 					need = 2.0*math.Exp(-b)*(b+1.0) - 1.0
@@ -108,22 +108,22 @@ func optimizePowerAllocationAgentRB(dbs *DBS) {
 					//need = .5 - math.Atan(5*(b-1))/math.Pi
 
 					delta = math.Pow(geom.Abs(need), 1) *
-						math.Pow(M.GetPower(rb), 1) *
-						geom.Sign(need-M.GetPower(rb)) * PowerAgentAlpha *
-						math.Pow(geom.Abs(need-M.GetPower(rb)), 1.5)
+						math.Pow(M.Power[rb], 1) *
+						geom.Sign(need-M.Power[rb]) * PowerAgentAlpha *
+						math.Pow(geom.Abs(need-M.Power[rb]), 1.5)
 
 					if math.IsNaN(delta) {
-						fmt.Println("delta NAN", need, M.GetPower(rb), b, M.SBERrb[rb])
+						fmt.Println("delta NAN", need, M.Power[rb], b, M.SBERrb[rb])
 						delta = -1
 					}
 
 					if delta > 0 {
-						v := (1.0 - M.GetPower(rb)) / 2.0
+						v := (1.0 - M.Power[rb]) / 2.0
 						if delta > v {
 							delta = v
 						}
 					} else {
-						v := -M.GetPower(rb) / 2.0
+						v := -M.Power[rb] / 2.0
 						if delta < v {
 							delta = v
 						}
@@ -154,7 +154,7 @@ func optimizePowerAllocationSimple(dbs *DBS) {
 		E := c.E
 
 		if c.Status == 0 {
-			if !c.E.IsSetARB(0) { // if master connection and transmitting data
+			if !c.E.ARB[0] { // if master connection and transmitting data
 
 				L := float64(1500)
 				d := (L - dbs.Pos.Distance(E.Pos)) / L
@@ -193,7 +193,7 @@ func PowerICIM(dbs *DBS) {
 
 		if c.Status == 0 {
 
-			distRatio := r.DistanceSquare(M.GetPos()) / (IntereNodeBDist * IntereNodeBDist)
+			distRatio := r.DistanceSquare(M.Pos) / (IntereNodeBDist * IntereNodeBDist)
 
 			// if edge region set power to one
 			if distRatio > ICIMdistRatio {
@@ -204,7 +204,7 @@ func PowerICIM(dbs *DBS) {
 
 				for rb := NChRes; rb < NCh; rb++ {
 
-					if M.IsSetARB(rb) {
+					if M.ARB[rb] {
 						// set power to low if outside previliedge range
 						if rb < jMin || rb >= jMax {
 							M.SetPowerRB(rb, 0.1)
