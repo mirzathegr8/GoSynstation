@@ -13,6 +13,7 @@ func GetDiversity() int { a := num_con; num_con = 0; return a }
 
 type Connection struct {
 	E *Emitter
+	IdB int //Id of the base station
 
 	Status int //0 master ,1 slave
 
@@ -56,17 +57,16 @@ type ConnectionS struct {
 }
 
 func (co *ConnectionS) Copy(cc *Connection) {
-	co.A = cc.E.GetPos()
+	co.A = cc.E.Pos
 	co.BER = cc.meanBER.Get()
 	co.Status = cc.Status
 }
 
-func (co *Connection) GetE() *Emitter     { return co.E }
 func (co *Connection) GetMeanPr() float64 { return co.meanPr.Get() }
 
 func (co *Connection) BitErrorRate(dbs *DBS) {
 
-	Orientation := dbs.AoA[co.E.GetId()]	
+	Orientation := dbs.AoA[co.E.Id]	
 
 	for m := range Mobiles {
 		co.gainM[m] = 0.0		
@@ -93,13 +93,17 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 	
 	}
 
+	MasterConnectedArray := dbs.GetCancelation()
 
 	if co.Status == 0 {
 		for rb := range co.Channels {
 			chR := &co.Channels[rb]
 			chR.Clear()
+
+			if InterferenceCancel== SIZEESCANCELATION {MasterConnectedArray = dbs.GetCancelationRB(rb)}
+
 			for m, g := range co.gainM { //Mobiles {
-				if Mobiles[m].ARB[rb] && (m==co.E.Id || !dbs.IsConnectedMaster(co.E))  {
+				if Mobiles[m].ARB[rb] && !(MasterConnectedArray[m] && m!= co.E.Id){
 					// Evaluate Beam Gain	
 					f := dbs.Channels[rb].pr[m] * g //co.gainM[m]
 					chR.pr[m] = f
@@ -117,9 +121,12 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 			if use {
 				chR := &co.Channels[rb]
 				chR.Clear()
+
+				if InterferenceCancel== SIZEESCANCELATION {MasterConnectedArray = dbs.GetCancelationRB(rb)}
+
 				for m, g := range co.gainM { //Mobiles {
 					//if g>0 {//dbs.pr[m] > thres {
-					if Mobiles[m].ARB[rb] && (m==co.E.Id || !dbs.IsConnectedMaster(co.E)) {
+					if Mobiles[m].ARB[rb]  && !(MasterConnectedArray[m] && m!= co.E.Id) {
 						// Evaluate Beam Gain	
 						f := dbs.Channels[rb].pr[m] * g //co.gainM[m]
 						chR.pr[m] = f
@@ -218,11 +225,11 @@ func (co *Connection) EvalRatio() float64 {
 }
 
 func (co *Connection) EvalRatioConnect() float64 {
-	return co.E.BERT()
+	return co.E.BERtotal
 }
 
 func (co *Connection) EvalRatioDisconnect() float64 {
-	Ptot := co.E.BERT()
+	Ptot := co.E.BERtotal
 	return Ptot * math.Log(Ptot/co.GetLogMeanBER())
 }
 
@@ -327,8 +334,9 @@ func (co *Connection) clear(){
 
 }
 
-func NewConnection() (Conn *Connection) {
+func NewConnection(i int) (Conn *Connection) {
 	Conn = new(Connection)
+	Conn.IdB=i
 	return
 }
 
