@@ -23,17 +23,34 @@ continue
 
 */
 
+type ARBSchedulerSDMA struct{
+	SNRrbAll [NConnec][NCh]float64
+	MasterMobs [NConnec]*Emitter
+	MasterConnec [NConnec]*Connection
+	Pr [NConnec]float64
+	index [popsize*11]int
+	S Sequence
+	PopulAr [popsize]SDMA_alloc
+	poolAr [popsize * (10+1)]SDMA_alloc
+	subGroups [mDf][NConnec]int
+	ALtmp [mDf][NCh]int
+	metricpool [popsize * 11]float64
+}
+
+
 type SDMA_alloc struct {
 	vect [mDf][NCh]int
 	subSize [mDf]int
 }
 
-func ARBSchedulerSDMA(dbs *DBS, Rgen *rand.Rand) {
+func initARBSchedulerSDMA() Scheduler{
+	d:= new(ARBSchedulerSDMA)
+	d.S.index = d.index[0:popsize*11]
+	return d
+}
 
-	var SNRrbAll [NConnec][NCh]float64
-	var MasterMobs [NConnec]*Emitter
-	var MasterConnec [NConnec]*Connection
-	var Pr [NConnec]float64
+func (d* ARBSchedulerSDMA) Schedule(dbs *DBS, Rgen *rand.Rand) {
+
 
 	// Eval Metric for all connections
 	var Nmaster int
@@ -43,12 +60,12 @@ func ARBSchedulerSDMA(dbs *DBS, Rgen *rand.Rand) {
 	for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
 
 		c := e.Value.(*Connection)
-		E := c.GetE()
+		E := c.E
 
 		if c.Status == 0 {
 
-			MasterConnec[Nmaster] = c
-			MasterMobs[Nmaster] = E
+			d.MasterConnec[Nmaster] = c
+			d.MasterMobs[Nmaster] = E
 
 			for rb := 0; rb < NCh; rb++ {
 				var snrrb float64
@@ -57,8 +74,8 @@ func ARBSchedulerSDMA(dbs *DBS, Rgen *rand.Rand) {
 				} else {
 					snrrb = E.SNRrb[rb]
 				}
-				SNRrbAll[Nmaster][rb] = snrrb
-				Pr[Nmaster] = dbs.pr[E.Id] * math.Fmax(1,float64(E.GetNumARB())) //total power before splitted over RBs
+				d.SNRrbAll[Nmaster][rb] = snrrb
+				d.Pr[Nmaster] = dbs.pr[E.Id] * math.Fmax(1,float64(E.GetNumARB())) //total power before splitted over RBs
 			}
 			Nmaster++
 
@@ -69,18 +86,17 @@ func ARBSchedulerSDMA(dbs *DBS, Rgen *rand.Rand) {
 		return
 	}
 
-	var PopulAr [popsize]SDMA_alloc
-	var poolAr [popsize * (10+1)]SDMA_alloc
+	
 	
 
 	// create the initial random partitions on mDf levels
 	for i := 0; i < popsize; i++ {
 
 		//first, create subgroups
-		var subGroups [mDf][NConnec]int
+		
 		for s:=0;s<mDf;s++{
 			for c:=0;c<NConnec;c++{
-				subGroups[s][c]=-1
+				d.subGroups[s][c]=-1
 			}
 		}
 
@@ -88,7 +104,7 @@ func ARBSchedulerSDMA(dbs *DBS, Rgen *rand.Rand) {
 		
 		var k,l int
 		for _, v := range a {			
-			subGroups[k][l] = v
+			d.subGroups[k][l] = v
 			k++
 			if k>=mDf {k=0; l++}
 			
@@ -108,8 +124,8 @@ func ARBSchedulerSDMA(dbs *DBS, Rgen *rand.Rand) {
 			if nbrb==0 {nbrb=1}
 			a := Rgen.Perm(NSubMaster)
 			//expand
-			pp := &PopulAr[i].vect[s]
-			PopulAr[i].subSize[s]=NSubMaster
+			pp := &d.PopulAr[i].vect[s]
+			d.PopulAr[i].subSize[s]=NSubMaster
 			// first dealocate everything
 			for j := 0; j < NCh; j++ {
 				pp[j] = -1
@@ -122,7 +138,7 @@ func ARBSchedulerSDMA(dbs *DBS, Rgen *rand.Rand) {
 			for j := 0; j < NSubMaster; j++ {
 				index := int(float64(NCh) / float64(NSubMaster) * float64(j)) 
 				for k := 0; k < nbrb; k++ {
-					pp[index+k+shift] = subGroups[s][a[j]] 
+					pp[index+k+shift] = d.subGroups[s][a[j]] 
 				}
 			}}
 
@@ -139,44 +155,43 @@ func ARBSchedulerSDMA(dbs *DBS, Rgen *rand.Rand) {
 	for gen := 0; gen < generations; gen++ {
 
 		for j := 0; j < popsize; j++ {
-			createDescSDMA(&PopulAr[j], poolAr[j*10:(j+1)*10], Rgen)
+			createDescSDMA(&d.PopulAr[j], d.poolAr[j*10:(j+1)*10], Rgen)
 		}
 
-		for i := range PopulAr[:] {
+		for i := range d.PopulAr[:] {
 				//copy(pool[popsize*10+i].vect[s], Popul[i].vect[s])
-				poolAr[popsize*10+i]= PopulAr[i]
+				d.poolAr[popsize*10+i]= d.PopulAr[i]
 			
 		}
 
-		//select the new population
-		var metricpool [popsize * 11]float64
+		//select the new population	
 
 		for i := 0; i < popsize*11; i++ {
 			for s := 0; s < mDf; s++ {
-				poolAr[i].vect[s][0] = -1
+				d.poolAr[i].vect[s][0] = -1
 			}
 
-			ALtmp:=poolAr[i].vect
-			metricpool[i] = MetricSDMA(&ALtmp,&SNRrbAll, &Pr, MasterConnec[0:Nmaster])
+			d.ALtmp = d.poolAr[i].vect //copies
+			d.metricpool[i] = MetricSDMA(&d.ALtmp,&d.SNRrbAll, &d.Pr, d.MasterConnec[0:Nmaster])
 		}
 
 		//find the best 100
-		S := initSequence(metricpool[:])
-		sort.Sort(S)
-		for i := 0; i < len(PopulAr); i++ {
-			PopulAr[i] = poolAr[S.index[i]]
+		initSequence(d.metricpool[:],&d.S)
+		sort.Sort(d.S)
+		for i := 0; i < len(d.PopulAr); i++ {
+			d.PopulAr[i] = d.poolAr[d.S.index[i]]
 		}
 
 	}
 
-	ALtmp := PopulAr[0].vect
+	d.ALtmp = d.PopulAr[0].vect
 	//for trimming	
-	MetricSDMA(&ALtmp,&SNRrbAll, &Pr, MasterConnec[0:Nmaster])
+	MetricSDMA(&d.ALtmp,&d.SNRrbAll, &d.Pr, d.MasterConnec[0:Nmaster])
 
 	//fmt.Println("before ",PopulAr[0].vect)
 	//fmt.Println("after ", ALtmp)
 
-	AllocateSDMA(&ALtmp, MasterMobs[0:Nmaster])
+	AllocateSDMA(&d.ALtmp, d.MasterMobs[0:Nmaster])
 
 }
 
@@ -308,7 +323,7 @@ func MetricSDMA(AL *[mDf][NCh]int, SNRrbAll *[NConnec][NCh]float64, Pr *[NConnec
 
 	mean_mm:=0.0
 	for v,C :=range MasterConn{
-		m_m := C.E.GetMeanTR()	
+		m_m := C.E.meanTR.Get()	
 		mean_mm+=m_m
 		//o := math.Fmax(1,float64(C.E.Outage-100))
 		//* math.Log2(1+float64(o)) 
@@ -337,10 +352,10 @@ func AllocateSDMA(ALv *[mDf][NCh]int, MasterMobs []*Emitter) {
 		AL := ALv[s][:]
 		for rb, vAL := range AL {
 			if vAL >= 0 {
-				if !MasterMobs[vAL].IsSetARB(rb) {
+				if !MasterMobs[vAL].ARB[rb] {
 					Hopcount++
 				}
-				MasterMobs[vAL].SetARB(rb)
+				MasterMobs[vAL].ARBfutur[rb]=true
 			}
 		}
 	}
