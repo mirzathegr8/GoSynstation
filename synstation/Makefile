@@ -30,7 +30,8 @@ icim.go\
 ChHop3.go\
 ChanReceiver.go\
 shadowing.go\
-RBScheduleSDMA.go
+RBScheduleSDMA.go\
+RBSchedule1_MU_OFDM.go
 
 
 include $(GOROOT)/src/Make.pkg
