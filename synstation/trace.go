@@ -37,7 +37,7 @@ func (t *Trace) copyTrace(mobs []Mob, syns []DBS, k int) {
 			c := e.Value.(*Connection)
 			t.Connec[l].Copy(c)
 			t.Connec[l].B = syns[i].Pos
-			t.Connec[l].Ch = c.GetE().GetFirstRB()
+			t.Connec[l].Ch = c.E.GetFirstRB()
 			l++
 		}
 	}
