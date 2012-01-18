@@ -9,7 +9,7 @@ func ICIMNone (r *geom.Pos, E *Emitter, Metric []float64, Color int){
 
 func ICIM (r *geom.Pos, E *Emitter, Metric []float64, Color int){
 
-	distRatio := r.DistanceSquare(E.GetPos()) / (IntereNodeBDist * IntereNodeBDist)
+	distRatio := r.DistanceSquare(E.Pos) / (IntereNodeBDist * IntereNodeBDist)
 
 	if distRatio > ICIMdistRatio {
 	
@@ -43,7 +43,7 @@ func ICIM (r *geom.Pos, E *Emitter, Metric []float64, Color int){
 
 func ICIMSplitEdgeCenter (r *geom.Pos, E *Emitter, Metric []float64, Color int){
 
-	distRatio := r.DistanceSquare(E.GetPos()) / (IntereNodeBDist * IntereNodeBDist)
+	distRatio := r.DistanceSquare(E.Pos) / (IntereNodeBDist * IntereNodeBDist)
 
 		jMin := NChRes + 40 + Color*20
 		jMax := jMin+20;
@@ -79,7 +79,7 @@ func ICIMSplitEdgeCenter (r *geom.Pos, E *Emitter, Metric []float64, Color int){
 
 func ICIMSplitEdgeCenter2 (r *geom.Pos, E *Emitter, Metric []float64, Color int){
 
-	distRatio := r.DistanceSquare(E.GetPos()) / (IntereNodeBDist * IntereNodeBDist)
+	distRatio := r.DistanceSquare(E.Pos) / (IntereNodeBDist * IntereNodeBDist)
 
 		jMin := NChRes +  Color*33
 		jMax := jMin+33;
