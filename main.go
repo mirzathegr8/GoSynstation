@@ -13,7 +13,9 @@ import "log"
 // Data to save for output during simulation
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
-//var mpf = flag.String("mpf", "main.mpf", "write memory profile to file") 
+var memprofile = flag.String("memprofile", "", "write memory profile to this file")
+var memprofileF = flag.String("memprofilef", "", "write memory profile to this file")
+var memprofilePF = flag.String("memprofilepf", "", "write memory profile to this file")
 
 var outD outputData  // one to print
 var outDs outputData // one to sum and take mean over simulation
@@ -21,6 +23,7 @@ var outDs outputData // one to sum and take mean over simulation
 func main() {
 
     flag.Parse()
+
     if *cpuprofile != "" {
         f, err := os.Create(*cpuprofile)
         if err != nil {
@@ -30,18 +33,22 @@ func main() {
         defer pprof.StopCPUProfile()
     }
 
-	/*var f *os.File
-	if *mpf != "" {
-      	  fo,err := os.Create(*mpf)
-		f=fo		
-        	if err != nil { log.Fatal(err) }
-        	
- 	   } */
+
 
 
 	runtime.GOMAXPROCS(18)
 
 	s.Init()
+
+  if *memprofilePF != "" {
+        f, err := os.Create(*memprofilePF)
+        if err != nil {
+            log.Fatal(err)
+        }
+        pprof.WriteHeapProfile(f)
+        f.Close()
+        //return
+    }
 
 	//draw.Init(s.M, s.D*s.NConnec) // init drawing system
 	//draw.DrawReceptionField(s.Synstations[:], "receptionLevel.png")
@@ -52,7 +59,7 @@ func main() {
 	fmt.Println("Start Simulation")
 
 	// precondition
-	for s.Tti = -200; s.Tti < 0; s.Tti++ {
+	for s.Tti = -50; s.Tti < 0; s.Tti++ {
 		/*fmt.Print("---- 1---- ", s.Mobiles[0].Diversity, " ")
 		fmt.Print( &s.Mobiles[0].MasterConnection)
 		fmt.Println()
@@ -91,6 +98,18 @@ func main() {
 
 		//s.PowerC(s.Synstations[:]) //centralized PowerAllocation
 	}
+
+
+   
+    if *memprofileF != "" {
+        f, err := os.Create(*memprofileF)
+        if err != nil {
+            log.Fatal(err)
+        }
+        pprof.WriteHeapProfile(f)
+        f.Close()
+       // return
+    }
 
 	// simu
 	for s.Tti = 0; s.Tti < s.Duration; s.Tti++ {
@@ -140,6 +159,18 @@ func main() {
 	//draw.Close()
 
 	        //	f.Close()
+
+
+    if *memprofile != "" {
+        f, err := os.Create(*memprofile)
+        if err != nil {
+            log.Fatal(err)
+        }
+        pprof.WriteHeapProfile(f)
+        f.Close()
+        return
+    }
+
 }
 
 func readDataAndPrintToStd(save bool) {
@@ -181,12 +212,20 @@ func readDataAndPrintToStd(save bool) {
 	outD.d_lost = float64(s.GetLostConnect())
 	outD.HopCount = float64(s.GetHopCount())
 
+	outD.SumTR=0
+	outD.Fairness=0
+	for m :=range s.Mobiles{
+		outD.SumTR+=s.Mobiles[m].TransferRate
+		outD.Fairness+= s.Mobiles[m].TransferRate * s.Mobiles[m].TransferRate	 
+	}
+	outD.Fairness= outD.SumTR*outD.SumTR / s.M / outD.Fairness
+
 	outD.k = float64(s.Tti)
 	if s.Tti%10 == 0 {
 		outChannel <- outD //sent data to print to  stdout			
 	}
 
-	if s.Tti%100 == 0 {
+	if s.Tti%200== 0 {
 		fmt.Println("GC")
 		runtime.GC()
 	}
