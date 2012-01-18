@@ -32,6 +32,8 @@ type EmitterS struct {
 
 	Data int //quantity of data to send in bits
 
+	IdB int // saves the id of the master BS
+
 }
 
 // EmitterS with additional registers for BER and diversity evaluation, 
@@ -64,42 +66,6 @@ type Emitter struct {
 	ARBe     [NCh]*list.Element //allocated RB
 }
 
-// our little interface for emitters
-type EmitterInt interface {
-	AddConnection(c *Connection, dbs *DBS)
-	BERT() float64
-	Req() float64
-	GetE() *Emitter
-
-	GetARB() []bool
-	GetFuturARB() []bool
-	SetARB(i int)
-	UnSetARB(i int)
-	IsSetARB(i int) bool
-	IsFuturSetARB(i int) bool
-	GetFirstRB() int
-	GetFirstFutureRB() int
-	ReSetARB()
-	GetNumARB() int
-	CopyFuturARB() // presets the future allocation to the current one
-	ClearFuturARB()
-
-	GetPower(i int) float64
-	GetMeanPower() float64
-	PowerDelta(int, float64)
-	SetPowerRB(int, float64)
-	SetPower(float64)
-	GetPos() geom.Pos
-
-	GetMasterConnec() *Connection
-	GetId() int
-
-	GetSpeed() float64
-
-	GetSNRrb(rb int) float64
-
-	GetMeanTR() float64
-}
 
 func (e *EmitterS) GetDataState() int {
 	return e.Data
@@ -115,33 +81,13 @@ func (e *Emitter) CopyFuturARB() {
 	copy(e.ARBfutur[:], e.ARB[:])
 }
 
-func (e *Emitter) GetMeanTR() float64 {
-	return e.meanTR.Get()
-}
 
-func (e *Emitter) GetSNRrb(rb int) float64 {
-	return e.SNRrb[rb]
-}
 
 func (e *Emitter) GetSpeed() float64 {
 	return math.Sqrt(e.Speed[0]*e.Speed[0] + e.Speed[1]*e.Speed[1])
 }
 
-func (e *EmitterS) GetARB() []bool {
-	return e.ARB[:]
-}
 
-func (e *Emitter) GetFuturARB() []bool {
-	return e.ARBfutur[:]
-}
-
-func (e *EmitterS) IsSetARB(i int) bool {
-	return e.ARB[i]
-}
-
-func (e *Emitter) IsFuturSetARB(i int) bool {
-	return e.ARBfutur[i]
-}
 
 func (e *Emitter) GetFirstFutureRB() int {
 	for i, use := range e.ARBfutur {
@@ -161,19 +107,12 @@ func (e *EmitterS) GetFirstRB() int {
 	return -1
 }
 
-func (e *Emitter) SetARB(i int) {
-	e.ARBfutur[i] = true
-}
-
-func (e *Emitter) UnSetARB(i int) {
-	e.ARBfutur[i] = false
-}
 
 func (e *Emitter) ReSetARB() {
 	for i := 1; i < NCh; i++ {
-		e.UnSetARB(i)
+		e.ARBfutur[i]=false
 	}
-	e.SetARB(0)
+	e.ARBfutur[0]=true
 
 }
 
@@ -186,26 +125,6 @@ func (e *EmitterS) GetNumARB() (n int) {
 	return
 }
 
-func (e *Emitter) GetId() int {
-	return e.Id
-}
-
-func (e *Emitter) GetMasterConnec() *Connection {
-	return e.MasterConnection
-}
-
-func (e *Emitter) GetPos() geom.Pos {
-	return e.Pos
-}
-
-func (e *Emitter) GetE() *Emitter {
-	return e
-}
-
-func (e *EmitterS) GetPower(i int) float64 {
-	return e.Power[i]
-}
-
 func (e *EmitterS) GetMeanPower() (mp float64) {
 	nrb := 0
 	for rb, prb := range e.Power {
@@ -214,7 +133,7 @@ func (e *EmitterS) GetMeanPower() (mp float64) {
 			nrb++
 		}
 	}
-	mp /= float64(nrb)
+	if nrb>0 { mp /= float64(nrb)} 
 	return
 }
 
@@ -254,41 +173,41 @@ func (e *Emitter) AddConnection(c *Connection, dbs *DBS) {
 
 	// for maximal RC
 	if DiversityType == MRC {
-		for rb := range e.ARB {
+		for rb ,use := range e.ARB {
 			e.SSNRrb[rb] += c.SNRrb[rb]
-			e.SSNRb+= math.Exp(-c.SNRrb[rb] / betae)
+			if use {
+			e.SSNRb += math.Exp(-c.SNRrb[rb] / betae)
+			}
 		}
 	}
 
 }
 
-func (e *Emitter) BERT() float64 { return e.BERtotal }
-func (e *Emitter) Req() float64  { return e.Requested }
-
-func (M *Emitter) PowerDelta(rb int, delta float64) {
-	M.SetPowerRB(rb, M.Power[rb]+delta)
+func (e *Emitter) PowerDelta(rb int, delta float64) {
+	e.SetPowerRB(rb, e.Power[rb]+delta)
 }
 
-func (M *Emitter) SetPowerRB(rb int, P float64) {
+func (e *Emitter) SetPowerRB(rb int, P float64) {
 	if P > 1.0 {
 		P = 1.0
-	}
-	if P < 0.001 {
+	} else 	if P < 0.001 {
 		P = 0.001
-	}
-	M.Power[rb] = P
+	} 
+	
+	e.Power[rb] = P
 }
 
 // Sets power on all RBs
-func (M *Emitter) SetPower(P float64) {
+func (e *Emitter) SetPower(P float64) {
 	if P > 1.0 {
 		P = 1.0
 	}
 	if P < 0.001 {
 		P = 0.001
 	}
-	for i := range M.Power {
-		M.Power[i] = P
+	
+	for i := range e.Power {
+		e.Power[i] = P
 	}
 }
 
@@ -296,62 +215,64 @@ func (M *Emitter) SetPower(P float64) {
 //	and selects the master connection 
 // 	reset power and channel if all connections losts
 // finnaly sents to syncchannel BER level
-func (M *Emitter) FetchData() {
+func (e *Emitter) FetchData() {
 
 	var syncval float64
 
-	M.SNRb, M.BERtotal, M.Diversity, M.MaxBER, M.InstMaxBER = M.SSNRb, M.SBERtotal, M.SDiversity, M.SMaxBER, M.SInstMaxBER
-	M.SSNRb, M.SInstMaxBER, M.SBERtotal, M.SDiversity, M.SMaxBER, M.SMinDist = 0, 0, 0, 0, 0, Field*16*Field
+	e.SNRb, e.BERtotal, e.Diversity, e.MaxBER, e.InstMaxBER = e.SSNRb, e.SBERtotal, e.SDiversity, e.SMaxBER, e.SInstMaxBER
+	e.SSNRb, e.SInstMaxBER, e.SBERtotal, e.SDiversity, e.SMaxBER, e.SMinDist = 0, 0, 0, 0, 0, Field*16*Field
 	for rb := 0; rb < NCh; rb++ {
-		M.SNRrb[rb], M.SSNRrb[rb] = M.SSNRrb[rb], 0
+		e.SNRrb[rb], e.SSNRrb[rb] = e.SSNRrb[rb], 0
 	}
 
-	M.TransferRate = 0
-	M.InstSNR = 0
+	e.TransferRate = 0
+	e.InstSNR = 0
 
-	M.Outage++
+	e.Outage++
 
 	syncval = 1
 
-	//beta:= 1.//1.5/ -(M.BERtotal*2.3026)
+	//beta:= 1.//1.5/ -(e.BERtotal*2.3026)
 
 	effectSNR := 0.0
 	minSNR :=100000000.0
 	nARB := 0
-	if M.Diversity == 0 {
+	if e.Diversity == 0 {
 
-		M.MasterConnection = nil
-		M.SetPower(1)
-		M.ReSetARB()
+		e.MasterConnection = nil
+		e.IdB=-1
+		e.SetPower(1)
+		e.ReSetARB()
 		syncval = 0
 
 	} else {
 
-		M.MasterConnection.Status = 0 // flag the best connection as master
+		e.MasterConnection.Status = 0 // flag the best connection as master
+		e.IdB=e.MasterConnection.IdB
 
 		for rb := 1; rb < NCh; rb++ {
 
-			if M.ARB[rb] {
+			if e.ARB[rb] {
 
 				switch TRATETECH {
 					case OFDM :
-						effectSNR += math.Exp(-M.SNRrb[rb] / betae)
+						effectSNR += math.Exp(-e.SNRrb[rb] / betae)
 					case SCFDM :
-						effectSNR += M.SNRrb[rb]
+						effectSNR += e.SNRrb[rb]
 					case NORMAL :
-						s := EffectiveBW*math.Log2(1+beta*M.SNRrb[rb])
+						s := EffectiveBW*math.Log2(1+beta*e.SNRrb[rb])
 						s=math.Fmin(s,10000)
 						if s> 100{
 							effectSNR+=s
 						} 							
 				}
 
-				if minSNR> M.SNRrb[rb] {minSNR=M.SNRrb[rb]}		
+				if minSNR> e.SNRrb[rb] {minSNR=e.SNRrb[rb]}		
 
 				nARB++
 
-				if M.InstSNR < M.SNRrb[rb] {
-					M.InstSNR = M.SNRrb[rb]
+				if e.InstSNR < e.SNRrb[rb] {
+					e.InstSNR = e.SNRrb[rb]
 				}
 			}
 		}
@@ -361,42 +282,42 @@ func (M *Emitter) FetchData() {
 			case OFDM2 :
 				//this hack is to prevent overflow in the exponential /logarithm leading otherwise to +Inf transferrate
 				// at high SINR the TR is anyways limited by the RB's lowest SINR
-				M.SNRb = -betae*math.Log(M.SNRb/(float64(nARB)*float64(M.Diversity)) )
-				if M.SNRb>600 {M.SNRb=minSNR}			
-				M.TransferRate = EffectiveBW * float64(M.Diversity) * float64(nARB) * math.Log2(1 + M.SNRb)
-				if M.TransferRate < float64(100*nARB) {M.TransferRate=0}			
+				e.SNRb = -betae*math.Log(e.SNRb/(float64(nARB)*float64(e.Diversity)) )
+				if e.SNRb>600 {e.SNRb=minSNR}	
+				e.TransferRate = EffectiveBW * float64(e.Diversity) * float64(nARB) * math.Log2(1 + e.SNRb)
+				if e.TransferRate < float64(100*nARB) {e.TransferRate=0}			
 
 			case OFDM :
-					//this hack is to prevent overflow in the exponential /logarithm leading otherwise to +Inf transferrate
-					// at high SINR the TR is anyways limited by the RB's lowest SINR
-				M.SNRb = -betae*math.Log(effectSNR/float64(nARB))
-				if M.SNRb>600 {M.SNRb=minSNR}			
-				M.TransferRate = EffectiveBW * float64(nARB) * math.Log2(1 + M.SNRb)
-				if M.TransferRate < float64(100*nARB) {M.TransferRate=0}	
+				//this hack is to prevent overflow in the exponential /logarithm leading otherwise to +Inf transferrate
+				// at high SINR the TR is anyways limited by the RB's lowest SINR
+				e.SNRb = -betae*math.Log(effectSNR/float64(nARB))
+				if e.SNRb>600 {e.SNRb=minSNR}			
+				e.TransferRate = EffectiveBW * float64(nARB) * math.Log2(1 + e.SNRb)
+				if e.TransferRate < float64(100*nARB) {e.TransferRate=0}	
 			case SCFDM :
 				effectSNR /= float64(nARB)
-				M.SNRb=effectSNR
-				M.TransferRate = EffectiveBW * float64(nARB) * math.Log2(1 + M.SNRb)			
-				if M.TransferRate < float64(100*nARB) {M.TransferRate=0}
+				e.SNRb=effectSNR
+				e.TransferRate = EffectiveBW * float64(nARB) * math.Log2(1 + e.SNRb)			
+				if e.TransferRate < float64(100*nARB) {e.TransferRate=0}
 			case NORMAL :
-				M.SNRb=math.Pow(2,effectSNR/EffectiveBW/float64(nARB))-1					
-				M.TransferRate = effectSNR
+				e.SNRb=math.Pow(2,effectSNR/EffectiveBW/float64(nARB))-1					
+				e.TransferRate = effectSNR
 		}
 
-		if M.TransferRate != 0 {
-			syncval = M.BERtotal
+		if e.TransferRate != 0 {
+			syncval = e.BERtotal
 		}
 		}	
 
 	}
 
-	if M.TransferRate > 100{
-		M.Outage=0
+	if e.TransferRate > 100{
+		e.Outage=0
 	}else{
-		M.TransferRate=0	
+		e.TransferRate=0	
 	}
 
-	M.meanTR.Add(M.TransferRate)
+	e.meanTR.Add(e.TransferRate)
 
 	SyncChannel <- syncval
 
