@@ -109,7 +109,10 @@ func createDesc(ppO allocSet, pool []allocSet, Rgen *rand.Rand) {
 func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 
 	var Metric [NConnec][NCh]float64
-
+	var metricpool [1100]float64
+	var index [1100]int
+	var S Sequence
+	S.index = index[0:1100]
 	//var MobilesID [NConnec]int
 
 	// Eval Metric for all connections
@@ -118,10 +121,10 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 	for j, i, e := 0, 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
 
 		c := e.Value.(*Connection)
-		E := c.GetE()
+		E := c.E
 
 		if c.Status == 0 {
-			for i:=0; i<NCh; i++{E.UnSetARB(i)}
+			for i:=0; i<NCh; i++{E.ARBfutur[i]=false}
 
 			Nmaster++
 
@@ -131,11 +134,11 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 				if DiversityType == SELECTION {
 					snrrb = c.SNRrb[rb]
 				} else {
-					snrrb = E.GetSNRrb(rb)
+					snrrb = E.SNRrb[rb]
 				}
 
 				m := EffectiveBW * math.Log2(1+beta*snrrb)
-				m_m := c.GetE().GetMeanTR()
+				m_m := c.E.meanTR.Get()
 
 				if m > 100 && m_m < 100000026000 {
 					Metric[j][rb] = math.Log2(m + 1)
@@ -220,8 +223,7 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 		}
 		//copy(pool[1000:1100], Popul[:])
 
-		//select the new population
-		var metricpool [1100]float64
+		//select the new population	
 
 		for i := 0; i < 1100; i++ {
 			metricT := float64(0.0)
@@ -240,7 +242,7 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 		}
 		//find the best 100
 
-		S := initSequence(metricpool[:])
+		initSequence(metricpool[:],&S)
 
 		sort.Sort(S)
 
@@ -316,31 +318,28 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 	AL[0] = -1 // connect all
 	for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
 		c := e.Value.(*Connection)
-		E := c.GetE()
+		E := c.E
 		if c.Status == 0 {
-			if E.IsSetARB(0) {
-				E.UnSetARB(0)
-			}
-
+				E.ARBfutur[0]=false
 		}
 	}
 	for rb := 1; rb < NCh; rb++ {
 		if AL[rb] >= 0 {
 			for k, i, e := 0, 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
 				c := e.Value.(*Connection)
-				E := c.GetE()
+				E := c.E
 
 				if c.Status == 0 {
 
-					if E.IsSetARB(rb) {
+					if E.ARB[rb] {
 						if AL[rb] != k {
-							E.UnSetARB(rb)
+							E.ARBfutur[rb]=false
 						}
 					} else {
 						if AL[rb] >= 0 {
 
 							if AL[rb] == k {
-								E.SetARB(rb)
+								E.ARBfutur[rb]=true
 								Hopcount++
 
 							}
@@ -358,6 +357,11 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 
 
 func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
+
+	var metricpool [popsize * 11]float64
+	var index [popsize*11]int
+	var S Sequence
+	S.index = index[0:popsize*11]
 
 	var Metric [NConnec][NCh]float64
 
@@ -377,9 +381,9 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 	for j, i, e := 0, 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
 
 		c := e.Value.(*Connection)
-		E := c.GetE()
+		E := c.E
 
-		m_m := E.GetMeanTR()
+		m_m := E.meanTR.Get()
 
 		meanMeanCapa += m_m
 		if maxMeanCapa < m_m {
@@ -397,7 +401,7 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 				if DiversityType == SELECTION {
 					snrrb = c.SNRrb[rb]
 				} else {
-					snrrb = E.GetSNRrb(rb)
+					snrrb = E.SNRrb[rb]
 				}
 
 				Metric[j][rb] = snrrb
@@ -481,7 +485,7 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 
 
 		//select the new population
-		var metricpool [popsize * 11]float64
+	
 
 		uARBcost := 0.00 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)
 
@@ -573,7 +577,7 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 
 					}
 
-					m_m := MasterConnec[v].GetE().GetMeanTR()
+					m_m := MasterConnec[v].E.meanTR.Get()
 
 					/*a := (m - m_m*0.8)
 					if a > 0 {
@@ -594,7 +598,7 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 		//find the best 100
 
 
-		S := initSequence(metricpool[:])
+		initSequence(metricpool[:],&S)
 
 		sort.Sort(S)
 
@@ -711,7 +715,7 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 	/*AL[0] = -1 // connect all
 	for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
 		c := e.Value.(*Connection)
-		E := c.GetE()
+		E := c.E
 		if c.Status == 0 {
 			if E.IsSetARB(0) {
 				E.UnSetARB(0)
@@ -723,19 +727,19 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 		if AL[rb] >= 0 {
 			for k, i, e := 0, 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
 				c := e.Value.(*Connection)
-				E := c.GetE()
+				E := c.E
 
 				if c.Status == 0 {
 
-					if E.IsSetARB(rb) {
+					if E.ARB[rb] {
 						if AL[rb] != k {
-							E.UnSetARB(rb)
+							E.ARBfutur[rb]=false
 						}
 					} else {
 						if AL[rb] >= 0 {
 
 							if AL[rb] == k {
-								E.SetARB(rb)
+								E.ARBfutur[rb]=true
 								Hopcount++
 
 							}
@@ -751,13 +755,13 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
  	AL[0] = -1 // connect all	
 	for rb, vAL := range AL {		
 		for k, E := range MasterMobs[0:Nmaster] {
-			if E.IsSetARB(rb) {
+			if E.ARB[rb] {
 				if vAL != k {
-					E.UnSetARB(rb)
+					E.ARBfutur[rb]=false
 				}
 			} else {
 				if vAL == k {
-					E.SetARB(rb)
+					E.ARBfutur[rb]=true
 					Hopcount++
 				}
 			}										
@@ -784,8 +788,7 @@ type Sequence struct {
 	value []float64
 }
 
-func initSequence(value []float64) (s Sequence) {
-	s.index = make([]int, len(value))
+func initSequence(value []float64, s *Sequence) {
 	for i := range value {
 		s.index[i] = i
 	}
@@ -816,31 +819,28 @@ func AllocateOld(AL []int, dbs *DBS) {
 	AL[0] = -1 // connect all
 	for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
 		c := e.Value.(*Connection)
-		E := c.GetE()
+		E := c.E
 		if c.Status == 0 {
-			if E.IsSetARB(0) {
-				E.UnSetARB(0)
-			}
-
+			E.ARBfutur[0]=false
 		}
 	}
 	for rb := 1; rb < NCh; rb++ {
 		if AL[rb] >= 0 {
 			for k, e := 0, dbs.Connec.Front(); e != nil; e = e.Next() {
 				c := e.Value.(*Connection)
-				E := c.GetE()
+				E := c.E
 
 				if c.Status == 0 {
 
-					if E.IsSetARB(rb) {
+					if E.ARB[rb] {
 						if AL[rb] != k {
-							E.UnSetARB(rb)
+							E.ARBfutur[rb]=false
 						}
 					} else {
 						if AL[rb] >= 0 {
 
 							if AL[rb] == k {
-								E.SetARB(rb)
+								E.ARBfutur[rb]=true
 								Hopcount++
 
 							}
