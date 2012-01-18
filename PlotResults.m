@@ -2,11 +2,12 @@ function PlotResults(c,fign)
 
 figure(1+fign);
 load TransferRate.mat ;
+M= size(TransferRate,1);
 TransferRate(isnan(TransferRate))=0;
-plot(sort(sum(TransferRate,2)/size(TransferRate,2)*1000/1e6),c);
-axis([0 size(TransferRate,1)]);
-%ylabel ("capacity")
-xlabel("mobiles")
+plot((sort(sum(TransferRate,2)/size(TransferRate,2)*1000/1e6)),[1:M]/M,c);
+axis([0 15 0 1]);
+ylabel ("PDF")
+xlabel("PDF of the capacity [Mbits/s]")
 hold on;
 
 figure(2+fign);
