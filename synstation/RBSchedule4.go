@@ -141,6 +141,7 @@ func (d *ARBScheduler4) Schedule(dbs *DBS, Rgen *rand.Rand) {
 
 	}
 
+	Trimm(d.Popul[0].vect,&d.Metric,d.MasterMobs[0:Nmaster])
 	Allocate(d.Popul[0].vect, d.MasterMobs[0:Nmaster]) // allocate the best 
 
 }
