@@ -68,3 +68,6 @@ hold on;
 #sum(tm(tm<0).^2)
 
 end
+
+%load MasterBSID.mat ; Vm=find(sum(MasterBSID>56,2));
+%load TransferRate.mat; plot((sort(sum(TransferRate(Vm,:),2)/size(TransferRate(Vm,:),2)*1000/1e6)),[1:length(Vm)]/length(Vm),"r")
