@@ -99,7 +99,7 @@ func Init() {
 	//sync
 	Sync(D)
 
-	Dprim:=D
+	Dprim:=D*3/4
 
 	if NetLayout==HONEYCOMB{
 
@@ -132,14 +132,23 @@ func Init() {
 				d++
 			}
 		}
+		
 	}	
 
 
 	//scenario for random positioned dbs
+	j:=0
 	for i := D*3/4; i<D ; i++ {
 		Synstations[i].SetPos(geom.Pos{Rgen.Float64() * Field, Rgen.Float64() * Field})
-		Synstations[i].scheduler = initChHopping2()
-		Synstations[i].NMaxConnec = 0//NConnec/3
+
+		//Synstations[i].Pos.x=Synstations[j].Pos.x
+		//		Synstations[i].Pos.y=Synstations[j].Pos.y
+
+		//SetPos(Synstations[j].GetPos())
+		j++
+
+		//Synstations[i].scheduler =  initChHopping2() // initARBScheduler4() //
+		Synstations[i].NMaxConnec = 0//15//15//15//NConnec/3
 	}
 
 
