@@ -105,7 +105,7 @@ func (d *ChHopping2) Schedule(dbs *DBS, Rgen *rand.Rand) {
 						Hopcount++
 					}
 					stop++
-					if stop > 1 {
+					if stop > 2 {
 						return
 					}
 				}
@@ -159,17 +159,18 @@ func (d *ChHopping2) Schedule(dbs *DBS, Rgen *rand.Rand) {
 		MobileListUSE = d.MobileList[0:nML]
 	}
 
-	for k := 0; k < len(MobileListUSE) && k < 1; k++ {
+	for k := 0; k < len(MobileListUSE) && k < 2; k++ {
 		co := MobileListUSE[k]
 		E := co.E
 		ratio := EvalRatio(E) * fact
 
 		chHop := FindFreeChan(dbs, E, ratio,&d.SNR)
-		oldCh := E.GetFirstRB()
+		//oldCh := E.GetFirstRB()
 
 		if chHop > 0 {
+			E.ClearFuturARB() //this in order to allow mixing of channel allocations
 			for l := 0; l < subsetSize; l++ {
-				E.ARBfutur[oldCh + l]=false
+				//E.ARBfutur[oldCh + l]=false				
 				E.ARBfutur[chHop + l]=true
 				Hopcount++
 			}
@@ -180,11 +181,19 @@ func (d *ChHopping2) Schedule(dbs *DBS, Rgen *rand.Rand) {
 func EvalRatio(E *Emitter) float64 {
 
 	ratio := 0.0
-	oldCh := E.GetFirstRB()
-	for l := 0; l < subsetSize; l++ {
+	nrb:=0
+	for rb,use := range E.ARB{
+		if use {
+			ratio += E.SNRrb[rb]		
+			nrb++
+		}
+	}
+	ratio /= float64(nrb)
+	/*oldCh := E.GetFirstRB()
+	for l := 0; l < subsetSize && oldCh+l<NCh; l++ {
 		ratio += E.SNRrb[oldCh + l]
 	}
-	ratio /= float64(subsetSize)
+	ratio /= float64(subsetSize)*/
 	return ratio
 }
 
@@ -196,14 +205,14 @@ func FindFreeChan(dbs *DBS, E *Emitter, ratio float64, SNRs *[NCh]float64) (nch 
 
 	ICIMfunc(&dbs.Pos, E, SNRs[:], dbs.Color)
 
-	for j := 1; j < NCh-subsetSize+1; j += subsetSize {
+	for j := NChRes; j < NCh-subsetSize+1; j += subsetSize {
 		rb := j // dbs.RndCh[j]
 		if !dbs.IsInFuturUse(rb) {			
 			snr := 0.0
 			for l := 0; l < subsetSize; l++ {
 				snr += SNRs[rb+l]
 			}
-			snr /= float64(subsetSize)			
+			snr /= float64(subsetSize*subsetSize) //we divide by subsetsize for mean and again because emitter power is split accross these RBs
 			if snr > ratio {
 				ratio = snr
 				nch = rb
