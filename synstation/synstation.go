@@ -2,6 +2,7 @@ package synstation
 
 import "container/list"
 import "math"
+//import "fmt"
 
 // counters to observe connection agents health
 var sens_connect, sens_disconnect, sens_lostconnect int
@@ -36,9 +37,8 @@ type DBS struct {
 
 	Masters [M]bool
 
-	NMaxConnec int          // numbers of connections per dbs
+	NMaxConnec int // numbers of connections per dbs
 }
-
 
 func (dbs *DBS) Init(i int) {
 
@@ -49,7 +49,6 @@ func (dbs *DBS) Init(i int) {
 		dbs.ConnectionBank.PushBack(NewConnection(dbs.Id))
 	}
 
-	
 	dbs.Connec = list.New()
 	dbs.PhysReceiverBase.Init()
 	//dbs.RBReuseFactor = 0.5	
@@ -263,23 +262,29 @@ func (dbs *DBS) connectionAgent() {
 
 		//First try to connect unconnected mobiles
 
-		for i, j := 0, dbs.NMaxConnec-dbs.Connec.Len(); j >= 0 && i < SizeES; j-- {
+		Rc := dbs.Channels[0]
+		for i := 0 ; dbs.Connec.Len()<dbs.NMaxConnec && i < SizeES; i++ {
 
-			//var i=0
-
-			Rc := dbs.Channels[0]
 			if Rc.Signal[i] >= 0 {
-				Eval := dbs.EvalConnection(i)
-				if !dbs.IsConnected(&Mobiles[Rc.Signal[i]].Emitter) {
-					if 10*math.Log10(Eval) > SNRThresConnec {
-						dbs.connect(&Mobiles[Rc.Signal[i]].Emitter, 0.001)
-						conn++
-						return // we are done connecting
+				//fmt.Println("get a signal ", i, SizeES, dbs.Connec.Len(), dbs.NMaxConnec)
+				if dbs.BelongsToNetwork(Rc.Signal[i]) {
+					//fmt.Println("part of network")
+					Eval := dbs.EvalConnection(i)
+					if !dbs.IsConnected(&Mobiles[Rc.Signal[i]].Emitter) {
+						//fmt.Println("is not connected")
+						if 10*math.Log10(Eval) > SNRThresConnec {
+							dbs.connect(&Mobiles[Rc.Signal[i]].Emitter, 0.001)
+							conn++
+							//fmt.Println("connected")
+							
+							//return // we are done connecting
+						}
 					}
 				}
 
 			}
-			i++
+
+			
 		}
 
 		// if no unconnected mobiles got connected, find one to provide it with macrodiversity
@@ -287,19 +292,19 @@ func (dbs *DBS) connectionAgent() {
 		for j := dbs.NMaxConnec - dbs.Connec.Len(); j > 0; j-- {
 			var max float64
 			max = -10.0
-			var Rc *ChanReceiver
-			Rc = nil
+
+			EmitterId := -1
 			for rb := NChRes; rb < NCh; rb++ {
 				if dbs.IsRBFree(rb) {
-					r := dbs.EvalSignalConnection(rb)
+					r, EId := dbs.EvalSignalConnection(rb)
 					if r > max {
 						max = r
-						Rc = &dbs.Channels[rb]
+						EmitterId = EId
 					}
 				}
 			}
-			if Rc != nil {
-				dbs.connect(&Mobiles[Rc.Signal[0]].Emitter, 0.001)
+			if EmitterId >= 0 {
+				dbs.connect(&Mobiles[EmitterId].Emitter, 0.001)
 				conn++
 			} else {
 				break
@@ -316,20 +321,51 @@ func (dbs *DBS) EvalConnection(k int) float64 {
 	return dbs.pr[dbs.Channels[0].Signal[k]] / WNoise
 }
 // return quality indicator for mobiles connected to other dbs
-func (dbs *DBS) EvalSignalConnection(rb int) (Eval float64) {
+func (dbs *DBS) EvalSignalConnection(rb int) (EvalMax float64, EmitterId int) {
 
 	Rc := &dbs.Channels[rb]
-	Eval = -100 //Eval is in [0 inf[, -100 means no signal
+	EvalMax = -100 //Eval is in [0 inf[, -100 means no signal
+	EmitterId = -1
+	for S := 0; S < SizeES; S++ {
+		if Rc.Signal[S] >= 0 {
+			if dbs.BelongsToNetwork(Rc.Signal[S]) && !dbs.IsConnected(&Mobiles[Rc.Signal[S]].Emitter) {
 
-	if Rc.Signal[0] >= 0 {
-		E := &Mobiles[Rc.Signal[0]].Emitter
-		BER := dbs.EvalSignalBER(E, rb)
-		BER = math.Log10(BER)
-		Ptot := E.BERtotal + BER
-		Eval = Ptot * math.Log(Ptot/BER)
+				E := &Mobiles[Rc.Signal[S]].Emitter
+				BER := dbs.EvalSignalBER(E, rb)
+				BER = math.Log10(BER)
+				Ptot := E.BERtotal + BER
+				Eval := Ptot * math.Log(Ptot/BER)
+				if EvalMax < Eval {
+					EmitterId = E.Id
+					EvalMax = Eval
+				}
+			}
+		}
+	}
+	return
+}
+
+func (dbs *DBS) BelongsToNetwork(m int) bool {
+	/*if dbs.Id >= D/2 {
+		if m >= M/2 {
+			return true
+		} else {
+			return false
+		}
+	} else if m < M/2 {
+		return true
 	}
 
-	return
+	return false*/
+
+	/*if dbs.Id%2==1{
+			if m%2==1 {return true} else {return false}
+	}else if (m+1)%2==1{return true}
+
+	return false*/
+
+	return true
+
 }
 
 func (dbs *DBS) EvalSignalSNR(e *Emitter, rb int) (SNR float64) {
@@ -362,5 +398,33 @@ func (dbs *DBS) EvalSignalBER(e *Emitter, rb int) (BER float64) {
 	return
 }
 
-//   Reformatted by   lerouxp    Tue Jan 17 15:01:04 CET 2012
+func (dbs *DBS) MU_factor_measure() (fact, nARB float64) {
+
+	var reuse [NCh]int
+	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
+		c := e.Value.(*Connection)
+		if c.Status == 0 {
+			for m := 1; m < NCh; m++ {
+				if c.E.ARBfutur[m] {
+					reuse[m]++
+					if reuse[m] == 1 {
+						nARB++
+					} //=float64(r)
+				}
+			}
+		}
+	}
+
+	for _, r := range reuse {
+
+		if r > 1 {
+			fact += float64(r - 1)
+		}
+	}
+
+	return
+
+}
+
+//   Reformatted by   lerouxp    Tue Jan 24 17:53:42 CET 2012
 
