@@ -18,6 +18,7 @@ type outputData struct {
 	HopCount                                 float64
 	Fairness				float64
 	SumTR					float64
+	MUFactor				float64
 }
 
 func (o *outputData) Add(o2 *outputData) {
@@ -34,6 +35,7 @@ func (o *outputData) Add(o2 *outputData) {
 	o.HopCount += o2.HopCount
 	o.Fairness += o2.Fairness
 	o.SumTR += o2.SumTR
+	o.MUFactor += o2.MUFactor
 }
 
 
@@ -51,6 +53,7 @@ func (o *outputData) Div(k float64) {
 	o.HopCount /= k
 	o.Fairness/=k
 	o.SumTR /=k
+	o.MUFactor /=k
 
 }
 
@@ -65,7 +68,8 @@ func (o outputData) String() string {
 		o.Diversity, "	",
 		o.HopCount, "	",
 		o.Fairness, "	",
-		o.SumTR)
+		o.SumTR, "	",
+		o.MUFactor)
 
 }
 
