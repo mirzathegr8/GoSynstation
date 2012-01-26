@@ -219,6 +219,15 @@ func readDataAndPrintToStd(save bool) {
 		outD.Fairness+= s.Mobiles[m].TransferRate * s.Mobiles[m].TransferRate	 
 	}
 	outD.Fairness= outD.SumTR*outD.SumTR / s.M / outD.Fairness
+	outD.MUFactor=0
+	var nARB float64
+	for d :=range s.Synstations{
+		a,b :=s.Synstations[d].MU_factor_measure()
+		outD.MUFactor+=a
+		nARB +=b
+	}
+	outD.MUFactor/=nARB
+
 
 	outD.k = float64(s.Tti)
 	if s.Tti%10 == 0 {
