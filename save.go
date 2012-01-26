@@ -33,6 +33,7 @@ func init() {
 	saveData = append(saveData, CreateStart(Outage, s.M, "Outage"))
 	saveData = append(saveData, CreateStart(Ptxr, s.M, "Ptxr"))
 	saveData = append(saveData, CreateStart(PowerM, s.NCh, "PowerM"))
+	saveData = append(saveData, CreateStart(ARBm, s.NCh, "ARBm"))
 	saveData = append(saveData, CreateStart(PrMaster, s.M, "PrMaster"))
 	saveData = append(saveData, CreateStart(TransferRate, s.M, "TransferRate"))
 	saveData = append(saveData, CreateStart(NumARB, s.M, "NumARB"))
@@ -73,6 +74,7 @@ func DIV(t *s.Trace, i int) float64          { return float64(t.Mobs[i].Diversit
 func Outage(t *s.Trace, i int) float64       { return float64(t.Mobs[i].Outage) }
 func Ptxr(t *s.Trace, i int) float64         { return float64(t.Mobs[i].GetMeanPower()) }
 func PowerM(t *s.Trace, i int) float64       { return float64(t.Mobs[MobileSaveID].Power[i]) }
+func ARBm(t *s.Trace, i int) float64         { if t.Mobs[MobileSaveID].ARB[i]{return 1} ;return 0 }
 func PrMaster(t *s.Trace, i int) float64     { return float64(t.Mobs[i].PrMaster) }
 func TransferRate(t *s.Trace, i int) float64 { return float64(t.Mobs[i].TransferRate) }
 func NumARB(t *s.Trace, i int) float64       { return float64(t.Mobs[i].GetNumARB()) }
