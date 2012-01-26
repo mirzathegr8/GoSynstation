@@ -6,7 +6,7 @@ const Field = 6000 //length in meters
 
 const Duration =1000// in iterations 
 
-const M = 2000 //numbers of mobiles
+const M = 1000 //numbers of mobiles
 const D =  75// numbers of DBS
 
 //for M-QAM, km*km=M
@@ -23,7 +23,7 @@ const NCh = NRB*NTDMA/DivCh + NChRes // number of channels
 const EffectiveBW =  90  * DivCh
 
 // Here we define the Coherence bandwith as a ratio of the total bandwith (20MHz)
-const corrF = 0.5
+const corrF = 0.3
 
 // 10 0 11 .1 12 .2 19 .5 37 .75
 const roverlap = 0.0 // ratio of overlaping of two adjacent channels
@@ -31,7 +31,7 @@ const roverlap = 0.0 // ratio of overlaping of two adjacent channels
 // thermal noise per RB 121.45dBm normalized per maximum terminal power output 21dBm and divided for one TTI
 const WNoise = DivCh * 5.6885e-15 //7.1614e-16 // White noise at reciever //21.484e-16
 const NChRes = 1              //numbers of reserved channels, not used yet, but chan 0 must be reserved
-const NConnec = 75          // numbers of connections per dbs
+const NConnec = 45          // numbers of connections per dbs
 
 
 //const BERThres = 0.30 //0.16//0.4/log2*(16)
@@ -53,7 +53,7 @@ const (
 
 //const BeamAngle = 1.1345 // for 120degre lobe (half lob size + 10% =65deg in rad)
 
-//const SetReceiverType = BEAM
+
 // 
 const (
 	OMNI = iota
@@ -116,8 +116,8 @@ const (
 
 // These parameter or set for the Genetic search SC-FDMA algorithms 
 // functions ARBScheduler 3 4 and 4
-const popsize = 5
-const generations = 50
+const popsize = 10
+const generations = 5
 const CAPAthres = 3000 // this value to define the relative min capacity compared to the maximum over ARB for one mobile, under this threshold RB will not be assigned
 
 
@@ -126,6 +126,7 @@ const CAPAthres = 3000 // this value to define the relative min capacity compare
 // This function allows to observe the effect of no interference, or mean interference power.
 func GetNoisePInterference(Pint,Pr float64) float64{
 	return Pint-Pr + WNoise
+	//return 1.00e-14
 	//return WNoise*5000
 }
 
@@ -194,14 +195,14 @@ const EnodeBClock = 1
 
 //var ICIMfunc=ICIMSplitEdgeCenter2
 var ICIMfunc=ICIMNone
-var PowerAllocation =      optimizePowerAllocationAgent // optimizePowerAllocationAgentRB//  optimizePowerAllocationAgent // optimizePowerNone // 
+var PowerAllocation =  optimizePowerAllocationAgent // optimizePowerAllocationAgentRB//  optimizePowerAllocationAgent // optimizePowerNone // 
 const PowerAgentFact = 0.8//0.8//0.2 
 const PowerAgentAlpha = 1 //0.8//0.2 
 
 
-const uARBcost = 0.10000 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)
+const uARBcost = 0.00000 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)
 
-const TRATETECH = OFDM
+const TRATETECH = NORMAL
 const (
 	OFDM = iota
 	OFDM2	
