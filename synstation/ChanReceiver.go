@@ -5,8 +5,7 @@ import "fmt"
 
 
 
-// number of signal id saved in the list of the ChanReceiver
-const SizeES = 4
+
 
 // Structure to hold interference level for a RB, and multilevel interference with overlaping channels calculation
 // as well as a list of ordered strongest signal received 
@@ -72,7 +71,7 @@ func (rbs * RBsReceiver) SumInterference(){
 		rbs.Channels[rb].Clear()
 	}
 
-	/*for m := range Mobiles{
+	for m := range Mobiles{
 	
 		for rb,use :=range Mobiles[m].ARB{
 			if use{
@@ -80,9 +79,9 @@ func (rbs * RBsReceiver) SumInterference(){
 				rbs.Channels[rb].Push(m, rbs.Channels[rb].pr[m])
 			}
 		}
-	}*/
+	}
 
-	for rb := range rbs.Channels {
+	/*for rb := range rbs.Channels {
 		chR := &rbs.Channels[rb]
 		Pmax:=-1.0
 		for e := SystemChan[rb].Emitters.Front(); e != nil; e = e.Next() {
@@ -97,7 +96,7 @@ func (rbs * RBsReceiver) SumInterference(){
 			//chR.Push(m, chR.pr[m])
 
 		}
-	}
+	}*/
 
 
 	//For now, no cochannel
