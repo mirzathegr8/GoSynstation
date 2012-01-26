@@ -68,7 +68,25 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 
 	Orientation := dbs.AoA[co.E.Id]	
 
+	//var sector int
+	if SetReceiverType==SECTORED{
+		if Orientation< PI/3 || Orientation > PI2*5/6{
+			Orientation=0
+		} else if Orientation<PI{
+			Orientation=PI2/3
+		} else {
+			Orientation=4*PI/3
+		}
+
+	}
+
+
 	for m := range Mobiles {
+		switch SetReceiverType{
+
+		case BEAM:
+			fallthrough
+		case SECTORED:
 		co.gainM[m] = 0.0		
 
 		theta := dbs.AoA[m] - Orientation
@@ -89,6 +107,11 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 				g = 20
 			}
 			co.gainM[m] = math.Pow(10, (-g+10)/10)
+		}
+
+		case OMNI: 
+			co.gainM[m]=1.0
+	
 		}
 	
 	}
@@ -200,9 +223,9 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 			touch = true
 		} else {
 			co.SNRrb[rb] = dbs.pr[co.E.Id] * co.ff_R[rb] /
-				(GetNoisePInterference(Rc.Pint, 0) + NotPint1)
+				(GetNoisePInterference(Rc.Pint, 0) + NotPint1) * conservationFactor
 
-			co.SNRrb[rb] *= estimateFactor(dbs, co.E)
+			//co.SNRrb[rb] *= estimateFactor(dbs, co.E)
 		}
 	}
 
