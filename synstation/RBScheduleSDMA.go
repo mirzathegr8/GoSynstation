@@ -172,7 +172,7 @@ func (d* ARBSchedulerSDMA) Schedule(dbs *DBS, Rgen *rand.Rand) {
 			}
 
 			d.ALtmp = d.poolAr[i].vect //copies
-			d.metricpool[i] = MetricSDMA(&d.ALtmp,&d.SNRrbAll, &d.Pr, d.MasterConnec[0:Nmaster])
+			d.metricpool[i] = MetricSDMA(&d.ALtmp,&d.SNRrbAll, &d.Pr, d.MasterConnec[0:Nmaster],dbs)
 		}
 
 		//find the best 100
@@ -186,7 +186,7 @@ func (d* ARBSchedulerSDMA) Schedule(dbs *DBS, Rgen *rand.Rand) {
 
 	d.ALtmp = d.PopulAr[0].vect
 	//for trimming	
-	MetricSDMA(&d.ALtmp,&d.SNRrbAll, &d.Pr, d.MasterConnec[0:Nmaster])
+	MetricSDMA(&d.ALtmp,&d.SNRrbAll, &d.Pr, d.MasterConnec[0:Nmaster], dbs)
 
 	//fmt.Println("before ",PopulAr[0].vect)
 	//fmt.Println("after ", ALtmp)
@@ -200,7 +200,7 @@ func (d* ARBSchedulerSDMA) Schedule(dbs *DBS, Rgen *rand.Rand) {
 *	
 *
  */
-func MetricSDMA(AL *[mDf][NCh]int, SNRrbAll *[NConnec][NCh]float64, Pr *[NConnec]float64, MasterConn []*Connection) (metric float64){
+func MetricSDMA(AL *[mDf][NCh]int, SNRrbAll *[NConnec][NCh]float64, Pr *[NConnec]float64, MasterConn []*Connection, dbs *DBS) (metric float64){
 
 	var SNRres [NConnec][NCh]float64
 	var NumARB [NConnec]int
@@ -215,17 +215,21 @@ func MetricSDMA(AL *[mDf][NCh]int, SNRrbAll *[NConnec][NCh]float64, Pr *[NConnec
 		}
 	}
 
+
+
+//TODO TODO
 	// remember the intra-interference ratios
 	for m1, C1 := range MasterConn {
 		for m2, C2 := range MasterConn {
 
 			//a := C1.gainM[C1.E.Id]
-			b := C1.gainM[C2.E.Id]
+  			b := C1.GetGain( dbs.AoA[C2.E.Id] )
 
 			Corr[m1][m2] = b /// a
 
 		}
 	}
+
 
 	// inverse the estimated SINR per rb to process for new allocation
 	for v1,C1 := range MasterConn {

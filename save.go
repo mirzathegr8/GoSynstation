@@ -33,6 +33,7 @@ func init() {
 	saveData = append(saveData, CreateStart(Outage, s.M, "Outage"))
 	saveData = append(saveData, CreateStart(Ptxr, s.M, "Ptxr"))
 	saveData = append(saveData, CreateStart(PowerM, s.NCh, "PowerM"))
+	saveData = append(saveData, CreateStart(Fading, s.NCh, "Fading"))
 	saveData = append(saveData, CreateStart(ARBm, s.NCh, "ARBm"))
 	saveData = append(saveData, CreateStart(PrMaster, s.M, "PrMaster"))
 	saveData = append(saveData, CreateStart(TransferRate, s.M, "TransferRate"))
@@ -75,6 +76,7 @@ func Outage(t *s.Trace, i int) float64       { return float64(t.Mobs[i].Outage) 
 func Ptxr(t *s.Trace, i int) float64         { return float64(t.Mobs[i].GetMeanPower()) }
 func PowerM(t *s.Trace, i int) float64       { return float64(t.Mobs[MobileSaveID].Power[i]) }
 func ARBm(t *s.Trace, i int) float64         { if t.Mobs[MobileSaveID].ARB[i]{return 1} ;return 0 }
+func Fading(t *s.Trace, i int) float64       { return float64(t.Mobs[MobileSaveID].MasterMultiPath[i]) }
 func PrMaster(t *s.Trace, i int) float64     { return float64(t.Mobs[i].PrMaster) }
 func TransferRate(t *s.Trace, i int) float64 { return float64(t.Mobs[i].TransferRate) }
 func NumARB(t *s.Trace, i int) float64       { return float64(t.Mobs[i].GetNumARB()) }
@@ -347,7 +349,7 @@ func SaveToFile(Mobiles []s.Mob, dbs []s.DBS) {
 
 }
 
-func fadingSave(c chan int) {
+/*func fadingSave(c chan int) {
 
 	os.Remove("fading.mat")
 	fadingF, err := os.OpenFile("fading.mat", os.O_WRONLY|os.O_CREATE, 0666)
@@ -382,6 +384,6 @@ func fadingSave(c chan int) {
 	fadingF.Close()
 
 }
-
+*/
 //   Reformatted by   lerouxp    Tue Nov 1 11:50:34 CET 2011
 

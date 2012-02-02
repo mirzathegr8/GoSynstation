@@ -254,7 +254,7 @@ func drawVoronoi(d *DataSave) {
 
 			m1 := &d.t.Mobs[m]
 
-			if m1.IsSetARB(Ch) {
+			if m1.ARB[Ch] {
 
 				d.cv.SetColor(0, 0, 0, 1)
 				//neighB = neighB[0:0]
@@ -265,7 +265,7 @@ func drawVoronoi(d *DataSave) {
 					if j != m {
 						m2 := &d.t.Mobs[j]
 
-						if m2.IsSetARB(Ch) {
+						if m2.ARB[Ch] {
 
 							if m1.Pos.Distance(m2.Pos) < 8000 {
 

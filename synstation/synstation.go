@@ -66,10 +66,25 @@ func (dbs *DBS) RunPhys() {
 
 	dbs.Clock = dbs.Rgen.Intn(EnodeBClock)
 
+	//must be done for all before evaluting gains and interfernce
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
+		c.EvalVectPath(dbs)
+	}
+
+
+	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
+		c := e.Value.(*Connection)
+		c.SetGains(dbs)
+	}
+	
+
+	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
+		c := e.Value.(*Connection)
+		c.EvalInterference(dbs)
 		c.BitErrorRate(dbs)
 	}
+
 
 	SyncChannel <- 1
 }
@@ -121,7 +136,7 @@ func (dbs *DBS) connect(e *Emitter, m float64) {
 	Conn := dbs.ConnectionBank.Back().Value.(*Connection)
 	dbs.ConnectionBank.Remove(dbs.ConnectionBank.Back())
 	// these connection instance of course need to be initialized
-	Conn.InitConnection(e, m, dbs.Rgen)
+	Conn.InitConnection(e, m, dbs)
 	dbs.Connec.PushBack(Conn)
 	sens_connect++
 }
@@ -136,6 +151,14 @@ func (dbs *DBS) IsConnected(tx *Emitter) bool {
 	}
 	return false
 
+}
+
+func (dbs *DBS) GetConnectedMobiles() *[M]bool{
+	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
+			c := e.Value.(*Connection)
+			dbs.Masters[c.E.Id] = true
+		}
+	return &dbs.Masters
 }
 
 func (dbs *DBS) GetCancelation() *[M]bool {

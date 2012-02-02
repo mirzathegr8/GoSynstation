@@ -3,16 +3,22 @@ package synstation
 import "math"
 import "geom"
 import rand "rand"
+import "cmath"
 //import cmath "math/cmplx"
 //import "fmt"
 
+// TODO make sum multi paht power mean to equal 1
+// TODO what difference for SNR estimates on used/unsued rbs. should be equal for gensearch
 
 var num_con int
 
 func GetDiversity() int { a := num_con; num_con = 0; return a }
 
+const NP = 3 // numbers of simulated paths
+const NA = 10 //numbers of antennas at receiver
+
 type Connection struct {
-	E *Emitter
+	E   *Emitter
 	IdB int //Id of the base station
 
 	Status int //0 master ,1 slave
@@ -25,28 +31,29 @@ type Connection struct {
 	meanCapa MeanData
 
 	//filterAr FilterBank   //filter ban to use for channel gain FF generator
-	filterAr [NCh]*Filter //filter ban to use for channel gain FF generator
-	ff_R     [NCh]float64 // stores channel gain for every RB
-	SNRrb    [NCh]float64 //stores SNR per RB
+	filterAr [NP][NCh]*Filter    //filter ban to use for channel gain FF generator
+	ff_R     [NP][NCh]complex128 // stores channel gain and phase for every RB every path
 
-	//IfilterAr FilterBank   //filter bank for first interferer
-	IfilterAr [NCh]*Filter //filter bank for first interferer
-	Iff_R     [NCh]float64 //channel FF gain  for first interer if fading is generated
+	MultiPathMAgain   [NCh]float64
+	InterferencePower [NCh]float64
+	//CorrelationMatrix [NA][NA]float64
+
+	SNRrb [NCh]float64 //stores SNR per RB
+
 
 	filterF *Filter //Coherence Frequency filter	
 
 	Rgen *rand.Rand
 
-	initz [NCh]complex128 //generation of random number per RB	
+	initz [NP][NCh]complex128 //generation of random number per RB	
 
 	//ComplexRand chan complex128
 
-	gainM [M]float64
-}
+	antennaGains [NA]complex128
+	pathAoA      [NP]float64
+	pathGains    [NP]float64 //amplitutes ,  delay is already in filter fading
 
-// for output to save
-func (co *Connection) GetInstantSNIR() []float64 {
-	return co.ff_R[:]
+	//gainM [M]float64
 }
 
 type ConnectionS struct {
@@ -64,7 +71,157 @@ func (co *ConnectionS) Copy(cc *Connection) {
 
 func (co *Connection) GetMeanPr() float64 { return co.meanPr.Get() }
 
-func (co *Connection) BitErrorRate(dbs *DBS) {
+var PathGain = [3]float64 {0.79057, 0.5, 0.35355} // to normalize sum power of paths
+
+func (co *Connection) EvalVectPath(dbs *DBS) {
+
+	co.pathAoA[0] = 0.2* dbs.AoA[co.E.Id] + .8*co.pathAoA[0] + (.05*co.Rgen.Float64() - .025)
+	co.pathGains[0] = PathGain[0]
+
+	for np := 1; np < NP; np++ {
+		co.pathAoA[np] = co.pathAoA[np] + (.2*co.Rgen.Float64() - .1)
+		if co.pathAoA[np] < 0 {
+			co.pathAoA[np] += PI2
+		}
+		if co.pathAoA[np] > PI2 {
+			co.pathAoA[np] -= PI2
+		}
+		co.pathGains[np] = .8*co.pathGains[np] + .2*co.Rgen.Float64()*3.0334*PathGain[np] //the fact 3.033 is to compensate the power loss in the filter. the fixed pathgain is to set a relative gain for each path, such that their mean power summs to one
+
+	}
+
+	for np := 0; np < NP; np++ {
+		//first decorelate freq filter
+		for i := 0; i < 50*corrF; i++ {
+			co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))
+		}
+
+		// generate NCh samples in frequencies
+		for rb := range co.initz[np] {
+			co.initz[np][rb] = co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))
+		}
+
+		// output values for each path on each rb
+		for rb := range co.initz[np] {
+			co.initz[np][rb] = co.filterAr[np][rb].nextValue(co.initz[np][rb])
+		}
+	}
+
+	//first path with line of sight
+	K := dbs.kk[co.E.Id]
+	for rb := range co.ff_R[0] {
+		co.ff_R[0][rb] = (co.initz[0][rb] + complex(K, 0)) / complex(2+K*K, 0) //(real(a * cmath.Conj(a))) / (2 + K*K)
+	}
+
+	for np := 1; np < NP; np++ {
+		for rb := range co.ff_R[np] {
+			co.ff_R[np][rb] = co.initz[np][rb] / complex(2, 0)
+
+		}
+	}
+
+	//antenna total gains
+	for rb := range co.ff_R[0] {
+		var val complex128
+		for np := 0; np < NP; np++ {
+			val += co.Gain(complex(co.pathGains[np], 0)*co.ff_R[np][rb], co.pathAoA[np], dbs)
+		}
+		co.MultiPathMAgain[rb] = real(val)*real(val) + imag(val)*imag(val)
+	}
+
+}
+
+func (co *Connection) EvalInterference(dbs *DBS) {
+
+	//add approximation for non connected mobiles (mean interference) without fading
+
+	ConnectedArray := dbs.GetConnectedMobiles()
+
+	for rb := range co.Channels {
+
+		co.InterferencePower[rb] = 0
+
+		for m := range Mobiles { //Mobiles {
+			if Mobiles[m].ARB[rb] && !ConnectedArray[m] {
+				// Evaluate Beam Gain	
+				gain := co.Gain(complex(1, 0), dbs.AoA[m], dbs)
+				co.InterferencePower[rb] += dbs.Channels[rb].pr[m] * (real(gain)*real(gain) + imag(gain)*imag(gain))
+
+			}
+		}
+	}
+	// sum miltupaths for all connections with appropriate gainM
+
+	sumPower := &co.initz[0]
+	for rb := 0 ; rb<NCh ;rb++ { sumPower[rb]=0}
+	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
+		c := e.Value.(*Connection)
+		if c.E.Id != co.E.Id {
+			//others paths for these gain combination
+			var IP complex128
+			for rb, use := range c.E.ARB {
+				if use {
+					for np := 0; np < NP; np++ {
+						IP += co.Gain(c.ff_R[np][rb]*complex(c.pathGains[np], 0), c.pathAoA[np], dbs)
+					}
+					sumPower[rb]+= IP* complex(dbs.Channels[rb].pr[c.E.Id],0)
+				}				
+			}
+		}
+	}
+	for rb :=0 ; rb<NCh;rb++ { 
+		co.InterferencePower[rb] += (real(sumPower[rb])*real(sumPower[rb]) + 
+						imag(sumPower[rb])*imag(sumPower[rb])) 
+	}
+
+	//fmt.Println(" ", co.InterferencePower)
+}
+
+func (co *Connection) SetGains(dbs *DBS) {
+
+	AoA := dbs.AoA[co.E.Id]
+
+	delta := math.Cos(AoA) / 2
+
+	for na := 0; na < NA; na++ {
+		co.antennaGains[na] = cmath.Exp(complex(0, -float64(na)*delta))
+	}
+
+}
+
+func (co *Connection) Gain(Signal complex128, AoA float64, dbs *DBS) complex128 {
+
+	var Val complex128
+	delta := math.Cos(AoA) / 2
+	for na := 0; na < NA; na++ {
+
+		Val +=  Signal *co.antennaGains[na] * cmath.Exp(complex(0, float64(na)*delta))
+
+	}
+
+	return Val
+}
+
+
+func (co *Connection) GetGain( AoA float64) float64  { //evals the gain of that mobile on this connection
+
+	var Val complex128
+	delta := math.Cos(AoA) / 2
+	for na := 0; na < NA; na++ {
+
+		Val +=  co.antennaGains[na] * cmath.Exp(complex(0, float64(na)*delta))
+
+	}
+
+	return real(Val)*real(Val)+imag(Val)*imag(Val)
+
+}
+
+/*
+func (co *Connection) Gain(AoA float64, dbs *DBS) complex128{
+
+
+
 
 	Orientation := dbs.AoA[co.E.Id]	
 
@@ -111,108 +268,23 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 
 		case OMNI: 
 			co.gainM[m]=1.0
-	
-		}
-	
-	}
 
-	MasterConnectedArray := dbs.GetCancelation()
-
-	if co.Status == 0 {
-		for rb := range co.Channels {
-			chR := &co.Channels[rb]
-			chR.Clear()
-
-			if InterferenceCancel== SIZEESCANCELATION {MasterConnectedArray = dbs.GetCancelationRB(rb)}
-
-			for m, g := range co.gainM { //Mobiles {
-				if Mobiles[m].ARB[rb] && !(MasterConnectedArray[m] && m!= co.E.Id){
-					// Evaluate Beam Gain	
-					f := dbs.Channels[rb].pr[m] * g //co.gainM[m]
-					chR.pr[m] = f
-					chR.Pint += f
-					if f > chR.Pmax {
-						chR.Pmax = f
-						chR.Signal[0] = m
-					}
-				}
-			}
-		}
-	} else { //we do not evaluate interference on unsused RB if we are not master, as this information is only usefull to scheduling algos
-		// however, if at the fetchdata call on mobiles it changes master connection, then the sinr information will be used from this calculation and will be wrong : need to add a delay before the new master dbs considers the link master and allocates rb to that emitter
-		for rb, use := range co.E.ARB {
-			if use {
-				chR := &co.Channels[rb]
-				chR.Clear()
-
-				if InterferenceCancel== SIZEESCANCELATION {MasterConnectedArray = dbs.GetCancelationRB(rb)}
-
-				for m, g := range co.gainM { //Mobiles {
-					//if g>0 {//dbs.pr[m] > thres {
-					if Mobiles[m].ARB[rb]  && !(MasterConnectedArray[m] && m!= co.E.Id) {
-						// Evaluate Beam Gain	
-						f := dbs.Channels[rb].pr[m] * g //co.gainM[m]
-						chR.pr[m] = f
-						chR.Pint += f
-						if f > chR.Pmax {
-							chR.Pmax = f
-							chR.Signal[0] = m
-						}
-					}
-					//}
-				}
-			}
 		}
 
 	}
+}*/
 
-	
-
-
-	for i := 0; i < 50*corrF; i++ {
-		co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))	
-	}
-
-	for rb := range co.filterAr {
-		co.initz[rb] = co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))		
-	}
-	
-	for rb := range co.ff_R { 
-		co.initz[rb] = co.filterAr[rb].nextValue(co.initz[rb])
-	}
-	K:=dbs.kk[co.E.Id]
-	for rb := range co.ff_R {	
-		ar := real(co.initz[rb]) + K
-		ai := imag(co.initz[rb])
-		co.ff_R[rb] = (ar*ar + ai*ai) / (2 + K*K) //(real(a * cmath.Conj(a))) / (2 + K*K)
-	}
-
-
-
+func (co *Connection) BitErrorRate(dbs *DBS) {
 
 	var touch bool
 
 	for rb, use := range co.E.ARB {
 
-		Rc := &co.Channels[rb]
-
-		NotPint1 := 0.0
-		/*	if FadingOnPint1 == Fading { //if cancel, co.Iff_r =0 and total multiplied by -1, 
-				//if fading, remove difference
-				if Rc.Signal[1] >= 0 {
-					NotPint1 = Rc.pr[Rc.Signal[1]] * (co.Iff_R[rb] - 1)
-				}
-			} else if FadingOnPint1 == Cancel {
-				if Rc.Signal[1] >= 0 {
-					NotPint1 = -Rc.pr[Rc.Signal[1]]
-				}
-			}*/
-
 		if use {
 
-			Pr := Rc.pr[co.E.Id]
-
-			co.SNRrb[rb] = Pr * co.ff_R[rb] / (GetNoisePInterference(Rc.Pint, Pr) + NotPint1)
+			Pr := co.MultiPathMAgain[rb] * dbs.Channels[rb].pr[co.E.Id]
+			co.SNRrb[rb] = Pr / (co.InterferencePower[rb] + WNoise)
+			//GetNoisePInterference(co.InterferencePower[rb], co.MultiPathMAgain[rb])
 
 			BER := L1 * math.Exp(-co.SNRrb[rb]/2/L2) / 2.0
 
@@ -222,10 +294,10 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 
 			touch = true
 		} else {
-			co.SNRrb[rb] = dbs.pr[co.E.Id] * co.ff_R[rb] /
-				(GetNoisePInterference(Rc.Pint, 0) + NotPint1) * conservationFactor
+			co.SNRrb[rb] = co.MultiPathMAgain[rb] * dbs.pr[co.E.Id] / (co.InterferencePower[rb] + WNoise) * conservationFactor
+			//GetNoisePInterference(co.InterferencePower[rb], 0) 
 
-			//co.SNRrb[rb] *= estimateFactor(dbs, co.E)
+
 		}
 	}
 
@@ -235,9 +307,8 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 		co.meanBER.Add(1)
 	}
 
+	//fmt.Println(co.SNRrb)
 
-
-	
 	co.Status = 1 //let mobile set master state		
 	co.E.AddConnection(co, dbs)
 
@@ -256,13 +327,13 @@ func (co *Connection) EvalRatioDisconnect() float64 {
 	return Ptot * math.Log(Ptot/co.GetLogMeanBER())
 }
 
-func (co *Connection) InitConnection(E *Emitter, v float64, Rgen *rand.Rand) {
+func (co *Connection) InitConnection(E *Emitter, v float64, dbs *DBS) {
 
 	co.E = E
 	co.meanBER.Clear(v)
 	co.Status = 1
 
-	co.Rgen = Rgen
+	co.Rgen = dbs.Rgen
 
 	Speed := E.GetSpeed()
 	DopplerF := Speed * F / cel // 1000 samples per seconds speed already divided by 1000 for RB TTI
@@ -277,59 +348,10 @@ func (co *Connection) InitConnection(E *Emitter, v float64, Rgen *rand.Rand) {
 
 	co.filterF = CoherenceFilter.Copy()
 
-	for i := 0; i < NCh; i++ {
-		co.filterAr[i] = C.Copy()
-	}
-	
-
-	/*
-	if FadingOnPint1 == Fading {
-			co.IfilterAr.Build(C)	
-
-
-		// initalize filters : sent some values to prevent having empty values z^-n in filters 
-		// 1.5/DopplerF gives a good number of itterations to decorelate initial null variables
-		// and set the channel to a steady state		
-
-		for l := 0; l < int(2.5/DopplerF); l++ {
-
-			// for speed optimization, decorelation samples or not used, it makes little difference 
-			for i := 0; i < 50; i++ {
-				co.initz[i] = complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())
-			}
-			co.filterF.nextValues(co.initz[0:50])
-
-			for i := 0; i < NCh; i++ {
-				co.initz[i] = complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())
-			}
-			co.filterF.nextValues(co.initz[0:NCh])		
-
-			co.IfilterAr.nextValues(&co.initz)
-
-		}
-	}*/
-
-	for l := 0; l < int(2.5/DopplerF); l++ {
-
-		// for speed optimization, decorelation samples or not used, it makes little difference 
-		for i := 0; i < 50; i++ {
-			co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))			
-		}		
-
+	for np := 0; np < NP; np++ {
 		for i := 0; i < NCh; i++ {
-			co.filterAr[i].nextValue(co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())))
+			co.filterAr[np][i] = C.Copy()
 		}
-
-	}
-
-	/*if FadingOnPint1 == Fading {
-		for i := 0; i < NCh; i++ {
-			co.IfilterAr[i] = C.Copy()
-		}
-
-		// initalize filters : sent some values to prevent having empty values z^-n in filters 
-		// 1.5/DopplerF gives a good number of itterations to decorelate initial null variables
-		// and set the channel to a steady state		
 
 		for l := 0; l < int(2.5/DopplerF); l++ {
 
@@ -339,30 +361,41 @@ func (co *Connection) InitConnection(E *Emitter, v float64, Rgen *rand.Rand) {
 			}
 
 			for i := 0; i < NCh; i++ {
-				co.IfilterAr[i].nextValue(co.filterF.nextValue(
-					complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())))
+				co.filterAr[np][i].nextValue(co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())))
 			}
 
 		}
-	}*/
+	}
+
+	co.pathAoA[0] = dbs.AoA[co.E.Id]
+	co.pathGains[0] = 1
+	divF := 5.0
+	for np := 1; np < NP; np++ {
+		co.pathAoA[np] = PI2 * co.Rgen.Float64()
+		co.pathGains[np] = co.Rgen.ExpFloat64() / divF
+		divF *= 5.0
+
+	}
 
 }
 
-func (co *Connection) clear(){
+func (co *Connection) clear() {
 	// free some memory . perhaps need to rethink this and have a filterbank
-	for rb :=range co.filterAr {
-		co.filterAr[rb]=nil
-		co.IfilterAr[rb]=nil
+	for np := 0; np < NP; np++ {
+		for rb := range co.filterAr {
+
+			co.filterAr[np][rb] = nil
+			//co.IfilterAr[rb]=nil
+		}
 	}
 
 }
 
 func NewConnection(i int) (Conn *Connection) {
 	Conn = new(Connection)
-	Conn.IdB=i
+	Conn.IdB = i
 	return
 }
-
 
 func (co *Connection) GetLogMeanBER() float64 {
 	return math.Log10(co.meanBER.Get() + 1e-10) //prevent saturation
@@ -385,4 +418,6 @@ func estimateFactor1(dbe *DBS, E *Emitter) (o float64) {
 	return
 
 }
+
+//   Reformatted by   lerouxp    Tue Jan 31 23:41:07 CET 2012
 

@@ -34,6 +34,8 @@ type EmitterS struct {
 
 	IdB int // saves the id of the master BS
 
+	MasterMultiPath [NCh]float64
+
 }
 
 // EmitterS with additional registers for BER and diversity evaluation, 
@@ -249,6 +251,8 @@ func (e *Emitter) FetchData() {
 
 		e.MasterConnection.Status = 0 // flag the best connection as master
 		e.IdB=e.MasterConnection.IdB
+
+		copy(e.MasterMultiPath[:],e.MasterConnection.MultiPathMAgain[:])
 
 		for rb := 1; rb < NCh; rb++ {
 
