@@ -2,12 +2,12 @@ package synstation
 
 import "math"
 
-const Field = 6000 //length in meters
+const Field = 4000 //length in meters
 
 const Duration =1000// in iterations 
 
-const M = 800 //numbers of mobiles
-const D =  60// numbers of DBS
+const M = 500 //numbers of mobiles
+const D =  50// numbers of DBS
 
 //for M-QAM, km*km=M
 const km = 4.0
@@ -16,7 +16,7 @@ const L1 = 2.0/km*(1.0-1.0/km)
 
 const beta=1 // SNR Gap
 
-const NRB=100
+const NRB=75
 const NTDMA=1
 const DivCh=1
 const NCh = NRB*NTDMA/DivCh + NChRes // number of channels

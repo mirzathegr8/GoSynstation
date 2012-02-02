@@ -161,7 +161,7 @@ func (dbs *DBS) GetConnectedMobiles() *[M]bool{
 	return &dbs.Masters
 }
 
-func (dbs *DBS) GetCancelation() *[M]bool {
+/*func (dbs *DBS) GetCancelation() *[M]bool {
 
 	for m := range dbs.Masters {
 		dbs.Masters[m] = false
@@ -186,7 +186,7 @@ func (dbs *DBS) GetCancelation() *[M]bool {
 
 	}
 	return &dbs.Masters
-}
+}*/
 
 func (dbs *DBS) GetCancelationRB(rb int) *[M]bool {
 

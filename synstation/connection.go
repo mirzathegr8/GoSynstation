@@ -15,7 +15,23 @@ var num_con int
 func GetDiversity() int { a := num_con; num_con = 0; return a }
 
 const NP = 3 // numbers of simulated paths
-const NA = 10 //numbers of antennas at receiver
+const NA = 3 //numbers of antennas at receiver
+
+
+var PathGain = [5]float64 {1, 0.25, 0.125,0.05,0.0001} //0.5, 0.125} // relative powers of each path
+
+
+func init(){
+
+	sum:=0.0
+	for np:=0;np<NP;np++{
+		sum+=PathGain[np]
+	}
+	for np:=0;np<NP;np++{
+		PathGain[np]=math.Sqrt(PathGain[np]/sum)
+	}
+
+}
 
 type Connection struct {
 	E   *Emitter
@@ -71,14 +87,14 @@ func (co *ConnectionS) Copy(cc *Connection) {
 
 func (co *Connection) GetMeanPr() float64 { return co.meanPr.Get() }
 
-var PathGain = [3]float64 {0.79057, 0.5, 0.35355} // to normalize sum power of paths
+
 
 func (co *Connection) EvalVectPath(dbs *DBS) {
 
-	co.pathAoA[0] = 0.2* dbs.AoA[co.E.Id] + .8*co.pathAoA[0] + (.05*co.Rgen.Float64() - .025)
-	co.pathGains[0] = PathGain[0]
+	//co.pathAoA[0] = 0.2* dbs.AoA[co.E.Id] + .8*co.pathAoA[0] + (.05*co.Rgen.Float64() - .025)
+	//co.pathGains[0] = PathGain[0]
 
-	for np := 1; np < NP; np++ {
+	/*for np := 1; np < NP; np++ {
 		co.pathAoA[np] = co.pathAoA[np] + (.2*co.Rgen.Float64() - .1)
 		if co.pathAoA[np] < 0 {
 			co.pathAoA[np] += PI2
@@ -86,9 +102,9 @@ func (co *Connection) EvalVectPath(dbs *DBS) {
 		if co.pathAoA[np] > PI2 {
 			co.pathAoA[np] -= PI2
 		}
-		co.pathGains[np] = .8*co.pathGains[np] + .2*co.Rgen.Float64()*3.0334*PathGain[np] //the fact 3.033 is to compensate the power loss in the filter. the fixed pathgain is to set a relative gain for each path, such that their mean power summs to one
+		//co.pathGains[np] = .8*co.pathGains[np] + .2*co.Rgen.Float64()*3.0334*PathGain[np] //the fact 3.033 is to compensate the power loss in the filter. the fixed pathgain is to set a relative gain for each path, such that their mean power summs to one
 
-	}
+	}*/
 
 	for np := 0; np < NP; np++ {
 		//first decorelate freq filter
@@ -368,12 +384,12 @@ func (co *Connection) InitConnection(E *Emitter, v float64, dbs *DBS) {
 	}
 
 	co.pathAoA[0] = dbs.AoA[co.E.Id]
-	co.pathGains[0] = 1
-	divF := 5.0
+	co.pathGains[0] = PathGain[0]
+	//divF := 5.0
 	for np := 1; np < NP; np++ {
 		co.pathAoA[np] = PI2 * co.Rgen.Float64()
-		co.pathGains[np] = co.Rgen.ExpFloat64() / divF
-		divF *= 5.0
+		co.pathGains[np] = PathGain[np] //co.Rgen.ExpFloat64() / divF
+	//	divF *= 5.0
 
 	}
 
