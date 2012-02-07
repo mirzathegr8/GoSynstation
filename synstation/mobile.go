@@ -1,8 +1,7 @@
 package synstation
 
-import rand "rand"
+import rand "math/rand"
 import "math"
-
 
 //  a mobile is an emitter with mobility : speed data, 
 // it also is an agent and has an internal clock
@@ -11,9 +10,7 @@ type Mob struct {
 	//R    PhysReceiver
 	Rgen  *rand.Rand
 	clock int
-	
 }
-
 
 func (M *Mob) Init(i int) {
 
@@ -24,7 +21,7 @@ func (M *Mob) Init(i int) {
 
 	M.X = M.Rgen.Float64() * Field
 	M.Y = M.Rgen.Float64() * Field
-	M.SetPower( 1.0 )
+	M.SetPower(1.0)
 
 	M.ReSetARB() // start trying to connect
 
@@ -34,8 +31,9 @@ func (M *Mob) Init(i int) {
 	M.Speed[0] = speed * math.Cos(angle)
 	M.Speed[1] = speed * math.Sin(angle)
 
-	M.Data=4e6;
+	M.Data = 4e6
 
+	M.Emitter.Init()
 }
 
 // 	applies agent functionality (move mobiles)
@@ -61,12 +59,16 @@ func (M *Mob) RunAgent() {
 		M.Y = Field
 	}
 
-	if Tti>=0 {M.Data-= int(M.TransferRate); if M.Data<0 {M.Data+=200}}
-//	if M.Data<2 { M.Power=0}
+	if Tti >= 0 {
+		M.Data -= int(M.TransferRate)
+		if M.Data < 0 {
+			M.Data += 200
+		}
+	}
+	//	if M.Data<2 { M.Power=0}
 
 	SyncChannel <- 1.0
 }
-
 
 func (M *Mob) RunPhys() {
 
@@ -78,4 +80,3 @@ func (M *Mob) RunPhys() {
 	SyncChannel <- 1
 
 }
-
