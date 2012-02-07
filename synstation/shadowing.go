@@ -1,17 +1,13 @@
-
 package synstation
 
 import "math"
 import "geom"
-import rand "rand"
-
-
+import rand "math/rand"
 
 type shadowMapInt interface {
 	Init(corr float64, Rgen *rand.Rand)
 	evalShadowFading(d geom.Pos) (val float64)
 }
-
 
 type noshadow struct{}
 
@@ -33,7 +29,6 @@ type shadowMap struct {
 	smap [][]float32
 }
 
-
 var mapres = mapsize / float64(maplength)
 
 func (s *shadowMap) Init(corr_dist float64, Rgen2 *rand.Rand) {
@@ -54,11 +49,11 @@ func (s *shadowMap) Init(corr_dist float64, Rgen2 *rand.Rand) {
 		s.ysin[i] = Rgen2.Float64() * 2 * math.Pi
 
 		//if !(s.xcos[i] > mval || s.xcos[i]< -mval) {
-		if s.xcos[i] < mval  {
+		if s.xcos[i] < mval {
 			s.xcos[i] = 0
 		}
 		//if !(s.ycos[i] > mval || s.ycos[i]< -mval) {
-		if s.ycos[i] < mval  {
+		if s.ycos[i] < mval {
 			s.ycos[i] = 0
 		}
 		s.power += s.xcos[i] * s.xcos[i]
@@ -122,4 +117,3 @@ func (s *shadowMap) evalShadowFadingDirect(d geom.Pos) float64 {
 
 	return math.Pow(10, val/10)
 }
-

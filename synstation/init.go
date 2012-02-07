@@ -1,16 +1,16 @@
 package synstation
 
 import "math"
-//import "fmt"
-import rand "rand"
-import "geom"
-//import "container/list"
 
+//import "fmt"
+import rand "math/rand"
+import "geom"
+
+//import "container/list"
 
 var Tti int //number of the current tti, to be incremented by the main loop
 
 var SyncChannel chan float64
-
 
 var Synstations [D]DBS
 var Mobiles [M]Mob
@@ -69,7 +69,6 @@ func init() {
 		}
 	}
 
-	
 	for i := range Mobiles {
 		Mobiles[i].Init(i)
 	}
@@ -80,7 +79,6 @@ func init() {
 	CoherenceFilter = MultFilter(A, B)
 
 }
-
 
 // what a random variable doing in constant declaration file???
 // ah, ok the random generator is constant,... :p
@@ -99,46 +97,51 @@ func Init() {
 	//sync
 	Sync(D)
 
-	Dprim:=D/2//*3/4
+	Dprim := D / 2 //*3/4
 
-	if NetLayout==HONEYCOMB{
+	if NetLayout == HONEYCOMB {
 
-		d:=0
-		Wsd := math.Sqrt(float64(Dprim)*2*math.Sqrt(3) )	
-		xD := int(Wsd/2.0)
-		yD := int(Wsd/math.Sqrt(3))
+		d := 0
+		Wsd := math.Sqrt(float64(Dprim) * 2 * math.Sqrt(3))
+		xD := int(Wsd / 2.0)
+		yD := int(Wsd / math.Sqrt(3))
 
-		a:=(xD+1)*yD
-		b:=(yD+1)*xD
-		if a<=Dprim && b<=Dprim{
-			if a>b { xD++} else {yD++}		
-		} else if a<=Dprim{ xD++
-		} else if b<=Dprim { yD++}
-	
+		a := (xD + 1) * yD
+		b := (yD + 1) * xD
+		if a <= Dprim && b <= Dprim {
+			if a > b {
+				xD++
+			} else {
+				yD++
+			}
+		} else if a <= Dprim {
+			xD++
+		} else if b <= Dprim {
+			yD++
+		}
 
-		DDx := Field / (float64(xD)+.8)
-		DDy := DDx*math.Sqrt(3)/2
+		DDx := Field / (float64(xD) + .8)
+		DDy := DDx * math.Sqrt(3) / 2
 
-		IntereNodeBDist=DDx // set the interdistance for schedulers with antipasta
+		IntereNodeBDist = DDx // set the interdistance for schedulers with antipasta
 
-		deltaX:= (Field- (float64(xD)-0.5)*DDx) / 2.0
-		deltaY:= (Field- (float64(yD)-1)*DDy) / 2.0
-		for i:=0;i< xD ;i++{
-			for j:=0;j < yD;j++{
-				x:=deltaX + DDx*(float64(i)+ .5*float64(j%2) )
-				y:=deltaY + DDy*float64(j)				
-				Synstations[d].SetPos(geom.Pos{x,y})
-				Synstations[d].Color=( 2*(j%2) + i )%3
+		deltaX := (Field - (float64(xD)-0.5)*DDx) / 2.0
+		deltaY := (Field - (float64(yD)-1)*DDy) / 2.0
+		for i := 0; i < xD; i++ {
+			for j := 0; j < yD; j++ {
+				x := deltaX + DDx*(float64(i)+.5*float64(j%2))
+				y := deltaY + DDy*float64(j)
+				Synstations[d].SetPos(geom.Pos{x, y})
+				Synstations[d].Color = (2*(j%2) + i) % 3
 				d++
 			}
 		}
-		
-	}	
 
+	}
 
 	//scenario for random positioned dbs
-	j:=0
-	for i := D/2; i<D ; i++ {
+	j := 0
+	for i := D / 2; i < D; i++ {
 		//Synstations[i].SetPos(geom.Pos{Rgen.Float64() * Field, Rgen.Float64() * Field})
 
 		Synstations[i].SetPos(Synstations[j].GetPos())
@@ -148,8 +151,6 @@ func Init() {
 		//Synstations[i].NMaxConnec = 0//15//15//15//NConnec/3
 	}
 
-
 	ChannelHop() //Set Mobile's initial channel
 
 }
-
