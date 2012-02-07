@@ -1,7 +1,7 @@
 package synstation
 
 import "sort"
-import rand "rand"
+import rand "math/rand"
 import "math"
 import "fmt"
 
@@ -10,21 +10,20 @@ func init() {
 	fmt.Println("init to keep fmt")
 }
 
-
 type allocSet struct {
 	vect []int
-} 
+}
 
 func createDesc(ppO allocSet, pool []allocSet, Rgen *rand.Rand) {
 	//fmt.Print(" in")
 
-	nCh:= len(ppO.vect)
+	nCh := len(ppO.vect)
 
 	for i := 0; i < 10; i++ {
 
 		//copy
 
-		copy(pool[i].vect,ppO.vect) // copies value since arraytype
+		copy(pool[i].vect, ppO.vect) // copies value since arraytype
 
 		pp := pool[i].vect //short name to consider that array descendant
 		//modify
@@ -105,7 +104,6 @@ func createDesc(ppO allocSet, pool []allocSet, Rgen *rand.Rand) {
 
 }
 
-
 func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 
 	var Metric [NConnec][NCh]float64
@@ -124,7 +122,9 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 		E := c.E
 
 		if c.Status == 0 {
-			for i:=0; i<NCh; i++{E.ARBfutur[i]=false}
+			for i := 0; i < NCh; i++ {
+				E.ARBfutur[i] = false
+			}
 
 			Nmaster++
 
@@ -169,16 +169,19 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 
 	var PopulAr [popsize][NCh]int
 	var Popul [popsize]allocSet
-	for i:=range Popul{ Popul[i].vect=PopulAr[i][:]}
+	for i := range Popul {
+		Popul[i].vect = PopulAr[i][:]
+	}
 
 	r := 6.0 / 6.0 // fraction of RB to allocate
 
 	//fmt.Print("Nmaster ", Nmaster, " ", int(float64(NCh)*float64(r)/float64(Nmaster)))
 
-	var poolAr [(popsize+1)*generations][NCh]int
-	var pool [(popsize+1)*10]allocSet
-	for i:=range pool{ pool[i].vect=poolAr[i][:]}
-	
+	var poolAr [(popsize + 1) * generations][NCh]int
+	var pool [(popsize + 1) * 10]allocSet
+	for i := range pool {
+		pool[i].vect = poolAr[i][:]
+	}
 
 	nbrb := int(float64(NCh) * float64(r) / float64(Nmaster))
 
@@ -217,9 +220,8 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 
 		//fmt.Println("desc created")
 
-
-		for i:=range Popul{
-			copy(pool[popsize*10+i].vect, Popul[i].vect)	
+		for i := range Popul {
+			copy(pool[popsize*10+i].vect, Popul[i].vect)
 		}
 		//copy(pool[1000:1100], Popul[:])
 
@@ -242,7 +244,7 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 		}
 		//find the best 100
 
-		initSequence(metricpool[:],&S)
+		initSequence(metricpool[:], &S)
 
 		sort.Sort(S)
 
@@ -320,7 +322,7 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 		c := e.Value.(*Connection)
 		E := c.E
 		if c.Status == 0 {
-				E.ARBfutur[0]=false
+			E.ARBfutur[0] = false
 		}
 	}
 	for rb := 1; rb < NCh; rb++ {
@@ -333,13 +335,13 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 
 					if E.ARB[rb] {
 						if AL[rb] != k {
-							E.ARBfutur[rb]=false
+							E.ARBfutur[rb] = false
 						}
 					} else {
 						if AL[rb] >= 0 {
 
 							if AL[rb] == k {
-								E.ARBfutur[rb]=true
+								E.ARBfutur[rb] = true
 								Hopcount++
 
 							}
@@ -355,13 +357,12 @@ func ARBScheduler2(dbs *DBS, Rgen *rand.Rand) {
 
 }
 
-
 func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 
 	var metricpool [popsize * 11]float64
-	var index [popsize*11]int
+	var index [popsize * 11]int
 	var S Sequence
-	S.index = index[0:popsize*11]
+	S.index = index[0 : popsize*11]
 
 	var Metric [NConnec][NCh]float64
 
@@ -427,25 +428,29 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 
 	//var NumAss [NConnec]int
 
-//	var Popul [popsize][NCh]int
+	//	var Popul [popsize][NCh]int
 	var PopulAr [popsize][NCh]int
 	var Popul [popsize]allocSet
-	for i:=range Popul{ Popul[i].vect=PopulAr[i][:]}
+	for i := range Popul {
+		Popul[i].vect = PopulAr[i][:]
+	}
 
 	r := 6.0 / 6.0 // fraction of RB to allocate
 
 	//fmt.Print("Nmaster ", Nmaster, " ", int(float64(NCh)*float64(r)/float64(Nmaster)))
 
-//	var pool [popsize * 11][NCh]int
-	var poolAr [(popsize+1)*10][NCh]int
-	var pool [(popsize+1)*10]allocSet
-	for i:=range pool{ pool[i].vect=poolAr[i][:]}
+	//	var pool [popsize * 11][NCh]int
+	var poolAr [(popsize + 1) * 10][NCh]int
+	var pool [(popsize + 1) * 10]allocSet
+	for i := range pool {
+		pool[i].vect = poolAr[i][:]
+	}
 
 	//First assign RB to best Metric
 	for i := 0; i < popsize; i++ {
 
-		numberAmobs := Nmaster                                               //Rgen.Intn(Nmaster) + 1
-		nbrb := int(float64(NCh) * float64(r) / (float64(Nmaster) )) //int(float64(NCh) * float64(r) / float64(numberAmobs))
+		numberAmobs := Nmaster                                      //Rgen.Intn(Nmaster) + 1
+		nbrb := int(float64(NCh) * float64(r) / (float64(Nmaster))) //int(float64(NCh) * float64(r) / float64(numberAmobs))
 
 		a := Rgen.Perm(Nmaster)
 
@@ -479,13 +484,11 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 
 		//fmt.Println("desc created")
 
-		for i:=range Popul{
-			copy(pool[popsize*10+i].vect, Popul[i].vect)	
+		for i := range Popul {
+			copy(pool[popsize*10+i].vect, Popul[i].vect)
 		}
 
-
 		//select the new population
-	
 
 		uARBcost := 0.00 //meanMeanCapa / 5 //0.5 // math.Log2(1 + meanMeanCapa)
 
@@ -496,7 +499,7 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 			//eval what would be the AL after trimming
 			var max float64
 			var AL [NCh]int
-			copy(AL[:],pool[i].vect) //copies 
+			copy(AL[:], pool[i].vect) //copies 
 			AL[0] = -1
 
 			for i := 1; i < len(AL); i++ {
@@ -523,7 +526,7 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 					//loop to trim
 					// here we only consider the Original metric 
 
-					jmax := i +nARBm - 1 //save first
+					jmax := i + nARBm - 1 //save first
 					jmaxo := jmax
 					for j = i; j <= jmax; j++ {
 
@@ -597,8 +600,7 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 		}
 		//find the best 100
 
-
-		initSequence(metricpool[:],&S)
+		initSequence(metricpool[:], &S)
 
 		sort.Sort(S)
 
@@ -688,27 +690,25 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 			fmt.Print("-1 ")
 		}
 	}
-	fmt.Println()*/		
- 
-	
-/*
-	for i,v:= range AL[0:len(AL)-1]{
-		
-	if  v!=sv && sv!=-1{ 
-		
-		for _,vv:=range AL[i:len(AL)]{
-			if sv==vv {fmt.Println("NOT SC-FDMA " ,AL)}	
-			goto br	
+	fmt.Println()*/
+
+	/*
+		for i,v:= range AL[0:len(AL)-1]{
+
+		if  v!=sv && sv!=-1{ 
+
+			for _,vv:=range AL[i:len(AL)]{
+				if sv==vv {fmt.Println("NOT SC-FDMA " ,AL)}	
+				goto br	
+			}
+			sv=v	
+		}else if sv==-1 && v!= -1{
+			sv=v	
 		}
-		sv=v	
-	}else if sv==-1 && v!= -1{
-		sv=v	
-	}
 
 
-	}
-	br:*/
-
+		}
+		br:*/
 
 	//Allocate RB effectivelly	
 
@@ -752,22 +752,21 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 	}*/
 
 	//fmt.Println("done")
- 	AL[0] = -1 // connect all	
-	for rb, vAL := range AL {		
+	AL[0] = -1 // connect all	
+	for rb, vAL := range AL {
 		for k, E := range MasterMobs[0:Nmaster] {
 			if E.ARB[rb] {
 				if vAL != k {
-					E.ARBfutur[rb]=false
+					E.ARBfutur[rb] = false
 				}
 			} else {
 				if vAL == k {
-					E.ARBfutur[rb]=true
+					E.ARBfutur[rb] = true
 					Hopcount++
 				}
-			}										
+			}
 		}
 	}
-
 
 	//test for SCFDMA on past assignment
 	/*for i:=range AL {AL[i]=-1}
@@ -776,12 +775,10 @@ func ARBScheduler3(dbs *DBS, Rgen *rand.Rand) {
 			if v {AL[rb]=i}
 		}
 	}
-	
+
 	testSCFDMA(AL[:])*/
 
-
 }
-
 
 type Sequence struct {
 	index []int
@@ -807,12 +804,11 @@ func (s Sequence) Swap(i, j int) {
 	s.index[i], s.index[j] = s.index[j], s.index[i]
 }
 
-func (s Sequence) PrintOrder(){
-	for _,v:=range s.index{
-		fmt.Print(s.value[v]," ")
+func (s Sequence) PrintOrder() {
+	for _, v := range s.index {
+		fmt.Print(s.value[v], " ")
 	}
 }
-
 
 func AllocateOld(AL []int, dbs *DBS) {
 
@@ -821,7 +817,7 @@ func AllocateOld(AL []int, dbs *DBS) {
 		c := e.Value.(*Connection)
 		E := c.E
 		if c.Status == 0 {
-			E.ARBfutur[0]=false
+			E.ARBfutur[0] = false
 		}
 	}
 	for rb := 1; rb < NCh; rb++ {
@@ -834,13 +830,13 @@ func AllocateOld(AL []int, dbs *DBS) {
 
 					if E.ARB[rb] {
 						if AL[rb] != k {
-							E.ARBfutur[rb]=false
+							E.ARBfutur[rb] = false
 						}
 					} else {
 						if AL[rb] >= 0 {
 
 							if AL[rb] == k {
-								E.ARBfutur[rb]=true
+								E.ARBfutur[rb] = true
 								Hopcount++
 
 							}

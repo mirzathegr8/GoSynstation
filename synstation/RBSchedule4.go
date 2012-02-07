@@ -1,7 +1,7 @@
 package synstation
 
 import "sort"
-import rand "rand"
+import rand "math/rand"
 import "math"
 import "fmt"
 
@@ -100,9 +100,9 @@ func (d *ARBScheduler4) Schedule(dbs *DBS, Rgen *rand.Rand) {
 	//Create #popsize initial allocations
 	for i := 0; i < popsize; i++ {
 		nbrb := int(float64(NCh) / (float64(Nmaster))) // subset size
-			//int(float64(NCh) * float64(r) / float64(numberAmobs))
-		a := Rgen.Perm(Nmaster) // ordering of master connected mobiles
-		pp := d.Popul[i].vect   // vector allocation we work on		
+		//int(float64(NCh) * float64(r) / float64(numberAmobs))
+		a := Rgen.Perm(Nmaster)    // ordering of master connected mobiles
+		pp := d.Popul[i].vect      // vector allocation we work on		
 		for j := 0; j < NCh; j++ { // first dealocate everything
 			pp[j] = -1
 		}
@@ -133,7 +133,7 @@ func (d *ARBScheduler4) Schedule(dbs *DBS, Rgen *rand.Rand) {
 		}
 
 		//find the best 100
-		initSequence(d.metricpool[:], &d.S) 
+		initSequence(d.metricpool[:], &d.S)
 		sort.Sort(d.S)
 		for i := 0; i < len(d.Popul); i++ { // and copy the best 100 as survivors to next generation
 			d.Popul[i] = d.pool[d.S.index[i]]
@@ -141,7 +141,7 @@ func (d *ARBScheduler4) Schedule(dbs *DBS, Rgen *rand.Rand) {
 
 	}
 
-	Trimm(d.Popul[0].vect,&d.Metric,d.MasterMobs[0:Nmaster])
+	Trimm(d.Popul[0].vect, &d.Metric, d.MasterMobs[0:Nmaster])
 	Allocate(d.Popul[0].vect, d.MasterMobs[0:Nmaster]) // allocate the best 
 
 }
@@ -181,7 +181,6 @@ func Trimm(AL []int, Metric *[NConnec][NCh]float64, MasterMobs []*Emitter) (metr
 
 			nARBmOrg := nARBm
 			jmax := jmin + nARBm //save first
-
 
 			for _, Mval := range Mvect[jmin:jmax] { //j:=jmin; j<jmax ;j++ { //
 
@@ -266,5 +265,3 @@ func testSCFDMA(AL []int) int {
 	return 0
 
 }
-
-

@@ -2,11 +2,11 @@ package synstation
 
 //import "container/vector"
 import "math"
-import rand "rand"
+import rand "math/rand"
 import "fmt"
 import "sort"
-//import "geom"
 
+//import "geom"
 
 func init() {
 	fmt.Println("init")
@@ -14,14 +14,12 @@ func init() {
 
 //var plus int
 
-
 type AssignedRB struct {
 	E      int     // index of MobileList of the emitting mobile
 	rb     int     // its RB
 	snr    float64 //its snr
 	metric float64 //its metric
 }
-
 
 func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 
@@ -46,11 +44,11 @@ func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 		}
 	}
 	if float64(NumTotalARB) > float64(NRB)*dbs.RBReuseFactor {
-		numDeAll+= ( NumTotalARB - int(float64(NRB)*dbs.RBReuseFactor) )/2 +1
+		numDeAll += (NumTotalARB-int(float64(NRB)*dbs.RBReuseFactor))/2 + 1
 		numAll--
 	} else {
 		numDeAll--
-		numAll+=  (int(float64(NRB)*dbs.RBReuseFactor) - NumTotalARB )/2 +2
+		numAll += (int(float64(NRB)*dbs.RBReuseFactor)-NumTotalARB)/2 + 2
 	}
 
 	// else add another one
@@ -91,7 +89,7 @@ func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 
 	//make sur noone emits on rb 0
 	for i := range eMobilesList {
-			MobilesList[i].ARBfutur[0]=false
+		MobilesList[i].ARBfutur[0] = false
 	}
 
 	// remove any RB with too low capa	
@@ -100,7 +98,7 @@ func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 	for i := range eAssignedRBs {
 		ARB := &eAssignedRBs[i]
 		if ARB.metric < 100 { // remove allocation
-			eMobilesList[ARB.E].ARBfutur[ARB.rb]=false
+			eMobilesList[ARB.E].ARBfutur[ARB.rb] = false
 			ARB.E = -1
 			ARB.metric = 0
 		} else {
@@ -115,8 +113,8 @@ func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 		RBmetrics[i] = eAssignedRBs[i].metric
 	}
 
-	S.index=S.index[0:numAsRB]
-	initSequence(RBmetrics[0:numAsRB],&S)
+	S.index = S.index[0:numAsRB]
+	initSequence(RBmetrics[0:numAsRB], &S)
 	sort.Sort(S)
 	//fmt.Print("disconnect"); S.PrintOrder(); fmt.Println();
 
@@ -124,7 +122,7 @@ func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 	for ir, irm := 0, 0; ir < numAsRB && irm < numDeAll; ir++ {
 		ARB := &eAssignedRBs[S.index[ir]]
 		if ARB.E >= 0 {
-			eMobilesList[ARB.E].ARBfutur[ARB.rb]=false
+			eMobilesList[ARB.E].ARBfutur[ARB.rb] = false
 			irm++
 		}
 	}
@@ -158,25 +156,25 @@ func ChHopping3(dbs *DBS, Rgen *rand.Rand) {
 	//eval metric
 	for i := range eNonAssignedRBs {
 		ARB := &eNonAssignedRBs[i]
-		ARB.metric =  math.Log2(1+ARB.metric) / math.Log2(2+MobilesRate[ARB.E]+ARB.metric) /
-							 math.Log2(2+eMobilesList[ARB.E].meanTR.Get())
+		ARB.metric = math.Log2(1+ARB.metric) / math.Log2(2+MobilesRate[ARB.E]+ARB.metric) /
+			math.Log2(2+eMobilesList[ARB.E].meanTR.Get())
 	}
 
 	//sort
 
 	for i := range eNonAssignedRBs {
-		RBmetrics[i] =  eNonAssignedRBs[i].metric //negative to sort the other way arround
+		RBmetrics[i] = eNonAssignedRBs[i].metric //negative to sort the other way arround
 	}
 	//fmt.Println(RBmetrics[0:numNAsRB])
-	S.index=S.index[0:numAsRB]
-	initSequence(RBmetrics[0:numNAsRB],&S)
+	S.index = S.index[0:numAsRB]
+	initSequence(RBmetrics[0:numNAsRB], &S)
 	sort.Sort(S)
 	//fmt.Print("connect"); S.PrintOrder(); fmt.Println();
 
 	for ir := 0; ir < numNAsRB && ir < numAll; ir++ {
 		ARB := &eNonAssignedRBs[S.index[ir]]
 		//if ARB.metric <= 0.0 {break} // snr insufficient
-		eMobilesList[ARB.E].ARBfutur[ARB.rb]=true
+		eMobilesList[ARB.E].ARBfutur[ARB.rb] = true
 		Hopcount++
 	}
 
@@ -199,11 +197,10 @@ func EvalRatio2(E *Emitter) float64 {
 func FindFreeChannels(dbs *DBS, E *Emitter, ratio float64) []int {
 
 	var nch [20]int //maximum 20RBs allocated
-	
+
 	var index [NCh]int
 	var S Sequence
 	S.index = index[0:NCh]
-
 
 	var SNRs [NCh]float64
 
@@ -215,8 +212,7 @@ func FindFreeChannels(dbs *DBS, E *Emitter, ratio float64) []int {
 
 	ICIMfunc(&r, E, SNRs[:], dbs.Color)
 
-
-	initSequence(SNRs[:],&S)
+	initSequence(SNRs[:], &S)
 	sort.Sort(S)
 
 	NumARB := int(float64(NCh) / float64(dbs.Connec.Len()) * dbs.RBReuseFactor)
@@ -236,4 +232,3 @@ func FindFreeChannels(dbs *DBS, E *Emitter, ratio float64) []int {
 //   Reformatted by   lerouxp    Mon Oct 3 17:42:18 CEST 2011
 
 //   Reformatted by   lerouxp    Mon Oct 3 18:06:29 CEST 2011
-

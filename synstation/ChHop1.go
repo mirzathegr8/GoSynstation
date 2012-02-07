@@ -1,9 +1,9 @@
 package synstation
 
-import rand "rand"
+import rand "math/rand"
+
 //import "container/vector"
 import "math"
-
 
 //
 //func (dbs *DBS) channelHopping2() {
@@ -168,7 +168,7 @@ func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 	//pour trier les connections actives
 	//var MobileList vector.Vector
 	MobileList := make([]*Connection, NConnec)
-	MobileList = MobileList[0:0]	
+	MobileList = MobileList[0:0]
 
 	//pour trier les canaux
 	dbs.RandomChan()
@@ -189,7 +189,7 @@ func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 				//Parse channels in some order  given by dbs.RndCh to find a suitable channel 
 				for j := NChRes; j < NCh; j++ {
 					rb := dbs.RndCh[j]
-					if dbs.IsRBFree(rb)  && !c.E.ARB[rb] {
+					if dbs.IsRBFree(rb) && !c.E.ARB[rb] {
 						snr := dbs.EvalSignalSNR(c.E, rb)
 						if 10*math.Log10(snr) > SNRThresChHop {
 							if snr > ratio {
@@ -234,7 +234,7 @@ func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 
 			rb := dbs.RndCh[j]
 
-			if dbs.IsRBFree(rb)  && !co.E.ARB[rb] {
+			if dbs.IsRBFree(rb) && !co.E.ARB[rb] {
 
 				snr := dbs.EvalSignalSNR(co.E, rb)
 
@@ -254,9 +254,8 @@ func ChHopping(dbs *DBS, Rgen *rand.Rand) {
 }
 
 func (dbs *DBS) changeChannel(co *Connection, pch, nch int) {
-	co.E.ARBfutur[pch]=false
-	co.E.ARBfutur[nch]=true
+	co.E.ARBfutur[pch] = false
+	co.E.ARBfutur[nch] = true
 }
 
 //   Reformatted by   lerouxp    Mon Oct 3 09:49:11 CEST 2011
-

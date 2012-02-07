@@ -1,8 +1,9 @@
 package synstation
 
 import "sort"
-import rand "rand"
+import rand "math/rand"
 import "fmt"
+
 //import "geom"
 //import "math"
 
@@ -17,19 +18,18 @@ func ARBScheduler5(dbs *DBS, Rgen *rand.Rand) {
 
 	var Metric [NConnec][NCh]float64
 	var metricpool [popsize * 11]float64
-	var index [popsize*11]int
+	var index [popsize * 11]int
 	var S Sequence
-	S.index = index[0:popsize*11]
+	S.index = index[0 : popsize*11]
 
 	var MasterMobs [NConnec]*Emitter
-
 
 	// Eval Metric for all connections
 	var Nmaster int
 
 	//Get SNR for all master mobiles all rbs
 
-	r:= dbs.Pos
+	r := dbs.Pos
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 
@@ -49,7 +49,7 @@ func ARBScheduler5(dbs *DBS, Rgen *rand.Rand) {
 				Metric[Nmaster][rb] = snrrb
 			}
 
-			ICIMfunc(&r,E,Metric[Nmaster][:],dbs.Color)
+			ICIMfunc(&r, E, Metric[Nmaster][:], dbs.Color)
 
 			Nmaster++
 		}
@@ -109,7 +109,6 @@ func ARBScheduler5(dbs *DBS, Rgen *rand.Rand) {
 		//copy(pool[popsize*10:popsize*11].vect, Popul[:].vect)
 
 		//select the new population
-		
 
 		for i := 0; i < popsize*11; i++ {
 			var AL [NCh]int
@@ -119,7 +118,7 @@ func ARBScheduler5(dbs *DBS, Rgen *rand.Rand) {
 		}
 
 		//find the best 100
-		initSequence(metricpool[:],&S)
+		initSequence(metricpool[:], &S)
 		sort.Sort(S)
 		for i := 0; i < len(Popul); i++ {
 			Popul[i] = pool[S.index[i]]

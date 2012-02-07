@@ -1,7 +1,8 @@
 package synstation
 
-import rand "rand"
+import rand "math/rand"
 import "math"
+
 //import "fmt"
 //import "geom"
 
@@ -77,7 +78,6 @@ func (d *ARBSchedulerMU_OFDM) Schedule(dbs *DBS, Rgen *rand.Rand) {
 
 	//create mDf clusters
 
-
 	mDfT := mDf
 	//clustering
 	if Nmaster > mDf {
@@ -95,8 +95,8 @@ func (d *ARBSchedulerMU_OFDM) Schedule(dbs *DBS, Rgen *rand.Rand) {
 			//compute angle diferences
 			for m := 0; m < Nmaster; m++ {
 				for i := range d.Centers {
-					d.anglesDiff[i][m] = math.Fmin(math.Fabs(d.angles[m]-d.Centers[i]),
-						math.Fabs(-d.angles[m]+d.Centers[i]))
+					d.anglesDiff[i][m] = math.Min(math.Abs(d.angles[m]-d.Centers[i]),
+						math.Abs(-d.angles[m]+d.Centers[i]))
 
 				}
 			}
@@ -191,9 +191,9 @@ func (d *ARBSchedulerMU_OFDM) Schedule(dbs *DBS, Rgen *rand.Rand) {
 						MetricPool += MetricBis[d.AL[rb]][rb]
 						d.NumAss[d.AL[rb]]++ //this emitter will have one more assigned RB
 						for rb2 := 1; rb2 < NCh; rb2++ {
-							if d.NumAss[d.AL[rb]]>15 {
-								MetricBis[d.AL[rb]][rb2]=0
-							}else {
+							if d.NumAss[d.AL[rb]] > 15 {
+								MetricBis[d.AL[rb]][rb2] = 0
+							} else {
 								MetricBis[d.AL[rb]][rb2] *= float64(d.NumAss[d.AL[rb]]) / float64(d.NumAss[d.AL[rb]]+1)
 							}
 						}
@@ -221,4 +221,3 @@ func (d *ARBSchedulerMU_OFDM) Schedule(dbs *DBS, Rgen *rand.Rand) {
 }
 
 //   Reformatted by   lerouxp    Mon Jan 16 15:29:49 CET 2012
-
