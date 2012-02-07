@@ -2,12 +2,12 @@ package synstation
 
 //import c "cmath"
 import "math"
-import rand "rand"
+import rand "math/rand"
+import "fmt"
 
 const F = 1400 * 10e6 //fréquence du canal en Hz
 
 const cel = 3 * 10e8 //vitesse de propagation en m/s
-
 
 type FilterInt interface {
 	nextValue(input complex128) (output complex128)
@@ -17,15 +17,13 @@ type FilterInt interface {
 	Copy() FilterInt
 }
 
-
-
 type PassNull struct{}
 
 func (p *PassNull) nextValue(input complex128) (output complex128) {
 	return 1 // to compensate  
 }
 func (p *PassNull) nextValues(input []complex128) {
-	return 
+	return
 }
 
 func (p *PassNull) InitRandom(Rgen *rand.Rand) {}
@@ -35,44 +33,41 @@ func (p *PassNull) Copy() (fo *PassNull) {
 	return p
 }
 
-
 var PNF PassNull
 
 type Filter struct {
 	a []complex128
 	b []complex128
 	z []complex128
-//	io chan complex128
+	//	io chan complex128
 }
 
 type FilterBank struct {
-	a []complex128
-	b []complex128
-	z []complex128	
+	a    []complex128
+	b    []complex128
+	z    []complex128
 	size int
 }
 
-
-func (f *FilterBank) Build(fo *Filter){
-	f.a=make([]complex128,len(fo.a))
-	f.b=make([]complex128,len(fo.b))
-	copy(f.a,fo.a)
-	copy(f.b,fo.b)
-	f.size=len(fo.z)
-	f.z=make([]complex128,len(fo.z)*NCh)
-	for i,z:=range fo.z{
-	for rb:=0;rb<NCh;rb++{
-		f.z[rb*f.size+i]=z	
+func (f *FilterBank) Build(fo *Filter) {
+	f.a = make([]complex128, len(fo.a))
+	f.b = make([]complex128, len(fo.b))
+	copy(f.a, fo.a)
+	copy(f.b, fo.b)
+	f.size = len(fo.z)
+	f.z = make([]complex128, len(fo.z)*NCh)
+	for i, z := range fo.z {
+		for rb := 0; rb < NCh; rb++ {
+			f.z[rb*f.size+i] = z
+		}
 	}
-	}
-
 
 }
 
 func (f *FilterBank) nextValues(Input *[NCh]complex128) {
-	bk:=0
+	bk := 0
 	for k, input := range Input {
-		f.z[bk] = input 
+		f.z[bk] = input
 		for i := 1; i < len(f.a); i++ {
 			f.z[bk] -= f.a[i] * f.z[bk+i]
 		}
@@ -82,33 +77,14 @@ func (f *FilterBank) nextValues(Input *[NCh]complex128) {
 		for i := f.size - 1; i > 0; i-- {
 			f.z[bk+i] = f.z[bk+i-1]
 		}
-		bk+=f.size
+		bk += f.size
 	}
-	return 
+	return
 }
 
 
-
-/*func (f *Filter) gonext(){
-
-	for input := range f.io{
-		f.z[0] = input //* f.a[0]
-		var output complex128
-		for i := 1; i < len(f.a); i++ {
-			f.z[0] -= f.a[i] * f.z[i]
-		}
-		for i := 0; i < len(f.b); i++ {
-			output += f.b[i] * f.z[i]
-		}
-		f.io<-output
-		for i := len(f.z) - 1; i > 0; i-- {
-			f.z[i] = f.z[i-1]
-		}
-	}
-}*/
-
 func (f *Filter) nextValue(input complex128) (output complex128) {
-	f.z[0] = input //* f.a[0]
+	f.z[0] = input 
 	for i := 1; i < len(f.a); i++ {
 		f.z[0] -= f.a[i] * f.z[i]
 	}
@@ -122,11 +98,10 @@ func (f *Filter) nextValue(input complex128) (output complex128) {
 	return
 }
 
-
-func (f *Filter) nextValues(Input []complex128)  {
+func (f *Filter) nextValues(Input []complex128) {
 
 	for k, input := range Input {
-		f.z[0] = input //* f.a[0]
+		f.z[0] = input 
 		for i := 1; i < len(f.a); i++ {
 			f.z[0] -= f.a[i] * f.z[i]
 		}
@@ -140,15 +115,13 @@ func (f *Filter) nextValues(Input []complex128)  {
 	return
 }
 
-
 func (f *Filter) InitRandom(Rgen *rand.Rand) {
 	for i := 0; i < len(f.z); i++ {
-		f.z[i] = complex(Rgen.NormFloat64(),Rgen.NormFloat64())
+		f.z[i] = complex(Rgen.NormFloat64(), Rgen.NormFloat64())
 	}
 
 	return
 }
-
 
 func (f *Filter) InitZ(z []complex128) {
 
@@ -158,9 +131,6 @@ func (f *Filter) InitZ(z []complex128) {
 
 	return
 }
-
-
-
 
 func Butter(W float64) (f *Filter) {
 
@@ -178,7 +148,6 @@ func Butter(W float64) (f *Filter) {
 		(-0.707106781186547 + 0.707106781186548i),
 		(-0.707106781186548 - 0.707106781186547i),
 	} //C*c.Exp( 1i*pi*(2*[1:n] + n - 1)/(2*n));
-
 
 	gain := complex128(1.0)
 
@@ -204,7 +173,7 @@ func Butter(W float64) (f *Filter) {
 
 	f.b = Sreal(poly(zero))
 	for i := range f.b {
-		f.b[i] = complex(real(gain),0) * f.b[i]
+		f.b[i] = complex(real(gain), 0) * f.b[i]
 	}
 	f.a = Sreal(poly(pole))
 
@@ -216,7 +185,7 @@ func Butter(W float64) (f *Filter) {
 
 	//adjust gain
 	for j := range f.b {
-		f.b[j] *= complex(math.Sqrt(1/W) * .96, 0) //scale input to compensate for lowpass and have same output power as input
+		f.b[j] *= complex(math.Sqrt(1/W)*.96, 0) //scale input to compensate for lowpass and have same output power as input
 	}
 
 	//go f.gonext()
@@ -247,7 +216,6 @@ func Sreal(x []complex128) (y []complex128) {
 	}
 	return
 }
-
 
 func Cheby(Rp, W float64) (f *Filter) {
 
@@ -301,7 +269,7 @@ func Cheby(Rp, W float64) (f *Filter) {
 
 	f.b = Sreal(poly(zero))
 	for i := range f.b {
-		f.b[i] = complex(real(gain),0) * f.b[i]
+		f.b[i] = complex(real(gain), 0) * f.b[i]
 	}
 	f.a = Sreal(poly(pole))
 
@@ -322,16 +290,14 @@ func Cheby(Rp, W float64) (f *Filter) {
 
 }
 
-
 func (f *Filter) PassNull() {
-	f.a = []complex128{0,0 , -1.0,0}
-	f.b = []complex128{0,0, 1.0,0}
+	f.a = []complex128{0, 0, -1.0, 0}
+	f.b = []complex128{0, 0, 1.0, 0}
 	for i := range f.z {
 		f.z[i] = 1 //init stream to non null
 		//f.z2[i] = 1 //init stream to non null
 	}
 }
-
 
 func MultFilter(f1, f2 *Filter) (fo *Filter) {
 
@@ -345,13 +311,11 @@ func MultFilter(f1, f2 *Filter) (fo *Filter) {
 	}
 	fo.z = make([]complex128, lz)
 
-
-
 	for i := range fo.z {
 		fo.z[i] = 1 //init stream to non null
 		//f.z2[i] = 1 //init stream to non null
 	}
-	
+
 	//go fo.gonext()
 	return
 }
@@ -375,8 +339,7 @@ func conv(a, b []complex128) (y []complex128) {
 	return
 }
 
-
-func (f *Filter) Copy() (fb *Filter) {
+func (f *Filter) CopyNew() (fb *Filter) {
 
 	fb = new(Filter)
 	fb.a = f.a
@@ -390,6 +353,36 @@ func (f *Filter) Copy() (fb *Filter) {
 	}
 
 	//go fb.gonext()
-	return 
+	return
 }
 
+
+// this function used to copy filters and not reallocate memory
+func (f *Filter) CopyTo(fb *Filter) {
+
+	if fb==nil{fmt.Println("Error Filter nil")
+	fb = new(Filter)}
+
+	fb.a = f.a
+	fb.b = f.b
+
+	if fb.z==nil || len(fb.z)<len(f.z){
+	fb.z = make([]complex128, len(f.z))
+	}
+	//fb.io = make(chan complex128)
+	fb.z=fb.z[0:len(f.z)]
+	for i := range fb.z {
+		fb.z[i] = f.z[i] //init stream to non null
+		//f.z2[i] = 1 //init stream to non null
+	}
+
+	//go fb.gonext()
+	return
+}
+
+func NewFilter(s int) (fb *Filter){
+	fb=new(Filter)
+	fb.z = make([]complex128, s)
+	return
+}
+ 
