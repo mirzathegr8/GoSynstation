@@ -45,40 +45,86 @@ type Filter struct {
 type FilterBank struct {
 	a    []complex128
 	b    []complex128
-	z    []complex128
+	//z    [NCh][]complex128
+	z []complex128
 	size int
 }
 
-func (f *FilterBank) Build(fo *Filter) {
-	f.a = make([]complex128, len(fo.a))
-	f.b = make([]complex128, len(fo.b))
-	copy(f.a, fo.a)
-	copy(f.b, fo.b)
-	f.size = len(fo.z)
-	f.z = make([]complex128, len(fo.z)*NCh)
-	for i, z := range fo.z {
-		for rb := 0; rb < NCh; rb++ {
-			f.z[rb*f.size+i] = z
-		}
-	}
 
+
+func  BuildFilterBank(size int) (f *FilterBank) {
+	f=new(FilterBank)
+	f.size = size
+	f.z = make([]complex128, size*NCh)	
+	/*for rb:=0;rb<NCh;rb++{
+		f.z[rb] = make([]complex128,size)
+	}*/
+	return
 }
 
+
+func (f *FilterBank) CopyFrom(fa *Filter){
+	f.a=fa.a
+	f.b=fa.b	
+
+
+/*	for i := range fa.z {
+		for rb:=0;rb<NCh;rb++{
+			f.z[rb][i] = fa.z[i] //init stream to non null
+	}}*/
+	
+	f.z=f.z[0:len(fa.z)*NCh]
+	f.size=len(fa.z)
+
+	bk:=0
+	for rb:=0;rb<NCh;rb++{
+	//for i := range fa.z {		
+	//		f.z[bk+i] = fa.z[i] //init stream to non null		
+	//}
+		copy(f.z[bk:bk+f.size],fa.z)
+	bk+=f.size
+	}
+}
+
+
 func (f *FilterBank) nextValues(Input *[NCh]complex128) {
-	bk := 0
-	for k, input := range Input {
-		f.z[bk] = input
+	
+	/*for k, input := range Input {
+		z:=f.z[k]
+		z[0] = input 
+		var output complex128
+		for i := 1; i < len(f.a); i++ {
+			z[0] -= f.a[i] * z[i]
+		}
+		for i := 0; i < len(f.b); i++ {
+			output += f.b[i] * z[i]
+		}
+		for i := len(z) - 1; i > 0; i-- {
+			z[i] = z[i-1]
+		}
+		Input[k]=output
+
+	}
+	*/
+bk := 0
+for k, input := range Input {
+		
+		f.z[bk] = input 
+		var output complex128
 		for i := 1; i < len(f.a); i++ {
 			f.z[bk] -= f.a[i] * f.z[bk+i]
 		}
 		for i := 0; i < len(f.b); i++ {
-			Input[k] += f.b[i] * f.z[bk+i]
+			output += f.b[i] * f.z[bk+i]
 		}
 		for i := f.size - 1; i > 0; i-- {
 			f.z[bk+i] = f.z[bk+i-1]
 		}
-		bk += f.size
+		bk+=f.size
+		Input[k]=output
+
 	}
+
 	return
 }
 
@@ -102,15 +148,17 @@ func (f *Filter) nextValues(Input []complex128) {
 
 	for k, input := range Input {
 		f.z[0] = input 
+		var output complex128
 		for i := 1; i < len(f.a); i++ {
 			f.z[0] -= f.a[i] * f.z[i]
 		}
 		for i := 0; i < len(f.b); i++ {
-			Input[k] += f.b[i] * f.z[i]
+			output += f.b[i] * f.z[i]
 		}
 		for i := len(f.z) - 1; i > 0; i-- {
 			f.z[i] = f.z[i-1]
 		}
+		Input[k]=output
 	}
 	return
 }
