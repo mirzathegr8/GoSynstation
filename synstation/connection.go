@@ -65,6 +65,8 @@ type Connection struct {
 
 	antennaPhase [NP][NA]complex128
 
+	antennaFactor [NP]complex128
+
 	pathAoA   [NP]float64
 	pathGains [NP]float64 //amplitutes ,  delay is already in filter fading
 
@@ -141,7 +143,13 @@ func (co *Connection) EvalVectPath(dbs *DBS) {
 		sumPower[rb] = 0
 	}
 
+
+
+
 	for np := 0; np < NP; np++ {
+
+
+
 		phase := cmplx.Exp(complex(0, math.Cos(co.pathAoA[np])/2))
 		for rb := range co.ff_R[0] {			
 
@@ -193,7 +201,7 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 	for m := range Mobiles { //Mobiles {
 		if !ConnectedArray[m] {
 
-			gain := co.Gain(complex(1, 0), dbs.AoA[m], dbs)
+			gain := co.Gain(dbs.AoA[m])
 			re := real(gain)
 			im := imag(gain)
 			G := (re*re + im*im)
@@ -253,7 +261,11 @@ func (co *Connection) SetGains(dbs *DBS) {
 
 }
 
-func (co *Connection) Gain(Signal complex128, AoA float64, dbs *DBS) complex128 {
+func  Mag(c complex128) float64{
+	return real(c)*real(c) + imag(c)*imag(c)
+}
+
+func (co *Connection) Gain(AoA float64) complex128 {
 
 	var Val complex128
 	cosAoA_2 := math.Cos(AoA) / 2.0
@@ -261,7 +273,7 @@ func (co *Connection) Gain(Signal complex128, AoA float64, dbs *DBS) complex128 
 	phase := complex(cos, sin)
 	delta := complex(1.0, 0.0)
 	for na := 0; na < NA; na++ {
-		Val += Signal * co.antennaGains[na] * delta
+		Val +=  co.antennaGains[na] * delta
 		delta *= phase
 	}
 
@@ -269,19 +281,7 @@ func (co *Connection) Gain(Signal complex128, AoA float64, dbs *DBS) complex128 
 }
 
 func (co *Connection) GetGain(AoA float64) float64 { //evals the gain of that mobile on this connection
-
-	var Val complex128
-	cosAoA_2 := math.Cos(AoA) / 2.0
-	cos, sin := math.Sincos(cosAoA_2)
-	phase := complex(cos, sin)
-	delta := complex(1.0, 0.0)
-	for na := 0; na < NA; na++ {
-		Val += co.antennaGains[na] * delta
-		delta *= phase
-	}
-
-	return real(Val)*real(Val) + imag(Val)*imag(Val)
-
+	return Mag(co.Gain(AoA))
 }
 
 
