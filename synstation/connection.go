@@ -215,10 +215,10 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 
 	// sum miltupaths for all connections with appropriate gainM
 
-	sumPower := &co.initz[0]
-	for rb := 0; rb < NCh; rb++ {
+	sumPower := &co.initz[0] //tmp vector
+	/*for rb := 0; rb < NCh; rb++ {
 		sumPower[rb] = 0
-	}
+	}*/
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
 		if c.E.Id != co.E.Id {
@@ -231,10 +231,10 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 				for na := 0; na < NA; na++ {
 					Val += co.antennaGains[na] * c.antennaPhase[np][na]
 				}
-				
+				Val*=complex(c.pathGains[np], 0)
 				for rb, use := range c.E.ARB {
 					if use {
-						sumPower[rb] += Val * c.ff_R[np][rb] * complex(c.pathGains[np], 0)
+						sumPower[rb] += Val * c.ff_R[np][rb] //* complex(dbs.Channels[rb].pr[c.E.Id],0)
 					}
 				}
 			}
@@ -244,6 +244,10 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 			}
 		}
 	}
+
+/*for rb := 0; rb < NCh; rb++ {
+				co.InterferencePower[rb] += Mag(sumPower[rb]) 
+			}*/
 
 }
 
