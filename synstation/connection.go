@@ -3,7 +3,7 @@ package synstation
 import "math"
 import "geom"
 import rand "math/rand"
-import "math/cmplx"
+//import "math/cmplx"
 
 //import cmath "math/cmplx"
 //import "fmt"
@@ -15,7 +15,7 @@ var num_con int
 func GetDiversity() int { a := num_con; num_con = 0; return a }
 
 const NP = 5  // numbers of simulated paths
-const NA = 10 //numbers of antennas at receiver
+const NA = 15//numbers of antennas at receiver
 
 var PathGain = [5]float64{1, .5, 0.25, 0.05, 0.01} //0.5, 0.125} // relative powers of each path
 
@@ -64,8 +64,6 @@ type Connection struct {
 	antennaGains [NA]complex128
 
 	antennaPhase [NP][NA]complex128
-
-	antennaFactor [NP]complex128
 
 	pathAoA   [NP]float64
 	pathGains [NP]float64 //amplitutes ,  delay is already in filter fading
@@ -124,66 +122,57 @@ func (co *Connection) EvalVectPath(dbs *DBS) {
 
 	}
 
+	
 	//first path with line of sight
 	K := dbs.kk[co.E.Id]
+	NormFac:=math.Sqrt(2+K*K)
 	for rb := range co.ff_R[0] {
-		co.ff_R[0][rb] = (co.initz[0][rb] + complex(K, 0)) / complex(2+K*K, 0) //(real(a * cmath.Conj(a))) / (2 + K*K)
+		co.ff_R[0][rb] = (co.initz[0][rb] + complex(K, 0)) / complex(NormFac, 0) //(real(a * cmath.Conj(a))) / (2 + K*K)
 	}
 
 	for np := 1; np < NP; np++ {
 		for rb := range co.ff_R[np] {
-			co.ff_R[np][rb] = co.initz[np][rb] / complex(2, 0)
+			co.ff_R[np][rb] = co.initz[np][rb] / complex(1.4142, 0)
 
 		}
-	}
-
-	
-	sumPower := &co.initz[0]
-	for rb := 0; rb < NCh; rb++ {
-		sumPower[rb] = 0
-	}
-
-
-
-
-	for np := 0; np < NP; np++ {
-
-
-
-		phase := cmplx.Exp(complex(0, math.Cos(co.pathAoA[np])/2))
-		for rb := range co.ff_R[0] {			
-
-			var Val complex128
-
-			delta := complex(1.0, 0.0)
-			for na := 0; na < NA; na++ {
-				Val += co.ff_R[np][rb] * complex(co.pathGains[np], 0) * co.antennaGains[na] * delta 
-				delta *= phase
-			}
-			sumPower[rb] += Val
-
-		}
-
-	}
-
-	for rb := range co.ff_R[0] {
-		re := real(sumPower[rb])
-		im := imag(sumPower[rb])
-		co.MultiPathMAgain[rb] = re*re + im*im
 	}
 
 	//signals phase at each antenna (for each path)
 
 	for np := 0; np < NP; np++ {
 		cosAoA_2 := math.Cos(co.pathAoA[np]) / 2.0
-		cos, sin := math.Sincos(cosAoA_2)
+		sin, cos := math.Sincos(cosAoA_2)
 		phase := complex(cos, sin)
-		delta := complex(1.0, 0.0)
-		for na := 0; na < NA; na++ {
-			co.antennaPhase[np][na] = delta
-			delta *= phase
+		co.antennaPhase[np][0] = complex(1.0, 0.0)
+		for na := 1; na < NA; na++ {
+			 co.antennaPhase[np][na] = co.antennaPhase[np][na-1]*phase
 		}
 	}
+
+
+	sumPower := &co.initz[0]
+	for rb := 0; rb < NCh; rb++ {
+		sumPower[rb] = 0
+	}
+
+	for np := 0; np < NP; np++ {
+
+		var Val complex128
+		for na := 0; na < NA; na++ {
+			Val += co.antennaGains[na] * co.antennaPhase[np][na]
+		}
+		Val*=complex(co.pathGains[np],0)
+
+		for rb, ff := range co.ff_R[np] {
+			sumPower[rb] += ff * Val
+		}
+	}
+
+	for rb := range co.ff_R[0] {
+		co.MultiPathMAgain[rb] = Mag(sumPower[rb])
+	}
+
+
 
 }
 
@@ -198,16 +187,27 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 		co.InterferencePower[rb] = 0
 	}
 
+		
 	for m := range Mobiles { //Mobiles {
 		if !ConnectedArray[m] {
 
-			gain := co.Gain(dbs.AoA[m])
-			re := real(gain)
-			im := imag(gain)
-			G := (re*re + im*im)
+			gain := Mag(co.Gain(dbs.AoA[m]))				
+		
+			/*var Val complex128
+			cosAoA_2 := math.Cos(dbs.AoA[m]) / 2.0
+			cos, sin := math.Sincos(cosAoA_2)
+			phase := complex(cos, sin)
+			delta:= complex(1,0)
+			for na := 0; na < NA; na++ {
+				Val += co.antennaGains[na] * delta
+				delta *= phase
+			}*/
+
+			//gain:=Mag(Val)
+		
 			for rb, use := range Mobiles[m].ARB {
 				if use {
-					co.InterferencePower[rb] += dbs.Channels[rb].pr[m] * G
+					co.InterferencePower[rb] += dbs.Channels[rb].pr[m] * gain
 				}
 			}
 		}
@@ -231,7 +231,7 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 				for na := 0; na < NA; na++ {
 					Val += co.antennaGains[na] * c.antennaPhase[np][na]
 				}
-
+				
 				for rb, use := range c.E.ARB {
 					if use {
 						sumPower[rb] += Val * c.ff_R[np][rb] * complex(c.pathGains[np], 0)
@@ -240,9 +240,7 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 			}
 
 			for rb := 0; rb < NCh; rb++ {
-				re := real(sumPower[rb])
-				im := imag(sumPower[rb])
-				co.InterferencePower[rb] += (re*re + im*im) * dbs.Channels[rb].pr[c.E.Id]
+				co.InterferencePower[rb] += Mag(sumPower[rb]) * dbs.Channels[rb].pr[c.E.Id]
 			}
 		}
 	}
@@ -253,10 +251,12 @@ func (co *Connection) SetGains(dbs *DBS) {
 
 	AoA := dbs.AoA[co.E.Id]
 
-	delta := math.Cos(AoA) / 2
-
-	for na := 0; na < NA; na++ {
-		co.antennaGains[na] = cmplx.Exp(complex(0, -float64(na)*delta))
+	cosAoA_2 := math.Cos(AoA) / 2
+	sin, cos := math.Sincos(cosAoA_2)
+	phase := complex(cos, -sin)
+	co.antennaGains[0]=1
+	for na := 1; na < NA; na++ {
+		co.antennaGains[na] = co.antennaGains[na-1]*phase
 	}
 
 }
@@ -269,11 +269,11 @@ func (co *Connection) Gain(AoA float64) complex128 {
 
 	var Val complex128
 	cosAoA_2 := math.Cos(AoA) / 2.0
-	cos, sin := math.Sincos(cosAoA_2)
+	sin, cos := math.Sincos(cosAoA_2)
 	phase := complex(cos, sin)
 	delta := complex(1.0, 0.0)
 	for na := 0; na < NA; na++ {
-		Val +=  co.antennaGains[na] * delta
+		Val += co.antennaGains[na] * delta
 		delta *= phase
 	}
 
@@ -290,12 +290,18 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 
 	var touch bool
 
+	NoisePower:=0.0
+	for na:=0;na<NA;na++{
+		NoisePower+=Mag(co.antennaGains[na])
+	}
+	NoisePower*=WNoise
+
 	for rb, use := range co.E.ARB {
 
 		if use {
 
 			Pr := co.MultiPathMAgain[rb] * dbs.Channels[rb].pr[co.E.Id]
-			co.SNRrb[rb] = Pr / (co.InterferencePower[rb] + WNoise)
+			co.SNRrb[rb] = Pr / (co.InterferencePower[rb] + NoisePower)
 
 			BER := L1 * math.Exp(-co.SNRrb[rb]/2/L2) / 2.0
 
@@ -305,9 +311,7 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 
 			touch = true
 		} else {
-			co.SNRrb[rb] = co.MultiPathMAgain[rb] * dbs.pr[co.E.Id] / (co.InterferencePower[rb] + WNoise) * conservationFactor
-
-
+			co.SNRrb[rb] = co.MultiPathMAgain[rb] * dbs.pr[co.E.Id] / (co.InterferencePower[rb] + NoisePower) * conservationFactor
 		}
 	}
 
@@ -352,7 +356,7 @@ func (co *Connection) InitConnection(E *Emitter, v float64, dbs *DBS) {
 		}*/
 		co.filterAr[np].CopyFrom(E.DoppFilter)
 
-		for l := 0; l < int(1.5/co.E.DopplerF); l++ {
+		for l := 0; l < int(2.5/co.E.DopplerF); l++ {
 
 			// for speed optimization, decorelation samples or not used, it makes little difference 
 			for i := 0; i < 50; i++ {
