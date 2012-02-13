@@ -14,8 +14,8 @@ var num_con int
 
 func GetDiversity() int { a := num_con; num_con = 0; return a }
 
-const NP = 5  // numbers of simulated paths
-const NA = 15//numbers of antennas at receiver
+const NP = 1  // numbers of simulated paths
+const NA = 10//numbers of antennas at receiver
 
 var PathGain = [5]float64{1, .5, 0.25, 0.05, 0.01} //0.5, 0.125} // relative powers of each path
 
@@ -44,8 +44,9 @@ type Connection struct {
 	meanBER  MeanData
 	meanCapa MeanData
 
-	filterAr [NP]*FilterBank //filter ban to use for channel gain FF generator
-	ff_R [NP][NCh]complex128 // stores channel gain and phase for every RB every path
+	//filterAr FilterBank   //filter ban to use for channel gain FF generator
+	filterAr [NP][NCh]*Filter    //filter ban to use for channel gain FF generator
+	ff_R     [NP][NCh]complex128 // stores channel gain and phase for every RB every path
 
 	MultiPathMAgain   [NCh]float64
 	InterferencePower [NCh]float64
@@ -106,20 +107,19 @@ func (co *Connection) EvalVectPath(dbs *DBS) {
 	for np := 0; np < NP; np++ {
 		//first decorelate freq filter
 		for i := 0; i < 50*corrF; i++ {
-			co.initz[np][i] = complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())
+			co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))
 		}
-		co.filterF.nextValues(co.initz[np][0:50])
+	//	co.filterF.nextValues(co.initz[np][0:50])
 
 		// generate NCh samples in frequencies
 		for rb := range co.initz[np] {
-			co.initz[np][rb] = complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())
+			co.initz[np][rb] = co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))
 		}
 
-		co.filterF.nextValues(co.initz[np][0:NCh])
-
-		co.filterAr[np].nextValues(&co.initz[np])
-	
-
+		// output values for each path on each rb
+		for rb := range co.initz[np] {
+			co.initz[np][rb] = co.filterAr[np][rb].nextValue(co.initz[np][rb])
+		}
 	}
 
 	
@@ -245,7 +245,7 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 		}
 	}
 
-/*for rb := 0; rb < NCh; rb++ {
+	/*	for rb := 0; rb < NCh; rb++ {
 				co.InterferencePower[rb] += Mag(sumPower[rb]) 
 			}*/
 
@@ -352,28 +352,38 @@ func (co *Connection) InitConnection(E *Emitter, v float64, dbs *DBS) {
 
 	co.Rgen = dbs.Rgen
 
-	CoherenceFilter.CopyTo(co.filterF)
+	Speed := E.GetSpeed()
+	DopplerF := Speed * F / cel // 1000 samples per seconds speed already divided by 1000 for RB TTI
+
+	if DopplerF < 0.002 { // the frequency is so low, a simple antena diversity will compensate for 	
+		DopplerF = 0.002
+	}
+
+	A := Butter(DopplerF)
+	B := Cheby(10, DopplerF)
+	C := MultFilter(A, B)
+
+	co.filterF = CoherenceFilter.CopyNew()
 
 	for np := 0; np < NP; np++ {
-		/*for i := 0; i < NCh; i++ {
-			E.DoppFilter.CopyTo(co.filterAr[np][i])
-		}*/
-		co.filterAr[np].CopyFrom(E.DoppFilter)
+		for i := 0; i < NCh; i++ {
+			co.filterAr[np][i] = C.CopyNew()
+		}
 
-		for l := 0; l < int(2.5/co.E.DopplerF); l++ {
+		for l := 0; l < int(2.5/DopplerF); l++ {
 
 			// for speed optimization, decorelation samples or not used, it makes little difference 
 			for i := 0; i < 50; i++ {
-				co.initz[np][i] = complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())
+				co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))
 			}
-			co.filterF.nextValues(co.initz[np][0:50])
+			//co.filterF.nextValues(co.initz[np][0:50])
 
 			for i := 0; i < NCh; i++ {
-				co.initz[np][i] = complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())
+				co.filterAr[np][i].nextValue(co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())))
 			}
-			co.filterF.nextValues(co.initz[np][0:NCh])			
+	//		co.filterF.nextValues(co.initz[np][0:NCh])			
 
-			co.filterAr[np].nextValues(&co.initz[np])
+		//	co.filterAr[np].nextValues(&co.initz[np])
 
 		}
 	}
@@ -391,17 +401,25 @@ func (co *Connection) InitConnection(E *Emitter, v float64, dbs *DBS) {
 }
 
 func (co *Connection) clear() {
-	// we dont clear anymore, we keep filters memory and copy data back so to not reallocate memory
+	// free some memory . perhaps need to rethink this and have a filterbank
+	for np := 0; np < NP; np++ {
+		for rb := range co.filterAr {
+
+			co.filterAr[np][rb] = nil
+			//co.IfilterAr[rb]=nil
+		}
+	}
+
 }
 
 func NewConnection(i int) (Conn *Connection) {
 	Conn = new(Connection)
-
+/*
 	for np := 0; np < NP; np++ {	
 		Conn.filterAr[np] = BuildFilterBank(5)
 	}
 	Conn.filterF = NewFilter(5)
-
+*/
 	Conn.IdB = i
 	return
 }
