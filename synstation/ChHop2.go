@@ -120,7 +120,7 @@ func (d *ChHopping2) Schedule(dbs *DBS, Rgen *rand.Rand) {
 						}
 					}
 					nMLRX++
-					for j := nMLRX-1; j > i; j-- {
+					for j := nMLRX - 1; j > i; j-- {
 						d.MobileListRX[j] = d.MobileListRX[j-1]
 					}
 					d.MobileListRX[i] = c
@@ -132,8 +132,8 @@ func (d *ChHopping2) Schedule(dbs *DBS, Rgen *rand.Rand) {
 							break
 						}
 					}
-					nML++			
-					for j := nML-1; j > i; j-- {
+					nML++
+					for j := nML - 1; j > i; j-- {
 						d.MobileList[j] = d.MobileList[j-1]
 					}
 					d.MobileList[i] = c

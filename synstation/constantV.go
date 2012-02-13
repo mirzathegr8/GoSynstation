@@ -1,14 +1,14 @@
 package synstation
 const BERThres= 0.15
 const SNRThresConnec= 0
-var initScheduler=initChHopping2  //ARBScheduler4 //SDMA // //ARBSchedulerSDMA //  ChHopping2  //
+var initScheduler=initChHopping2  //ARBScheduler4//DMA //  
 //var estimateFactor=estimateFactor0
 const conservationFactor=1
-const DiversityType=SELECTION
-//const BeamAngle=  0.4254//  1.1345//
-const mDf=4
+const DiversityType=MRC
+//const BeamAngle=  1.4345//  1.1345//
+const mDf=1
 const NetLayout= HONEYCOMB
-const subsetSize= 5
+const subsetSize= 3
 //const InterferenceCancel= SIZEESCANCELATION //NOCANCEL ////NOCANCEL //
 //const SetReceiverType = BEAM
 
@@ -24,4 +24,4 @@ const subsetSize= 5
 )*/
 
 // number of signal id saved in the list of the ChanReceiver
-const SizeES = 4
+const SizeES = 5

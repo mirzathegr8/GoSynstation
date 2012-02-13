@@ -2,12 +2,12 @@ package synstation
 
 import "math"
 
-const Field = 6000 //length in meters
+const Field = 4000 //length in meters
 
 const Duration =1000// in iterations 
 
 const M = 1000 //numbers of mobiles
-const D =  100// numbers of DBS
+const D =  75// numbers of DBS
 
 //for M-QAM, km*km=M
 const km = 4.0
@@ -31,7 +31,7 @@ const roverlap = 0.0 // ratio of overlaping of two adjacent channels
 // thermal noise per RB 121.45dBm normalized per maximum terminal power output 21dBm and divided for one TTI
 const WNoise = DivCh * 5.6885e-15 //7.1614e-16 // White noise at reciever //21.484e-16
 const NChRes = 1              //numbers of reserved channels, not used yet, but chan 0 must be reserved
-const NConnec = 20       // numbers of connections per dbs
+const NConnec = 30        // numbers of connections per dbs
 
 
 //const BERThres = 0.30 //0.16//0.4/log2*(16)
