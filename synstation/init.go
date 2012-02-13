@@ -97,7 +97,7 @@ func Init() {
 	//sync
 	Sync(D)
 
-	Dprim := D / 2 //*3/4
+	Dprim := D // 2 //*3/4
 
 	if NetLayout == HONEYCOMB {
 
@@ -140,7 +140,7 @@ func Init() {
 	}
 
 	//scenario for random positioned dbs
-	j := 0
+	/*j := 0
 	for i := D / 2; i < D; i++ {
 		//Synstations[i].SetPos(geom.Pos{Rgen.Float64() * Field, Rgen.Float64() * Field})
 
@@ -149,7 +149,7 @@ func Init() {
 
 		//Synstations[i].scheduler =  initChHopping2() // initARBScheduler4() //
 		//Synstations[i].NMaxConnec = 0//15//15//15//NConnec/3
-	}
+	}*/
 
 	ChannelHop() //Set Mobile's initial channel
 
