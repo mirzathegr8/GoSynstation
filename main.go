@@ -3,7 +3,7 @@ package main
 import  "runtime/pprof"
 
 import "fmt"
-import s "synstation"
+import s "synstation" // synstation is a package defined in synstation.go file.
 import "runtime"
 //import "draw"
 import "os"
@@ -15,7 +15,7 @@ import "log"
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 //var mpf = flag.String("mpf", "main.mpf", "write memory profile to file") 
 
-var outD outputData  // one to print
+var outD outputData  // one to print. outputData is a structure defined in runtimeOutput.go file. As the name suggests, it defines the number of useful output data like BER, no. of connections, no. of lost connection etc.
 var outDs outputData // one to sum and take mean over simulation
 
 func main() {
@@ -63,23 +63,30 @@ func main() {
 		fmt.Println()
 		fmt.Println("ARB ",s.Mobiles[0].ARB)
 		fmt.Println("fut ",s.Mobiles[0].ARBfutur)*/
-		s.GoRunPhys()
+
+
+		s.GoRunPhys() //GoRunPhys() function is in agent.go file.
+
+
 		/*fmt.Print("---- 2---- ", s.Mobiles[0].Diversity, " ")
 		fmt.Print( &s.Mobiles[0].MasterConnection)
 		fmt.Println()
 		fmt.Println("ARB ",s.Mobiles[0].ARB)
 		fmt.Println("fut ",s.Mobiles[0].ARBfutur)*/
 
-		s.GoFetchData()
+
+		s.GoFetchData() //GoFetchData() function is in agent.go file.
+
+
 		/*	fmt.Print("---- 3---- ", s.Mobiles[0].Diversity, " ")
 			fmt.Print( &s.Mobiles[0].MasterConnection)
 			fmt.Println()
 			fmt.Println("ARB ",s.Mobiles[0].ARB)
 			fmt.Println("fut ",s.Mobiles[0].ARBfutur)*/
 
-		readDataAndPrintToStd(false)
+		readDataAndPrintToStd(false) //readDataAndPrintToStd() function is defined in main.go file.
 
-		s.GoRunAgent()
+		s.GoRunAgent() //GoRunAgent() function is in agent.go file.
 
 		/*	fmt.Print("---- 4---- ", s.Mobiles[0].Diversity, " ")
 			fmt.Print( &s.Mobiles[0].MasterConnection)
@@ -87,7 +94,9 @@ func main() {
 			fmt.Println("ARB ",s.Mobiles[0].ARB)
 			fmt.Println("fut ",s.Mobiles[0].ARBfutur)*/
 
-		s.ChannelHop()
+		s.ChannelHop() // ChannelHop() function is defined in channels.go file.
+
+
 		/*fmt.Print("---- 5---- ", s.Mobiles[0].Diversity, " ")
 		fmt.Print( &s.Mobiles[0].MasterConnection)
 		fmt.Println()

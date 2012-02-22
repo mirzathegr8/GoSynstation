@@ -16,13 +16,15 @@ func GetHopCount() int    { a := Hopcount; Hopcount = 0; return a }
 // it also is an agent and has a clock and internal random number generator
 // RndCh stores channels sequence used when parsing channels for allocation
 type DBS struct {
-	PhysReceiverBase
-	Connec *list.List
+	PhysReceiverBase // PhysReceiverBase is a structure defined in physReceiverBase.go file. This structure stores different parameters related to the physical channel, i.e., k rice factor, shadowing, received power, AoA, etc.
+	
+	Connec *list.List  // Connec is the pointer to the linked-list. list.List is defined in pakage container/list. It keeps the record of connected mobile (i guess).
+
 	Clock  int	
 
 	RndCh []int
 
-	ConnectionBank list.List
+	ConnectionBank list.List // ConnectionBank is the linked-list. list.List is defined in pakage container/list. It keeps the record of all the connections (i guess).
 
 	Color int // This value is used to store some colorisation of the eNodeB, that is for example to use inside schedulers in honeycomb layout, where it will use a subset of RBs for ICIM
 
@@ -38,8 +40,9 @@ var idtmp int
 
 func (dbs *DBS) Init() {
 
-	for i := 0; i < NConnec; i++ {
-		dbs.ConnectionBank.PushBack(NewConnection())
+	for i := 0; i < NConnec; i++ {//NConnec: Number of connections per DBS = 40 defined in constant.go file.
+		dbs.ConnectionBank.PushBack(NewConnection()) 
+/* NewConnection() is a function defined in connection.go file. The return type of NewConnection() is pointer to the Connection structure (Connection structure is also defined in connection.go file). PushBack is a method from the list pakage which inserts the return type of NewConnection() (which is the pointer to the Connection structure) at the back of the list. Thus, this for loop create a link list of 40 elements and each element is a structure of type Connection. */ 
 	}
 
 	dbs.Id=idtmp

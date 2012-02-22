@@ -12,22 +12,25 @@ var Tti int //number of the current tti, to be incremented by the main loop
 var SyncChannel chan float64
 
 
-var Synstations [D]DBS
-var Mobiles [M]Mob
+var Synstations [D]DBS //DBS is a structure defined in synstation.go file. Synstations is an array of type DBS with length D = 143.
+var Mobiles [M]Mob //Mob is a structure defined in mobile.go file. Mobiles is an array of type Mob with length M = 2000.
 
-var Agents [D + M]Agent
+var Agents [D + M]Agent //Agent is an interface defined in agent.go file with methods RunPhys(), FetchData(), and RunAgent().
 
 var CoherenceFilter *Filter
 
 func init() {
 
-	SyncChannel = make(chan float64, 100000)
-	Rgen = rand.New(rand.NewSource(123813541954235))
-	Rgen2 = rand.New(rand.NewSource(12384235))
+	SyncChannel = make(chan float64, 100000) //Create a channel of type float64 with buffer size of 100000
+	Rgen = rand.New(rand.NewSource(123813541954235)) //Random number generation
+	Rgen2 = rand.New(rand.NewSource(12384235)) //Random number generation
 
+//range of Mobiles is M = 2000. This for loop will create an agent at each mobile unit. This means that Agents[i] equal to the address of Mobiles[i].
 	for i := range Mobiles {
 		Agents[i] = &Mobiles[i]
 	}
+
+//range of Synstations is D = 143. This for loop will create an agent at each DBS. This means that the first M=2000 agents are at mobile unit and another D=143 agents are at DBS. Agents[i+M] equal to the address of Synstations[i].
 	for i := range Synstations {
 		Agents[i+M] = &Synstations[i]
 	}
@@ -91,9 +94,10 @@ var Rgen2 *rand.Rand //one used to init shadow maps
 var IntereNodeBDist float64
 
 func Init() {
-
+/* Synstations is of type DBS (it is different from package synstation). It is a vector of length D (no. of DBS defined in constants.go file with D = 143). DBS is a structure defined in synstation.go file.*/
 	for i := range Synstations {
 		go Synstations[i].Init()
+/* Synstations[i].Init() is defined in synstation.go file (under DBS structure). It initializes the variables in DBS structure. */
 	}
 
 	//sync
