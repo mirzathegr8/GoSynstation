@@ -122,7 +122,7 @@ func (co *Connection) EvalVectPath(dbs *DBS) {
 		}
 	}
 
-	
+
 	//first path with line of sight
 	K := dbs.kk[co.E.Id]
 	NormFac:=math.Sqrt(2+K*K)
@@ -149,6 +149,8 @@ func (co *Connection) EvalVectPath(dbs *DBS) {
 		}
 	}
 
+
+	//antenna total gains
 
 	sumPower := &co.initz[0]
 	for rb := 0; rb < NCh; rb++ {
@@ -191,7 +193,7 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 	for m := range Mobiles { //Mobiles {
 		if !ConnectedArray[m] {
 
-			gain := Mag(co.Gain(dbs.AoA[m]))				
+			gain := Mag(co.Gain(dbs.AoA[m]))
 		
 			/*var Val complex128
 			cosAoA_2 := math.Cos(dbs.AoA[m]) / 2.0
@@ -234,7 +236,7 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 				Val*=complex(c.pathGains[np], 0)
 				for rb, use := range c.E.ARB {
 					if use {
-						sumPower[rb] += Val * c.ff_R[np][rb] //* complex(dbs.Channels[rb].pr[c.E.Id],0)
+						sumPower[rb] += Val * c.ff_R[np][rb]
 					}
 				}
 			}
@@ -244,10 +246,6 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 			}
 		}
 	}
-
-	/*	for rb := 0; rb < NCh; rb++ {
-				co.InterferencePower[rb] += Mag(sumPower[rb]) 
-			}*/
 
 }
 
@@ -446,5 +444,5 @@ func estimateFactor1(dbe *DBS, E *Emitter) (o float64) {
 
 }
 
-//   Reformatted by   lerouxp    Tue Feb 7 12:51:06 CET 2012
+
 
