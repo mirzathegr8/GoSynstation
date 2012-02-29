@@ -2,7 +2,7 @@ package synstation
 
 import "container/list"
 import "math"
-import "compMatrix"
+//import "compMatrix"
 //import "fmt"
 
 // counters to observe connection agents health
@@ -458,7 +458,7 @@ func (dbs *DBS) SetReceiverGains() {
 	// hence sigma2 is the shadowing+ path loss * emitted power of all interferers  plus Wnoise
 	// this is a worst case scenario
 	
-	for
+	/*for
 
 	Nc:= dbs.Connec.Len()
 	H:= compMatrix.Zeros(Nc,NA)
@@ -476,7 +476,7 @@ func (dbs *DBS) SetReceiverGains() {
 
 
 	Ri.Plus( compMatrix.Eye(NA).Scale(complex(sigma2,0)))
-	Ri.Inverse
+	Ri.Inverse()
 	Ri.TimesHilbert(H)
 
 	for n,e := 0,dbs.Connec.Front(); e != nil; n,e = n+1,e.Next() {
@@ -485,6 +485,6 @@ func (dbs *DBS) SetReceiverGains() {
 			H.Set(n, m, c.antennaGains[m])
 		}
 	}
-	
+	*/
 
 }

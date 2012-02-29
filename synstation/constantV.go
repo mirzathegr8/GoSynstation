@@ -6,9 +6,9 @@ var initScheduler=initChHopping2  //ARBScheduler4//DMA //
 const conservationFactor=1
 const DiversityType=MRC
 //const BeamAngle=  1.4345//  1.1345//
-const mDf=1
+const mDf=3
 const NetLayout= HONEYCOMB
-const subsetSize= 3
+const subsetSize= 5
 //const InterferenceCancel= SIZEESCANCELATION //NOCANCEL ////NOCANCEL //
 //const SetReceiverType = BEAM
 
