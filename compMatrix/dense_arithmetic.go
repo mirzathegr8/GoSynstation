@@ -5,6 +5,7 @@
 package compMatrix
 
 import "runtime"
+import "math/cmplx"
 
 func (A *DenseMatrix) Plus(B MatrixRO) (Matrix, error) {
 	C := A.Copy()
@@ -301,12 +302,12 @@ func TimesTimes(A, B, C *DenseMatrix) {
 
 	//Bt := B.Transpose()
 
-	Bcols := B.Arrays()
+	Brows := B.Arrays()
 
 	for i := 0; i < A.rows; i++ {
 		Arow := A.elements[i*A.step : i*A.step+A.cols]
 		for j := 0; j < B.rows; j++ {
-			Brow := B[j]
+			Brow := Brows[j]
 			for k := range Arow {
 				C.elements[i*C.step+j] += Arow[k] * cmplx.Conj(Brow[k])
 			}
