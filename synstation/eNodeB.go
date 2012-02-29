@@ -2,6 +2,7 @@ package synstation
 
 import "container/list"
 import "math"
+import "compMatrix"
 //import "fmt"
 
 // counters to observe connection agents health
@@ -449,5 +450,41 @@ func (dbs *DBS) MU_factor_measure() (fact, nARB float64) {
 
 }
 
-//   Reformatted by   lerouxp    Tue Jan 24 17:53:42 CET 2012
 
+
+func (dbs *DBS) SetReceiverGains() {
+
+	//sigma2 is the estimated variance of the noise + interferes far awway and not connected to the enode
+	// hence sigma2 is the shadowing+ path loss * emitted power of all interferers  plus Wnoise
+	// this is a worst case scenario
+	
+	for
+
+	Nc:= dbs.Connec.Len()
+	H:= compMatrix.Zeros(Nc,NA)
+
+	Ri := compMatrix.Zeros(NA,NA)
+
+	for n,e := 0,dbs.Connec.Front(); e != nil; n,e = n+1,e.Next() {
+		c := e.Value.(*Connection)
+		for m:=0;m<NA;m++{
+			H.Set(n, m, c.antennaGains[m])
+		}
+	}
+
+        compMatrix.HilbertTimes(H,H,Ri)
+
+
+	Ri.Plus( compMatrix.Eye(NA).Scale(complex(sigma2,0)))
+	Ri.Inverse
+	Ri.TimesHilbert(H)
+
+	for n,e := 0,dbs.Connec.Front(); e != nil; n,e = n+1,e.Next() {
+		c := e.Value.(*Connection)
+		for m:=0;m<NA;m++{
+			H.Set(n, m, c.antennaGains[m])
+		}
+	}
+	
+
+}
