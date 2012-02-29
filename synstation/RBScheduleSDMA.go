@@ -216,7 +216,7 @@ func MetricSDMA(AL *[mDf][NCh]int, SNRrbAll *[NConnec][NCh]float64, Pr *[NConnec
 		for m2, C2 := range MasterConn {
 
 			//a := C1.gainM[C1.E.Id]
-			b := C1.GetGain(dbs.AoA[C2.E.Id])
+			b := C1.GetGain(dbs.AoA[C2.E.Id],C2.E.GetFirstRB())
 
 			Corr[m1][m2] = b /// a
 
