@@ -14,7 +14,7 @@ var num_con int
 
 func GetDiversity() int { a := num_con; num_con = 0; return a }
 
-const NP = 1  // numbers of simulated paths
+const NP = 3  // numbers of simulated paths
 const NA = 10//numbers of antennas at receiver
 
 var PathGain = [5]float64{1, .5, 0.25, 0.05, 0.01} //0.5, 0.125} // relative powers of each path
@@ -62,7 +62,7 @@ type Connection struct {
 
 	//ComplexRand chan complex128
 
-	antennaGains [NA]complex128
+	antennaGains [NCh][NA]complex128
 
 	antennaPhase [NP][NA]complex128
 
@@ -158,15 +158,10 @@ func (co *Connection) EvalVectPath(dbs *DBS) {
 	}
 
 	for np := 0; np < NP; np++ {
-
-		var Val complex128
-		for na := 0; na < NA; na++ {
-			Val += co.antennaGains[na] * co.antennaPhase[np][na]
-		}
-		Val*=complex(co.pathGains[np],0)
-
 		for rb, ff := range co.ff_R[np] {
-			sumPower[rb] += ff * Val
+			for na := 0; na < NA; na++ {
+				sumPower[rb] += ff * co.antennaGains[rb][na] * co.antennaPhase[np][na] * complex(co.pathGains[np],0)
+			}
 		}
 	}
 
@@ -193,7 +188,7 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 	for m := range Mobiles { //Mobiles {
 		if !ConnectedArray[m] {
 
-			gain := Mag(co.Gain(dbs.AoA[m]))
+			
 		
 			/*var Val complex128
 			cosAoA_2 := math.Cos(dbs.AoA[m]) / 2.0
@@ -209,6 +204,7 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 		
 			for rb, use := range Mobiles[m].ARB {
 				if use {
+					gain := Mag(co.Gain(dbs.AoA[m],rb))
 					co.InterferencePower[rb] += dbs.Channels[rb].pr[m] * gain
 				}
 			}
@@ -228,15 +224,12 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 			for rb := 0; rb < NCh; rb++ {
 				sumPower[rb] = 0
 			}
-			for np := 0; np < NP; np++ {
-				var Val complex128
-				for na := 0; na < NA; na++ {
-					Val += co.antennaGains[na] * c.antennaPhase[np][na]
-				}
-				Val*=complex(c.pathGains[np], 0)
-				for rb, use := range c.E.ARB {
-					if use {
-						sumPower[rb] += Val * c.ff_R[np][rb]
+			for rb, use := range c.E.ARB {				
+				if use {
+					for np := 0; np < NP; np++ {
+					for na := 0; na < NA; na++ {
+						sumPower[rb] += co.antennaGains[rb][na] * c.antennaPhase[np][na] * c.ff_R[np][rb] *complex(c.pathGains[np], 0)
+					}
 					}
 				}
 			}
@@ -256,9 +249,12 @@ func (co *Connection) SetGains(dbs *DBS) {
 	cosAoA_2 := math.Cos(AoA) / 2
 	sin, cos := math.Sincos(cosAoA_2)
 	phase := complex(cos, -sin)
-	co.antennaGains[0]=1
-	for na := 1; na < NA; na++ {
-		co.antennaGains[na] = co.antennaGains[na-1]*phase
+
+	for rb:=range co.antennaGains{
+		co.antennaGains[rb][0]=1
+		for na := 1; na < NA; na++ {
+			co.antennaGains[rb][na] = co.antennaGains[rb][na-1]*phase
+		}
 	}
 
 }
@@ -267,7 +263,7 @@ func  Mag(c complex128) float64{
 	return real(c)*real(c) + imag(c)*imag(c)
 }
 
-func (co *Connection) Gain(AoA float64) complex128 {
+func (co *Connection) Gain(AoA float64, rb int) complex128 {
 
 	var Val complex128
 	cosAoA_2 := math.Cos(AoA) / 2.0
@@ -275,15 +271,15 @@ func (co *Connection) Gain(AoA float64) complex128 {
 	phase := complex(cos, sin)
 	delta := complex(1.0, 0.0)
 	for na := 0; na < NA; na++ {
-		Val += co.antennaGains[na] * delta
+		Val += co.antennaGains[rb][na] * delta
 		delta *= phase
 	}
 
 	return Val
 }
 
-func (co *Connection) GetGain(AoA float64) float64 { //evals the gain of that mobile on this connection
-	return Mag(co.Gain(AoA))
+func (co *Connection) GetGain(AoA float64, rb int) float64 { //evals the gain of that mobile on this connection
+	return Mag(co.Gain(AoA,rb))
 }
 
 
@@ -292,13 +288,16 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 
 	var touch bool
 
-	NoisePower:=0.0
-	for na:=0;na<NA;na++{
-		NoisePower+=Mag(co.antennaGains[na])
-	}
-	NoisePower*=WNoise
-
+	
 	for rb, use := range co.E.ARB {
+
+		NoisePower:=0.0
+		for na:=0;na<NA;na++{
+			NoisePower+=Mag(co.antennaGains[rb][na])
+		}
+		NoisePower*=WNoise
+
+
 
 		if use {
 
