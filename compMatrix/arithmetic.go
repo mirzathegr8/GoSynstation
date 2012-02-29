@@ -4,7 +4,7 @@
 
 package compMatrix
 
-import "math"
+//import "math"
 
 /*
 Finds the sum of two matrices.
@@ -128,7 +128,7 @@ func ParallelProduct(A, B MatrixRO) (C *DenseMatrix) {
 		for {
 			select {
 			case i := <-in:
-				sums := make([]float64, B.Cols())
+				sums := make([]complex128, B.Cols())
 				for k := 0; k < A.Cols(); k++ {
 					for j := 0; j < B.Cols(); j++ {
 						sums[j] += A.Get(i, k) * B.Get(k, j)
@@ -163,7 +163,7 @@ func ParallelProduct(A, B MatrixRO) (C *DenseMatrix) {
 /*
 Scales a matrix by a scalar.
 */
-func Scaled(A MatrixRO, f float64) (B *DenseMatrix) {
+func Scaled(A MatrixRO, f complex128) (B *DenseMatrix) {
 	B = MakeDenseCopy(A)
 	B.Scale(f)
 	return
@@ -196,7 +196,7 @@ func ApproxEquals(A, B MatrixRO, ε float64) bool {
 	}
 	for i := 0; i < A.Rows(); i++ {
 		for j := 0; j < A.Cols(); j++ {
-			if math.Abs(A.Get(i, j)-B.Get(i, j)) > ε {
+			if Mag(A.Get(i, j)-B.Get(i, j)) > ε {
 				return false
 			}
 		}

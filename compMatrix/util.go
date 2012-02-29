@@ -6,6 +6,9 @@ package compMatrix
 
 import "runtime"
 
+import "math"
+import "math/cmplx"
+
 func Mag(x complex128) float64{
 
 	return real(x)*real(x) + imag(x)*imag(x)
@@ -89,4 +92,9 @@ func parFor(inputs <-chan box, foo func(i box)) (wait func()) {
 		}
 	}
 	return
+}
+
+
+func compHypot(a,b complex128) float64{
+	return math.Sqrt(real(a*cmplx.Conj(a)+b*cmplx.Conj(b)))
 }

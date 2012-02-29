@@ -4,7 +4,7 @@
 
 package compMatrix
 
-import "math"
+import "math/cmplx"
 
 /*
 Returns the cholesky decomposition C of A, st CC'=A.
@@ -26,12 +26,18 @@ func (A *DenseMatrix) Cholesky() (L *DenseMatrix, err error) {
 			s = (A.Get(j, k) - s) / Lrowk[k]
 			Lrowj[k] = s
 			L.Set(j, k, s)
+		//TODO complex conjugate?		
 			d += s * s
 			isspd = isspd && (A.Get(k, j) == A.Get(j, k))
 		}
 		d = A.Get(j, j) - d
-		isspd = isspd && (d > 0.0)
-		L.Set(j, j, math.Sqrt(math.Fmax(d, complex128(0))))
+		//TODO d>0.0 norm or isreal positiv?
+		isspd = isspd && (Mag(d) > 0.0)
+		if Mag(d)>0 {
+			L.Set(j, j, cmplx.Sqrt(d) )
+		}else{ 
+			L.Set(j,j,0)
+		}
 		for k := j + 1; k < n; k++ {
 			L.Set(j, k, 0)
 		}
@@ -97,7 +103,7 @@ func (A *DenseMatrix) LUInPlace() (P *PivotMatrix) {
 
 		p := j
 		for i := j + 1; i < m; i++ {
-			if math.Abs(LUcolj[i]) > math.Abs(LUcolj[p]) {
+			if Mag(LUcolj[i]) > Mag(LUcolj[p]) {
 				p = i
 			}
 		}
@@ -134,11 +140,12 @@ func (A *DenseMatrix) QR() (Q, R *DenseMatrix) {
 	for k = 0; k < n; k++ {
 		norm = 0
 		for i = k; i < m; i++ {
-			norm = math.Hypot(norm, QR.Get(i, k))
+			norm = complex(compHypot(norm, QR.Get(i, k) ),0)
 		}
 
 		if norm != 0.0 {
-			if QR.Get(k, k) < 0 {
+			//TODO what is negative? real part, something else?
+			if real(QR.Get(k, k)) < 0 {
 				norm = -norm
 			}
 
@@ -164,7 +171,7 @@ func (A *DenseMatrix) QR() (Q, R *DenseMatrix) {
 			}
 		}
 
-		R.Set(k, k, -norm)
+		R.Set(k, k, -norm )
 
 	}
 

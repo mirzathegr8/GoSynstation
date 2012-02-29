@@ -5,7 +5,7 @@
 package compMatrix
 
 import (
-	"rand"
+	"math/rand"
 	"fmt"
 )
 
@@ -299,7 +299,7 @@ func Normals(rows, cols int) *DenseMatrix {
 
 	for i := 0; i < A.Rows(); i++ {
 		for j := 0; j < A.Cols(); j++ {
-			A.Set(i, j, rand.Normcomplex128())
+			A.Set(i, j, complex(rand.NormFloat64(),rand.NormFloat64()) )
 		}
 	}
 

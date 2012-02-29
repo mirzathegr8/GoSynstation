@@ -6,7 +6,7 @@ package compMatrix
 
 import (
 	"fmt"
-	"rand"
+	"math/rand"
 	"testing"
 	"time"
 )

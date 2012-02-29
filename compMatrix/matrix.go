@@ -8,9 +8,9 @@
 package compMatrix
 
 import (
-//	"errors"
+	//"errors"
 	"fmt"
-	"strconv"
+	//"strconv"
 	"strings"
 )
 
@@ -90,7 +90,7 @@ func (A *matrix) GetSize() (rows, cols int) {
 
 	eg [a b c; d e f]
 */
-func ParseMatlab(txt string) (A *DenseMatrix, err error) {
+/*func ParseMatlab(txt string) (A *DenseMatrix, err error) {
 	var arrays [][]complex128
 
 	spaceSep := strings.Fields(txt)
@@ -136,8 +136,7 @@ func ParseMatlab(txt string) (A *DenseMatrix, err error) {
 			return
 		}
 		if len(arrays[0]) != len(row) {
-			//err = errors.New("misaligned row")
-			fmt.Println("misaligned row")
+			err = errors.New("misaligned row")
 		}
 		arrays = append(arrays, row)
 		return
@@ -176,7 +175,7 @@ loop:
 	}
 	A = MakeDenseMatrixStacked(arrays)
 	return
-}
+}*/
 
 func String(A MatrixRO) string {
 	condense := func(vs string) string {

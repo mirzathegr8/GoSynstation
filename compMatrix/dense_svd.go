@@ -5,6 +5,7 @@
 package compMatrix
 
 import "math"
+import "math/cmplx"
 
 /*
 Returns U, Σ, V st Σ is diagonal (or block diagonal) and UΣV'=Arg
@@ -58,10 +59,10 @@ func (Arg *DenseMatrix) SVD() (theU, Σ, theV *DenseMatrix, err error) {
 			// Compute 2-norm of k-th column without under/overflow.
 			s[k] = 0
 			for i := k; i < m; i++ {
-				s[k] = math.Hypot(s[k], A[i][k])
+				s[k] = complex(compHypot(s[k], A[i][k]),0)
 			}
 			if s[k] != 0.0 {
-				if A[k][k] < 0.0 {
+				if real(A[k][k]) < 0.0 {
 					s[k] = -s[k]
 				}
 				for i := k; i < m; i++ {
@@ -107,10 +108,10 @@ func (Arg *DenseMatrix) SVD() (theU, Σ, theV *DenseMatrix, err error) {
 			// Compute 2-norm without under/overflow.
 			e[k] = 0
 			for i := k + 1; i < n; i++ {
-				e[k] = math.Hypot(e[k], e[i])
+				e[k] = complex(compHypot(e[k], e[i]),0)
 			}
 			if e[k] != 0.0 {
-				if e[k+1] < 0.0 {
+				if real(e[k+1]) < 0.0 {
 					e[k] = -e[k]
 				}
 				for i := k + 1; i < n; i++ {
@@ -119,7 +120,7 @@ func (Arg *DenseMatrix) SVD() (theU, Σ, theV *DenseMatrix, err error) {
 				e[k+1] += 1.0
 			}
 			e[k] = -e[k]
-			if (k+1 < m) && (e[k] != 0.0) {
+			if (k+1 < m) && (Mag(e[k]) > 0.0) {
 
 				// Apply the transformation.
 
@@ -249,8 +250,8 @@ func (Arg *DenseMatrix) SVD() (theU, Σ, theV *DenseMatrix, err error) {
 			if k == -1 {
 				break
 			}
-			if math.Abs(e[k]) <=
-				tiny+eps*(math.Abs(s[k])+math.Abs(s[k+1])) {
+			if cmplx.Abs(e[k]) <=
+				tiny+eps*(cmplx.Abs(s[k])+cmplx.Abs(s[k+1])) {
 				e[k] = 0.0
 				break
 			}
@@ -265,14 +266,14 @@ func (Arg *DenseMatrix) SVD() (theU, Σ, theV *DenseMatrix, err error) {
 				}
 				t := complex128(0)
 				if ks != p {
-					t = math.Abs(e[ks])
+					t = complex(cmplx.Abs(e[ks]),0)
 				}
 				if ks != k+1 {
-					t += math.Abs(e[ks-1])
+					t += complex(cmplx.Abs(e[ks-1]),0)
 				}
 				//double t = (ks != p ? Math.abs(e[ks]) : 0.) +
 				//           (ks != k+1 ? Math.abs(e[ks-1]) : 0.);
-				if math.Abs(s[ks]) <= tiny+eps*t {
+				if cmplx.Abs(s[ks]) <= tiny+eps*real(t) {
 					s[ks] = 0.0
 					break
 				}
@@ -299,7 +300,7 @@ func (Arg *DenseMatrix) SVD() (theU, Σ, theV *DenseMatrix, err error) {
 				f := e[p-2]
 				e[p-2] = 0.0
 				for j := p - 2; j >= k; j-- {
-					t := math.Hypot(s[j], f)
+					t := complex(compHypot(s[j], f),0)
 					cs := s[j] / t
 					sn := f / t
 					s[j] = t
@@ -325,7 +326,7 @@ func (Arg *DenseMatrix) SVD() (theU, Σ, theV *DenseMatrix, err error) {
 				f := e[k-1]
 				e[k-1] = 0.0
 				for j := k; j < p; j++ {
-					t := math.Hypot(s[j], f)
+					t := complex(compHypot(s[j], f),0)
 					cs := s[j] / t
 					sn := f / t
 					s[j] = t
@@ -349,22 +350,40 @@ func (Arg *DenseMatrix) SVD() (theU, Σ, theV *DenseMatrix, err error) {
 
 				// Calculate the shift.
 
-				scale := max(max(max(max(
+				//max
+				scale:=cmplx.Abs(s[p-1])
+				a:=cmplx.Abs(s[p-2])
+				if scale < a  {
+					scale= a
+				}
+				a =cmplx.Abs(e[p-2])
+				if scale < a  {
+					scale= a
+				}
+				a=cmplx.Abs(s[k])
+				if scale < a  {
+					scale= a
+				}
+				a=cmplx.Abs(e[k])
+				if scale < a  {
+					scale= a
+				}
+				/*scale := max(max(max(max(
 					math.Abs(s[p-1]), math.Abs(s[p-2])),
 					math.Abs(e[p-2])),
 					math.Abs(s[k])),
-					math.Abs(e[k]))
-				sp := s[p-1] / scale
-				spm1 := s[p-2] / scale
-				epm1 := e[p-2] / scale
-				sk := s[k] / scale
-				ek := e[k] / scale
+					math.Abs(e[k]))*/
+				sp := s[p-1] / complex(scale,0)
+				spm1 := s[p-2] / complex(scale,0)
+				epm1 := e[p-2] / complex(scale,0)
+				sk := s[k] / complex(scale,0)
+				ek := e[k] / complex(scale,0)
 				b := ((spm1+sp)*(spm1-sp) + epm1*epm1) / 2.0
 				c := (sp * epm1) * (sp * epm1)
 				shift := complex128(0)
 				if (b != 0.0) || (c != 0.0) {
-					shift = math.Sqrt(b*b + c)
-					if b < 0.0 {
+					shift = cmplx.Sqrt(b*b + c)
+					if real(b) < 0.0 {
 						shift = -shift
 					}
 					shift = c / (b + shift)
@@ -375,7 +394,7 @@ func (Arg *DenseMatrix) SVD() (theU, Σ, theV *DenseMatrix, err error) {
 				// Chase zeros.
 
 				for j := k; j < p-1; j++ {
-					t := math.Hypot(f, g)
+					t := complex(compHypot(f, g),0)
 					cs := f / t
 					sn := g / t
 					if j != k {
@@ -392,7 +411,7 @@ func (Arg *DenseMatrix) SVD() (theU, Σ, theV *DenseMatrix, err error) {
 							V[i][j] = t
 						}
 					}
-					t = math.Hypot(f, g)
+					t = complex(compHypot(f, g),0)
 					cs = f / t
 					sn = g / t
 					s[j] = t
@@ -420,8 +439,8 @@ func (Arg *DenseMatrix) SVD() (theU, Σ, theV *DenseMatrix, err error) {
 
 				// Make the singular values positive.
 
-				if s[k] <= 0.0 {
-					if s[k] < 0.0 {
+				if real(s[k]) <= 0.0 {
+					if real(s[k]) < 0.0 {
 						s[k] = -s[k]
 					} else {
 						s[k] = 0
@@ -436,7 +455,7 @@ func (Arg *DenseMatrix) SVD() (theU, Σ, theV *DenseMatrix, err error) {
 				// Order the singular values.
 
 				for k < pp {
-					if s[k] >= s[k+1] {
+					if real(s[k]) >= real(s[k+1]) {
 						break
 					}
 					t := s[k]

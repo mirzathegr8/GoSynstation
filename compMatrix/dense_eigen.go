@@ -5,6 +5,7 @@
 package compMatrix
 
 import "math"
+import "math/cmplx"
 
 /*
 Returns V,D st V*D*inv(V) = A and D is diagonal (or block diagonal).
@@ -47,9 +48,9 @@ func makeD(d []complex128, e []complex128) *DenseMatrix {
 			D[i][j] = 0.0
 		}
 		D[i][i] = d[i]
-		if e[i] > 0 {
+		if real(e[i]) > 0 {
 			D[i][i+1] = e[i]
-		} else if e[i] < 0 {
+		} else if real(e[i]) < 0 {
 			D[i][i-1] = e[i]
 		}
 	}
@@ -77,7 +78,7 @@ func tred2(V [][]complex128, d []complex128, e []complex128) {
 		scale := complex128(0)
 		h := complex128(0)
 		for k := 0; k < i; k++ {
-			scale = scale + math.Abs(d[k])
+			scale = scale + complex(cmplx.Abs(d[k]),0)
 		}
 		if scale == 0.0 {
 			e[i] = d[i-1]
@@ -95,8 +96,8 @@ func tred2(V [][]complex128, d []complex128, e []complex128) {
 				h += d[k] * d[k]
 			}
 			f := d[i-1]
-			g := math.Sqrt(h)
-			if f > 0 {
+			g := cmplx.Sqrt(h)
+			if real(f) > 0 {
 				g = -g
 			}
 			e[i] = scale * g
@@ -188,16 +189,16 @@ func tql2(V [][]complex128, d []complex128, e []complex128) {
 	e[n-1] = 0.0
 
 	f := complex128(0)
-	tst1 := complex128(0)
+	tst1 := float64(0)
 	eps := math.Pow(2.0, -52.0)
 	for l := 0; l < n; l++ {
 
 		// Find small subdiagonal element
 
-		tst1 = max(tst1, math.Abs(d[l])+math.Abs(e[l]))
+		tst1 = math.Max(tst1, cmplx.Abs(d[l]) + cmplx.Abs(e[l]))
 		m := l
 		for m < n {
-			if math.Abs(e[m]) <= eps*tst1 {
+			if cmplx.Abs(e[m]) <= eps*tst1 {
 				break
 			}
 			m++
@@ -215,8 +216,8 @@ func tql2(V [][]complex128, d []complex128, e []complex128) {
 
 				g := d[l]
 				p := (d[l+1] - g) / (2.0 * e[l])
-				r := math.Sqrt(p*p + 1.0)
-				if p < 0 {
+				r := cmplx.Sqrt(p*p + 1.0)
+				if real(p) < 0 {
 					r = -r
 				}
 				d[l] = e[l] / (p + r)
@@ -243,7 +244,7 @@ func tql2(V [][]complex128, d []complex128, e []complex128) {
 					s2 = s
 					g = c * e[i]
 					h = c * p
-					r = math.Sqrt(p*p + e[i]*e[i])
+					r = cmplx.Sqrt(p*p + e[i]*e[i])
 					e[i+1] = s * r
 					s = e[i] / r
 					c = p / r
@@ -263,7 +264,7 @@ func tql2(V [][]complex128, d []complex128, e []complex128) {
 				d[l] = c * p
 
 				// Check for convergence.
-				if !(math.Abs(e[l]) > eps*tst1) {
+				if !(cmplx.Abs(e[l]) > eps*tst1) {
 					break
 				}
 			}
@@ -278,7 +279,7 @@ func tql2(V [][]complex128, d []complex128, e []complex128) {
 		k := i
 		p := d[i]
 		for j := i + 1; j < n; j++ {
-			if d[j] < p {
+			if Mag(d[j]) < Mag(p) {
 				k = j
 				p = d[j]
 			}
@@ -311,9 +312,9 @@ func orthes(V [][]complex128, d []complex128, e []complex128, H [][]complex128, 
 
 		// Scale column.
 
-		scale := complex128(0)
+		scale := float64(0)
 		for i := m; i <= high; i++ {
-			scale = scale + math.Abs(H[i][m-1])
+			scale = scale + cmplx.Abs(H[i][m-1])
 		}
 		if scale != 0.0 {
 
@@ -321,11 +322,11 @@ func orthes(V [][]complex128, d []complex128, e []complex128, H [][]complex128, 
 
 			h := complex128(0)
 			for i := high; i >= m; i-- {
-				ort[i] = H[i][m-1] / scale
+				ort[i] = H[i][m-1] / complex(scale,0)
 				h += ort[i] * ort[i]
 			}
-			g := math.Sqrt(h)
-			if ort[m] > 0 {
+			g := cmplx.Sqrt(h)
+			if real(ort[m]) > 0 {
 				g = -g
 			}
 			h = h - ort[m]*g
@@ -355,8 +356,8 @@ func orthes(V [][]complex128, d []complex128, e []complex128, H [][]complex128, 
 					H[i][j] -= f * ort[j]
 				}
 			}
-			ort[m] = scale * ort[m]
-			H[m][m-1] = scale * g
+			ort[m] = complex(scale,0) * ort[m]
+			H[m][m-1] = complex(scale,0) * g
 		}
 	}
 
@@ -418,14 +419,15 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 
 	// Store roots isolated by balanc and compute matrix norm
 
-	norm := complex128(0)
+	norm := float64(0)
 	for i := 0; i < nn; i++ {
 		if i < low || i > high {
 			d[i] = H[i][i]
 			e[i] = 0.0
 		}
-		for j := int(max(complex128(i)-1, 0)); j < nn; j++ {
-			norm = norm + math.Abs(H[i][j])
+		j:= i-1; if j<0 {j=0}
+		for ; j < nn; j++ {
+			norm = norm + cmplx.Abs(H[i][j])
 		}
 	}
 
@@ -438,11 +440,11 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 
 		l := n
 		for l > low {
-			s = math.Abs(H[l-1][l-1]) + math.Abs(H[l][l])
+			s = complex(cmplx.Abs(H[l-1][l-1]) + cmplx.Abs(H[l][l]),0)
 			if s == 0.0 {
-				s = norm
+				s = complex(norm,0)
 			}
-			if math.Abs(H[l][l-1]) < eps*s {
+			if cmplx.Abs(H[l][l-1]) < eps*real(s) {
 				break
 			}
 			l--
@@ -464,15 +466,15 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 			w = H[n][n-1] * H[n-1][n]
 			p = (H[n-1][n-1] - H[n][n]) / 2.0
 			q = p*p + w
-			z = math.Sqrt(math.Abs(q))
+			z = complex(math.Sqrt(cmplx.Abs(q)),0)
 			H[n][n] = H[n][n] + exshift
 			H[n-1][n-1] = H[n-1][n-1] + exshift
 			x = H[n][n]
 
 			// Real pair
 
-			if q >= 0 {
-				if p >= 0 {
+			if real(q) >= 0 {
+				if real(p) >= 0 {
 					z = p + z
 				} else {
 					z = p - z
@@ -485,10 +487,10 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 				e[n-1] = 0.0
 				e[n] = 0.0
 				x = H[n][n-1]
-				s = math.Abs(x) + math.Abs(z)
+				s = complex(cmplx.Abs(x) + cmplx.Abs(z),0)
 				p = x / s
 				q = z / s
-				r = math.Sqrt(p*p + q*q)
+				r = cmplx.Sqrt(p*p + q*q)
 				p = p / r
 				q = q / r
 
@@ -548,20 +550,20 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 				for i := low; i <= n; i++ {
 					H[i][i] -= x
 				}
-				s = math.Abs(H[n][n-1]) + math.Abs(H[n-1][n-2])
+				s = complex(cmplx.Abs(H[n][n-1]) + cmplx.Abs(H[n-1][n-2]),0)
 				y = 0.75 * s
 				x = y
-				w = -0.4375 * s * s
+				w = -0.4375 * s * cmplx.Conj(s)
 			}
 
 			// MATLAB's new ad hoc shift
 
 			if iter == 30 {
 				s = (y - x) / 2.0
-				s = s*s + w
-				if s > 0 {
-					s = math.Sqrt(s)
-					if y < x {
+				s = s*cmplx.Conj(s) + w
+				if real(s) > 0 {
+					s = complex(math.Sqrt(real(s)),0)
+					if real(y) < real(x) {
 						s = -s
 					}
 					s = x - w/((y-x)/2.0+s)
@@ -587,16 +589,16 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 				p = (r*s-w)/H[m+1][m] + H[m][m+1]
 				q = H[m+1][m+1] - z - r - s
 				r = H[m+2][m+1]
-				s = math.Abs(p) + math.Abs(q) + math.Abs(r)
+				s = complex(cmplx.Abs(p) + cmplx.Abs(q) + cmplx.Abs(r),0)
 				p = p / s
 				q = q / s
 				r = r / s
 				if m == l {
 					break
 				}
-				if math.Abs(H[m][m-1])*(math.Abs(q)+math.Abs(r)) <
-					eps*(math.Abs(p)*(math.Abs(H[m-1][m-1])+math.Abs(z)+
-						math.Abs(H[m+1][m+1]))) {
+				if cmplx.Abs(H[m][m-1])*(cmplx.Abs(q)+cmplx.Abs(r)) <
+					eps*(cmplx.Abs(p)*(cmplx.Abs(H[m-1][m-1])+cmplx.Abs(z)+
+						cmplx.Abs(H[m+1][m+1]))) {
 					break
 				}
 				m--
@@ -622,7 +624,7 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 						r = 0
 					}
 
-					x = math.Abs(p) + math.Abs(q) + math.Abs(r)
+					x = complex( cmplx.Abs(p) + cmplx.Abs(q) + cmplx.Abs(r),0)
 					if x != 0.0 {
 						p = p / x
 						q = q / x
@@ -632,8 +634,8 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 				if x == 0.0 {
 					break
 				}
-				s = math.Sqrt(p*p + q*q + r*r)
-				if p < 0 {
+				s = cmplx.Sqrt(p*p + q*q + r*r)
+				if real(p) < 0 {
 					s = -s
 				}
 				if s != 0 {
@@ -655,22 +657,24 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 						p = H[k][j] + q*H[k+1][j]
 						if notlast {
 							p = p + r*H[k+2][j]
-							H[k+2][j] = H[k+2][j] - p*z
+							H[k+2][j] = H[k+2][j] - p*cmplx.Conj(z)
 						}
 						H[k][j] = H[k][j] - p*x
-						H[k+1][j] = H[k+1][j] - p*y
+						H[k+1][j] = H[k+1][j] - p*cmplx.Conj(y)
 					}
 
 					// Column modification
 
-					for i := 0; i <= int(min(complex128(n), complex128(k)+3)); i++ {
+					max:=n
+					if n> k+3 { max=k+3}
+					for i := 0; i <= max; i++ {
 						p = x*H[i][k] + y*H[i][k+1]
 						if notlast {
 							p = p + z*H[i][k+2]
-							H[i][k+2] = H[i][k+2] - p*r
+							H[i][k+2] = H[i][k+2] - p*cmplx.Conj(r)
 						}
 						H[i][k] = H[i][k] - p
-						H[i][k+1] = H[i][k+1] - p*q
+						H[i][k+1] = H[i][k+1] - p*cmplx.Conj(q)
 					}
 
 					// Accumulate transformations
@@ -679,10 +683,10 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 						p = x*V[i][k] + y*V[i][k+1]
 						if notlast {
 							p = p + z*V[i][k+2]
-							V[i][k+2] = V[i][k+2] - p*r
+							V[i][k+2] = V[i][k+2] - p*cmplx.Conj(r)
 						}
 						V[i][k] = V[i][k] - p
-						V[i][k+1] = V[i][k+1] - p*q
+						V[i][k+1] = V[i][k+1] - p*cmplx.Conj(q)
 					}
 				} // (s != 0)
 			} // k loop
@@ -710,7 +714,7 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 				for j := l; j <= n; j++ {
 					r = r + H[i][j]*H[j][n]
 				}
-				if e[i] < 0.0 {
+				if real(e[i]) < 0.0 {
 					z = w
 					s = r
 				} else {
@@ -719,7 +723,7 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 						if w != 0.0 {
 							H[i][n] = -r / w
 						} else {
-							H[i][n] = -r / (eps * norm)
+							H[i][n] = -r / complex(eps * norm,0)
 						}
 
 						// Solve real equations
@@ -730,7 +734,7 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 						q = (d[i]-p)*(d[i]-p) + e[i]*e[i]
 						t = (x*s - z*r) / q
 						H[i][n] = t
-						if math.Abs(x) > math.Abs(z) {
+						if cmplx.Abs(x) > cmplx.Abs(z) {
 							H[i+1][n] = (-r - w*t) / x
 						} else {
 							H[i+1][n] = (-s - y*t) / z
@@ -739,8 +743,8 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 
 					// Overflow control
 
-					t = math.Abs(H[i][n])
-					if (eps*t)*t > 1 {
+					t = complex(cmplx.Abs(H[i][n]),0)
+					if (eps*real(t))*real(t) > 1 {
 						for j := i; j <= n; j++ {
 							H[j][n] = H[j][n] / t
 						}
@@ -750,12 +754,12 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 
 			// Complex vector
 
-		} else if q < 0 {
+		} else if real(q) < 0 {
 			l := n - 1
 
 			// Last vector component imaginary so matrix is triangular
 
-			if math.Abs(H[n][n-1]) > math.Abs(H[n-1][n]) {
+			if cmplx.Abs(H[n][n-1]) > cmplx.Abs(H[n-1][n]) {
 				H[n-1][n-1] = q / H[n][n-1]
 				H[n-1][n] = -(H[n][n] - p) / H[n][n-1]
 			} else {
@@ -775,13 +779,13 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 				}
 				w = H[i][i] - p
 
-				if e[i] < 0.0 {
+				if real(e[i]) < 0.0 {
 					z = w
 					r = ra
 					s = sa
 				} else {
 					l = i
-					if e[i] == 0 {
+					if Mag(e[i]) == 0 {
 						cdivr, cdivi := cdiv(-ra, -sa, w, q)
 						H[i][n-1] = cdivr
 						H[i][n] = cdivi
@@ -794,13 +798,13 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 						vr = (d[i]-p)*(d[i]-p) + e[i]*e[i] - q*q
 						vi = (d[i] - p) * 2.0 * q
 						if vr == 0.0 && vi == 0.0 {
-							vr = eps * norm * (math.Abs(w) + math.Abs(q) +
-								math.Abs(x) + math.Abs(y) + math.Abs(z))
+							vr = complex(eps * norm * (cmplx.Abs(w) + cmplx.Abs(q) +
+								cmplx.Abs(x) + cmplx.Abs(y) + cmplx.Abs(z)),0)
 						}
 						cdivr, cdivi := cdiv(x*r-z*ra+q*sa, x*s-z*sa-q*ra, vr, vi)
 						H[i][n-1] = cdivr
 						H[i][n] = cdivi
-						if math.Abs(x) > (math.Abs(z) + math.Abs(q)) {
+						if cmplx.Abs(x) > (cmplx.Abs(z) + cmplx.Abs(q)) {
 							H[i+1][n-1] = (-ra - w*H[i][n-1] + q*H[i][n]) / x
 							H[i+1][n] = (-sa - w*H[i][n] - q*H[i][n-1]) / x
 						} else {
@@ -812,8 +816,8 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 
 					// Overflow control
 
-					t = max(math.Abs(H[i][n-1]), math.Abs(H[i][n]))
-					if (eps*t)*t > 1 {
+					t = complex(math.Max(cmplx.Abs(H[i][n-1]), cmplx.Abs(H[i][n])),0)
+					if (eps*real(t))*real(t) > 1 {
 						for j := i; j <= n; j++ {
 							H[j][n-1] = H[j][n-1] / t
 							H[j][n] = H[j][n] / t
@@ -839,7 +843,9 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 	for j := nn - 1; j >= low; j-- {
 		for i := low; i <= high; i++ {
 			z = 0.0
-			for k := low; k <= int(min(complex128(j), complex128(high))); k++ {
+			max:= j
+			if max > high { max=high}
+			for k := low; k <= max; k++ {
 				z = z + V[i][k]*H[k][j]
 			}
 			V[i][j] = z
@@ -849,7 +855,7 @@ func hqr2(V [][]complex128, d []complex128, e []complex128, H [][]complex128, or
 
 func cdiv(xr complex128, xi complex128, yr complex128, yi complex128) (cdivr complex128, cdivi complex128) {
 	var r, d complex128
-	if math.Abs(yr) > math.Abs(yi) {
+	if cmplx.Abs(yr) > cmplx.Abs(yi) {
 		r = yi / yr
 		d = yr + r*yi
 		cdivr = (xr + r*xi) / d

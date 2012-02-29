@@ -6,8 +6,8 @@ package compMatrix
 
 import (
 	"math"
-//	"errors"
-	"fmt"
+	"errors"
+	"math/cmplx"
 )
 
 func (A *DenseMatrix) Symmetric() bool {
@@ -60,7 +60,7 @@ func (A *DenseMatrix) Inverse() (*DenseMatrix, error) {
 	for i := 0; i < aug.Rows(); i++ {
 		j := i
 		for k := i; k < aug.Rows(); k++ {
-			if math.Abs(aug.Get(k, i)) > math.Abs(aug.Get(j, i)) {
+			if Mag(aug.Get(k, i)) > Mag(aug.Get(j, i)) {
 				j = k
 			}
 		}
@@ -90,10 +90,10 @@ func (A *DenseMatrix) Det() complex128 {
 
 func (A *DenseMatrix) Trace() complex128 { return sum(A.DiagonalCopy()) }
 
-func (A *DenseMatrix) OneNorm() (ε complex128) {
+func (A *DenseMatrix) OneNorm() (ε float64) {
 	for i := 0; i < A.rows; i++ {
 		for j := 0; j < A.cols; j++ {
-			ε = math.Fmax(ε, A.Get(i, j))
+			ε = math.Max(ε, Mag(A.Get(i, j)))
 		}
 	}
 	return
@@ -107,7 +107,7 @@ func (A *DenseMatrix) TwoNorm() complex128 {
 			sum += v * v
 		}
 	}
-	return math.Sqrt(sum)
+	return cmplx.Sqrt(sum)
 }
 
 func (A *DenseMatrix) InfinityNorm() (ε complex128) {
@@ -131,8 +131,7 @@ func (A *DenseMatrix) Transpose() *DenseMatrix {
 
 func (A *DenseMatrix) TransposeInPlace() (err error) {
 	if A.rows != A.cols {
-		//err = errors.New("Can only transpose a square matrix in place")
-		fmt.Println("Can only transpose a square matrix in place")
+		err = errors.New("Can only transpose a square matrix in place")
 		return
 	}
 	for i := 0; i < A.rows; i++ {
