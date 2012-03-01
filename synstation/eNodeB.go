@@ -2,7 +2,8 @@ package synstation
 
 import "container/list"
 import "math"
-//import "compMatrix"
+
+import "compMatrix"
 //import "fmt"
 
 // counters to observe connection agents health
@@ -73,19 +74,18 @@ func (dbs *DBS) RunPhys() {
 		c.EvalVectPath(dbs)
 	}
 
-
-	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
+	/*for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
 		c.SetGains(dbs)
-	}
-	
+	}*/
+
+	dbs.SetReceiverGains()
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
 		c.EvalInterference(dbs)
 		c.BitErrorRate(dbs)
 	}
-
 
 	SyncChannel <- 1
 }
@@ -154,11 +154,11 @@ func (dbs *DBS) IsConnected(tx *Emitter) bool {
 
 }
 
-func (dbs *DBS) GetConnectedMobiles() *[M]bool{
+func (dbs *DBS) GetConnectedMobiles() *[M]bool {
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
-			c := e.Value.(*Connection)
-			dbs.Masters[c.E.Id] = true
-		}
+		c := e.Value.(*Connection)
+		dbs.Masters[c.E.Id] = true
+	}
 	return &dbs.Masters
 }
 
@@ -287,7 +287,7 @@ func (dbs *DBS) connectionAgent() {
 		//First try to connect unconnected mobiles
 
 		Rc := dbs.Channels[0]
-		for i := 0 ; dbs.Connec.Len()<dbs.NMaxConnec && i < SizeES; i++ {
+		for i := 0; dbs.Connec.Len() < dbs.NMaxConnec && i < SizeES; i++ {
 
 			if Rc.Signal[i] >= 0 {
 				//fmt.Println("get a signal ", i, SizeES, dbs.Connec.Len(), dbs.NMaxConnec)
@@ -300,7 +300,7 @@ func (dbs *DBS) connectionAgent() {
 							dbs.connect(&Mobiles[Rc.Signal[i]].Emitter, 0.001)
 							conn++
 							//fmt.Println("connected")
-							
+
 							//return // we are done connecting
 						}
 					}
@@ -308,7 +308,6 @@ func (dbs *DBS) connectionAgent() {
 
 			}
 
-			
 		}
 
 		// if no unconnected mobiles got connected, find one to provide it with macrodiversity
@@ -344,6 +343,7 @@ func (dbs *DBS) connectionAgent() {
 func (dbs *DBS) EvalConnection(k int) float64 {
 	return dbs.pr[dbs.Channels[0].Signal[k]] / WNoise
 }
+
 // return quality indicator for mobiles connected to other dbs
 func (dbs *DBS) EvalSignalConnection(rb int) (EvalMax float64, EmitterId int) {
 
@@ -450,41 +450,69 @@ func (dbs *DBS) MU_factor_measure() (fact, nARB float64) {
 
 }
 
-
-
 func (dbs *DBS) SetReceiverGains() {
 
 	//sigma2 is the estimated variance of the noise + interferes far awway and not connected to the enode
 	// hence sigma2 is the shadowing+ path loss * emitted power of all interferers  plus Wnoise
 	// this is a worst case scenario
-	
-	/*for
 
-	Nc:= dbs.Connec.Len()
-	H:= compMatrix.Zeros(Nc,NA)
+	var MobileList [NConnec]*Emitter
+	var ConnecList [NConnec]*Connection
 
-	Ri := compMatrix.Zeros(NA,NA)
+	Ri := compMatrix.Zeros(NA, NA)
 
-	for n,e := 0,dbs.Connec.Front(); e != nil; n,e = n+1,e.Next() {
-		c := e.Value.(*Connection)
-		for m:=0;m<NA;m++{
-			H.Set(n, m, c.antennaGains[m])
+	ConnectedArray:=dbs.GetConnectedMobiles()
+
+	for rb := 0; rb < NCh; rb++ {
+
+		//out of reach mobiles interferer included in sigma noise
+		Sigma2:=0.0
+		for m := range Mobiles { 
+			if !ConnectedArray[m] {				
+				if Mobiles[m].ARB[rb] {										
+					Sigma2 += dbs.Channels[rb].pr[m] 
+				}
+			}
 		}
-	}
+		Sigma2+=WNoise	
 
-        compMatrix.HilbertTimes(H,H,Ri)
+		Nc := 0
+		for n, e := 0, dbs.Connec.Front(); e != nil; n, e = n+1, e.Next() {
+			c := e.Value.(*Connection)
+			if c.E.ARB[rb] {
+				ConnecList[Nc] = c
+				MobileList[Nc] = c.E
+				Nc++
+			}
 
-
-	Ri.Plus( compMatrix.Eye(NA).Scale(complex(sigma2,0)))
-	Ri.Inverse()
-	Ri.TimesHilbert(H)
-
-	for n,e := 0,dbs.Connec.Front(); e != nil; n,e = n+1,e.Next() {
-		c := e.Value.(*Connection)
-		for m:=0;m<NA;m++{
-			H.Set(n, m, c.antennaGains[m])
 		}
-	}
-	*/
 
+		H := compMatrix.Zeros(Nc, NA)
+		Wh := compMatrix.Zeros(NA, Nc)
+
+		for m := 0; m < Nc; m++ {
+			for na := 0; na < NA; na++ {
+				H.Set(m, na, ConnecList[m].antennaChans[rb][na])
+			}
+		}	
+
+		compMatrix.HilbertTimes(H, H, Ri)
+		Eye:=compMatrix.Eye(NA)
+		Eye.Scale(complex(Sigma2, 0))
+		Ri.Plus(Eye)
+		Ri.Inverse()
+		compMatrix.TimesHilbert(Ri,H,Wh)
+
+		Wrows := Wh.Arrays()
+
+		for m := 0; m < Nc; m++ {
+			for m := 0; m < NA; m++ {
+				ConnecList[m].SetGains(dbs,Wrows[m],rb)
+			}
+		}
+
+	}
 }
+
+//   Reformatted by   lerouxp    Thu Mar 1 09:27:55 EST 2012
+
