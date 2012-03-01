@@ -66,6 +66,8 @@ type Connection struct {
 
 	antennaPhase [NP][NA]complex128
 
+	antennaChans [NCh][NA]complex128 
+
 	pathAoA   [NP]float64
 	pathGains [NP]float64 //amplitutes ,  delay is already in filter fading
 
@@ -150,18 +152,31 @@ func (co *Connection) EvalVectPath(dbs *DBS) {
 	}
 
 
+
 	//antenna total gains
 
 	sumPower := &co.initz[0]
 	for rb := 0; rb < NCh; rb++ {
 		sumPower[rb] = 0
-	}
+	}	
 
-	for np := 0; np < NP; np++ {
-		for rb, ff := range co.ff_R[np] {
-			for na := 0; na < NA; na++ {
-				sumPower[rb] += ff * co.antennaGains[rb][na] * co.antennaPhase[np][na] * complex(co.pathGains[np],0)
+	PrEst := complex( dbs.pr[co.E.Id] / float64(co.E.GetNumARB()),0) //estimated Power that *would be* on unsused RBs // TODO needs thinking, on how to code this estimate properly 
+
+	for rb := 0; rb < NCh; rb++ {
+		power := complex(1,0)
+		if co.E.ARB[rb] {
+			power=complex(dbs.Channels[rb].pr[co.E.Id],0) //emitted power on rb + shadowing + path loss
+		}else{
+			power=PrEst
+		}
+
+		for na := 0; na < NA; na++ {
+			co.antennaChans[rb][na]= 0
+			for np := 0; np < NP; np++ {				
+				co.antennaChans[rb][na]+= co.antennaPhase[np][na] * complex(co.pathGains[np],0) *co.ff_R[np][rb]
 			}
+			co.antennaChans[rb][na]*= power // channel gains include all, for each antenna/rb,
+			sumPower[rb] +=  co.antennaChans[rb][na] * co.antennaGains[rb][na] 
 		}
 	}
 
@@ -180,32 +195,17 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 	ConnectedArray := dbs.GetConnectedMobiles()
 
 	for rb := range co.Channels {
-
 		co.InterferencePower[rb] = 0
 	}
 
 		
-	for m := range Mobiles { //Mobiles {
+	for m := range Mobiles {
 		if !ConnectedArray[m] {
-
-			
 		
-			/*var Val complex128
-			cosAoA_2 := math.Cos(dbs.AoA[m]) / 2.0
-			cos, sin := math.Sincos(cosAoA_2)
-			phase := complex(cos, sin)
-			delta:= complex(1,0)
-			for na := 0; na < NA; na++ {
-				Val += co.antennaGains[na] * delta
-				delta *= phase
-			}*/
-
-			//gain:=Mag(Val)
-		
-			for rb, use := range Mobiles[m].ARB {
+			for rb, use := range Mobiles[m].ARB {				
 				if use {
 					gain := Mag(co.Gain(dbs.AoA[m],rb))
-					co.InterferencePower[rb] += dbs.Channels[rb].pr[m] * gain
+					co.InterferencePower[rb] += dbs.Channels[rb].pr[m] * gain					
 				}
 			}
 		}
@@ -225,26 +225,24 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 				sumPower[rb] = 0
 			}
 			for rb, use := range c.E.ARB {				
-				if use {
-					for np := 0; np < NP; np++ {
+				if use {					
 					for na := 0; na < NA; na++ {
-						sumPower[rb] += co.antennaGains[rb][na] * c.antennaPhase[np][na] * c.ff_R[np][rb] *complex(c.pathGains[np], 0)
-					}
+						sumPower[rb] += co.antennaGains[rb][na] * c.antennaChans[rb][na] 
 					}
 				}
 			}
 
 			for rb := 0; rb < NCh; rb++ {
-				co.InterferencePower[rb] += Mag(sumPower[rb]) * dbs.Channels[rb].pr[c.E.Id]
+				co.InterferencePower[rb] += Mag(sumPower[rb]) 
 			}
 		}
 	}
 
 }
 
-func (co *Connection) SetGains(dbs *DBS) {
+func (co *Connection) SetGains(dbs *DBS, gains []complex128, rb int) {
 
-	AoA := dbs.AoA[co.E.Id]
+	/*AoA := dbs.AoA[co.E.Id]
 
 	cosAoA_2 := math.Cos(AoA) / 2
 	sin, cos := math.Sincos(cosAoA_2)
@@ -255,7 +253,9 @@ func (co *Connection) SetGains(dbs *DBS) {
 		for na := 1; na < NA; na++ {
 			co.antennaGains[rb][na] = co.antennaGains[rb][na-1]*phase
 		}
-	}
+	}*/
+
+	copy(co.antennaGains[rb][0:NA],gains)
 
 }
 
@@ -301,7 +301,7 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 
 		if use {
 
-			Pr := co.MultiPathMAgain[rb] * dbs.Channels[rb].pr[co.E.Id]
+			Pr := co.MultiPathMAgain[rb] 
 			co.SNRrb[rb] = Pr / (co.InterferencePower[rb] + NoisePower)
 
 			BER := L1 * math.Exp(-co.SNRrb[rb]/2/L2) / 2.0
