@@ -298,7 +298,7 @@ func HilbertTimes(A, B, C *DenseMatrix) {
 	return
 }
 
-func TimesTimes(A, B, C *DenseMatrix) {
+func TimesHilbert(A, B, C *DenseMatrix) {
 
 	//Bt := B.Transpose()
 
