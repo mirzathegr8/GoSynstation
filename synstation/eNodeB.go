@@ -3,7 +3,7 @@ package synstation
 import "container/list"
 import "math"
 
-//import "compMatrix"
+import "compMatrix"
 import "fmt"
 
 
@@ -462,7 +462,7 @@ func (dbs *DBS) SetReceiverGains() {
 	// hence sigma2 is the shadowing+ path loss * emitted power of all interferers  plus Wnoise
 	// this is a worst case scenario
 
-	/*var MobileList [NConnec]*Emitter
+	var MobileList [NConnec]*Emitter
 	var ConnecList [NConnec]*Connection
 
 	R := compMatrix.Zeros(NA, NA)
@@ -516,12 +516,17 @@ func (dbs *DBS) SetReceiverGains() {
 		Eye.Scale(complex(Sigma2, 0))
 		R.Plus(Eye)
 		
-		Ri,_:=R.Inverse()
+		Ri,err := R.Inverse()
+	
+		if err==nil{	
+
+		//fmt.Println(" Ri inverse ok")
+
 		compMatrix.TimesHilbert(Ri,H,Wh)
 
 		//fmt.Print(Wh.Rows(),Wh.Cols())
 
-		W:=Wh.Hilbert()
+		W:=Wh.Transpose()//Hilbert()
 
 	//	fmt.Println(W)
 
@@ -536,10 +541,11 @@ func (dbs *DBS) SetReceiverGains() {
 		for m := 0; m < Nc; m++ {			
 				ConnecList[m].SetGains(dbs,Wrows[m],rb)			
 		}
+		}
 
 		}
 
-	}*/
+	}
 }
 
 //   Reformatted by   lerouxp    Thu Mar 1 09:27:55 EST 2012

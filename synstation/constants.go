@@ -195,7 +195,7 @@ const EnodeBClock = 1
 
 //var ICIMfunc=ICIMSplitEdgeCenter2
 var ICIMfunc=ICIMNone
-var PowerAllocation =  optimizePowerAllocationAgent // optimizePowerAllocationAgentRB//  optimizePowerAllocationAgent // optimizePowerNone // 
+var PowerAllocation = optimizePowerNone //  optimizePowerAllocationAgent // optimizePowerAllocationAgentRB//  optimizePowerAllocationAgent // optimizePowerNone // 
 const PowerAgentFact = 0.8//0.8//0.2 
 const PowerAgentAlpha = 1 //0.8//0.2 
 
