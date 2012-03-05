@@ -3,9 +3,8 @@ package synstation
 import "math"
 import "geom"
 import rand "math/rand"
-//import "math/cmplx"
 
-//import cmath "math/cmplx"
+//import "math/cmplx"
 //import "fmt"
 
 // TODO what difference for SNR estimates on used/unsued rbs. should be equal for gensearch
@@ -14,8 +13,8 @@ var num_con int
 
 func GetDiversity() int { a := num_con; num_con = 0; return a }
 
-const NP = 3  // numbers of simulated paths
-const NA = 10//numbers of antennas at receiver
+const NP = 1  // numbers of simulated paths
+const NA = 3//numbers of antennas at receiver
 
 var PathGain = [5]float64{1, .5, 0.25, 0.05, 0.01} //0.5, 0.125} // relative powers of each path
 
@@ -118,9 +117,9 @@ func (co *Connection) EvalVectPath(dbs *DBS) {
 			co.initz[np][rb] = co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))
 		}
 
-		// output values for each path on each rb
+		// output values for each path on each rb, multiplied by gain
 		for rb := range co.initz[np] {
-			co.initz[np][rb] = co.filterAr[np][rb].nextValue(co.initz[np][rb])
+			co.initz[np][rb] = co.filterAr[np][rb].nextValue(co.initz[np][rb])  * complex(co.pathGains[np],0)
 		}
 	}
 
@@ -155,17 +154,12 @@ func (co *Connection) EvalVectPath(dbs *DBS) {
 
 	//antenna total gains
 
-	sumPower := &co.initz[0]
-	for rb := 0; rb < NCh; rb++ {
-		sumPower[rb] = 0
-	}	
-
-	PrEst := complex( dbs.pr[co.E.Id] / float64(co.E.GetNumARB()),0) //estimated Power that *would be* on unsused RBs // TODO needs thinking, on how to code this estimate properly 
+	PrEst := complex( math.Sqrt(dbs.pr[co.E.Id] / float64(co.E.GetNumARB())),0) //estimated Power that *would be* on unsused RBs // TODO needs thinking, on how to code this estimate properly 
 
 	for rb := 0; rb < NCh; rb++ {
 		power := complex(1,0)
 		if co.E.ARB[rb] {
-			power=complex(dbs.Channels[rb].pr[co.E.Id],0) //emitted power on rb + shadowing + path loss
+			power=complex(math.Sqrt(dbs.Channels[rb].pr[co.E.Id]),0) //emitted power on rb + shadowing + path loss
 		}else{
 			power=PrEst
 		}
@@ -173,22 +167,39 @@ func (co *Connection) EvalVectPath(dbs *DBS) {
 		for na := 0; na < NA; na++ {
 			co.antennaChans[rb][na]= 0
 			for np := 0; np < NP; np++ {				
-				co.antennaChans[rb][na]+= co.antennaPhase[np][na] * complex(co.pathGains[np],0) *co.ff_R[np][rb]
+				co.antennaChans[rb][na]+= co.antennaPhase[np][na]  *co.ff_R[np][rb]
 			}
-			co.antennaChans[rb][na]*= power // channel gains include all, for each antenna/rb,
-			sumPower[rb] +=  co.antennaChans[rb][na] * co.antennaGains[rb][na] 
+			co.antennaChans[rb][na]*= power // channel gains include all, for each antenna/rb,			
 		}
 	}
 
-	for rb := range co.ff_R[0] {
-		co.MultiPathMAgain[rb] = Mag(sumPower[rb])
+	
+	//SetGains for all rb including unsuded ones
+	AoA := dbs.AoA[co.E.Id]
+
+	cosAoA_2 := math.Cos(AoA) / 2
+	sin, cos := math.Sincos(cosAoA_2)
+	phase := complex(cos, -sin)
+
+	for rb:=range co.antennaGains{
+		co.antennaGains[rb][0]=1
+		for na := 1; na < NA; na++ {
+			co.antennaGains[rb][na] = co.antennaGains[rb][na-1]*phase
+		}
 	}
-
-
 
 }
 
 func (co *Connection) EvalInterference(dbs *DBS) {
+
+	//eval power received with updated antenna gains
+	for rb := 0; rb < NCh; rb++ {	
+		Val := complex(0,0)
+		for na := 0; na < NA; na++ {			
+			Val +=  co.antennaChans[rb][na] * co.antennaGains[rb][na] 
+		}
+		co.MultiPathMAgain[rb] = Mag(Val)
+	}
 
 	//add approximation for non connected mobiles (mean interference) without fading
 
@@ -211,30 +222,22 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 		}
 	}
 
-	// sum miltupaths for all connections with appropriate gainM
+	// sum multipaths for all connections with appropriate gainM
 
-	sumPower := &co.initz[0] //tmp vector
-	/*for rb := 0; rb < NCh; rb++ {
-		sumPower[rb] = 0
-	}*/
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
 		if c.E.Id != co.E.Id {
 
-			for rb := 0; rb < NCh; rb++ {
-				sumPower[rb] = 0
-			}
-			for rb, use := range c.E.ARB {				
+			for rb, use := range c.E.ARB {	
+				Val:=complex(0,0)			
 				if use {					
 					for na := 0; na < NA; na++ {
-						sumPower[rb] += co.antennaGains[rb][na] * c.antennaChans[rb][na] 
+						Val += co.antennaGains[rb][na] * c.antennaChans[rb][na] 
 					}
 				}
+				co.InterferencePower[rb] += Mag(Val) 
 			}
-
-			for rb := 0; rb < NCh; rb++ {
-				co.InterferencePower[rb] += Mag(sumPower[rb]) 
-			}
+		
 		}
 	}
 
@@ -247,13 +250,12 @@ func (co *Connection) SetGains(dbs *DBS, gains []complex128, rb int) {
 	cosAoA_2 := math.Cos(AoA) / 2
 	sin, cos := math.Sincos(cosAoA_2)
 	phase := complex(cos, -sin)
-
-	for rb:=range co.antennaGains{
-		co.antennaGains[rb][0]=1
-		for na := 1; na < NA; na++ {
-			co.antennaGains[rb][na] = co.antennaGains[rb][na-1]*phase
-		}
+	
+	co.antennaGains[rb][0]=1
+	for na := 1; na < NA; na++ {
+		co.antennaGains[rb][na] = co.antennaGains[rb][na-1]*phase
 	}*/
+
 
 	copy(co.antennaGains[rb][0:NA],gains)
 
@@ -304,6 +306,9 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 			Pr := co.MultiPathMAgain[rb] 
 			co.SNRrb[rb] = Pr / (co.InterferencePower[rb] + NoisePower)
 
+			//fmt.Println(dbs.Channels[rb].pr[co.E.Id],Pr, co.InterferencePower[rb],co.SNRrb[rb])
+
+
 			BER := L1 * math.Exp(-co.SNRrb[rb]/2/L2) / 2.0
 
 			co.meanPr.Add(Pr)
@@ -312,7 +317,7 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 
 			touch = true
 		} else {
-			co.SNRrb[rb] = co.MultiPathMAgain[rb] * dbs.pr[co.E.Id] / (co.InterferencePower[rb] + NoisePower) * conservationFactor
+			co.SNRrb[rb] = co.MultiPathMAgain[rb] / (co.InterferencePower[rb] + NoisePower) * conservationFactor
 		}
 	}
 
