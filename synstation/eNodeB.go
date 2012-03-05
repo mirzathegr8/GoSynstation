@@ -3,8 +3,14 @@ package synstation
 import "container/list"
 import "math"
 
-import "compMatrix"
-//import "fmt"
+//import "compMatrix"
+import "fmt"
+
+
+func init() {
+
+ fmt.Println("initEnodeB.go")
+}
 
 // counters to observe connection agents health
 var sens_connect, sens_disconnect, sens_lostconnect int
@@ -459,9 +465,9 @@ func (dbs *DBS) SetReceiverGains() {
 	var MobileList [NConnec]*Emitter
 	var ConnecList [NConnec]*Connection
 
-	Ri := compMatrix.Zeros(NA, NA)
+	R := compMatrix.Zeros(NA, NA)
 
-	ConnectedArray:=dbs.GetConnectedMobiles()
+	//ConnectedArray:=dbs.GetConnectedMobiles()
 
 	for rb := 0; rb < NCh; rb++ {
 
@@ -487,6 +493,8 @@ func (dbs *DBS) SetReceiverGains() {
 
 		}
 
+		if Nc>0 {
+
 		H := compMatrix.Zeros(Nc, NA)
 		Wh := compMatrix.Zeros(NA, Nc)
 
@@ -496,19 +504,39 @@ func (dbs *DBS) SetReceiverGains() {
 			}
 		}	
 
-		compMatrix.HilbertTimes(H, H, Ri)
+
+		//H.Scale(1e7)
+
+		compMatrix.HilbertTimes(H, H, R)
+		
+
+		//fmt.Println( Ri)
+
 		Eye:=compMatrix.Eye(NA)
 		Eye.Scale(complex(Sigma2, 0))
-		Ri.Plus(Eye)
-		Ri.Inverse()
+		R.Plus(Eye)
+		
+		Ri,_:=R.Inverse()
 		compMatrix.TimesHilbert(Ri,H,Wh)
 
-		Wrows := Wh.Arrays()
+		//fmt.Print(Wh.Rows(),Wh.Cols())
 
-		for m := 0; m < Nc; m++ {
-			for m := 0; m < NA; m++ {
-				ConnecList[m].SetGains(dbs,Wrows[m],rb)
-			}
+		W:=Wh.Hilbert()
+
+	//	fmt.Println(W)
+
+		//fmt.Println("  ",W.Rows(),W.Cols())
+
+	//	W.Scale(1000)
+
+		Wrows := W.Arrays()
+
+		
+
+		for m := 0; m < Nc; m++ {			
+				ConnecList[m].SetGains(dbs,Wrows[m],rb)			
+		}
+
 		}
 
 	}
