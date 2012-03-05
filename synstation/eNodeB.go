@@ -462,12 +462,12 @@ func (dbs *DBS) SetReceiverGains() {
 	// hence sigma2 is the shadowing+ path loss * emitted power of all interferers  plus Wnoise
 	// this is a worst case scenario
 
-	var MobileList [NConnec]*Emitter
+	/*var MobileList [NConnec]*Emitter
 	var ConnecList [NConnec]*Connection
 
 	R := compMatrix.Zeros(NA, NA)
 
-	//ConnectedArray:=dbs.GetConnectedMobiles()
+	ConnectedArray:=dbs.GetConnectedMobiles()
 
 	for rb := 0; rb < NCh; rb++ {
 
@@ -539,7 +539,7 @@ func (dbs *DBS) SetReceiverGains() {
 
 		}
 
-	}
+	}*/
 }
 
 //   Reformatted by   lerouxp    Thu Mar 1 09:27:55 EST 2012
