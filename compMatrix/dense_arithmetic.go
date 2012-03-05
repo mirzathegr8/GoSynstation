@@ -6,6 +6,7 @@ package compMatrix
 
 import "runtime"
 import "math/cmplx"
+import "fmt"
 
 func (A *DenseMatrix) Plus(B MatrixRO) (Matrix, error) {
 	C := A.Copy()
@@ -260,6 +261,9 @@ func (A *DenseMatrix) TimesDenseFill(B, C *DenseMatrix) (err error) {
 	return
 }
 
+
+/* Normal matrix multiplication achieved by first transposing the B matrix for vector access to elements
+*/
 func transposeTimes(A, B, C *DenseMatrix) {
 	Bt := B.Transpose()
 
@@ -278,15 +282,23 @@ func transposeTimes(A, B, C *DenseMatrix) {
 	return
 }
 
+/* Matrix multiplication with first transposing and conjugating the A matrix
+*/
+func HilbertTimes(A, B, C *DenseMatrix) error {
 
-func HilbertTimes(A, B, C *DenseMatrix) {
 
+	if A.rows != B.rows || A.cols != C.cols || B.cols != C.cols {
+		fmt.Println(" dim mistmatch, ", A.rows,A.cols," ; ",B.rows,B.cols," ; ", C.rows,C.cols )
+		return ErrorDimensionMismatch
+	} 
+
+	At := A.Transpose()
 	Bt := B.Transpose()
-
 	Bcols := Bt.Arrays()
 
-	for i := 0; i < A.rows; i++ {
-		Arow := A.elements[i*A.step : i*A.step+A.cols]
+
+	for i := 0; i < At.rows; i++ {
+		Arow := At.elements[i*At.step : i*At.step+At.cols]
 		for j := 0; j < B.cols; j++ {
 			Bcol := Bcols[j]
 			for k := range Arow {
@@ -295,8 +307,9 @@ func HilbertTimes(A, B, C *DenseMatrix) {
 		}
 	}
 
-	return
+	return nil
 }
+
 
 func TimesHilbert(A, B, C *DenseMatrix) {
 
@@ -374,3 +387,17 @@ func (A *DenseMatrix) ScaleMatrixDense(B *DenseMatrix) error {
 	}
 	return nil
 }
+
+func (A *DenseMatrix) Hilbert() (B *DenseMatrix) {
+
+	B=A.Transpose()
+	for i := 0; i < B.rows; i++ {
+		indexB := i * B.step
+		for j := 0; j < B.cols; j++ {
+			B.elements[indexB] = cmplx.Conj(B.elements[indexB])
+			indexB++
+		}
+	}
+	return 
+}
+

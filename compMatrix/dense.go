@@ -6,7 +6,7 @@ package compMatrix
 
 import (
 	"math/rand"
-	"fmt"
+//	"fmt"
 )
 
 /*
@@ -98,9 +98,9 @@ the returned matrix show up in the original.
 */
 func (A *DenseMatrix) GetMatrix(i, j, rows, cols int) *DenseMatrix {
 	B := new(DenseMatrix)
-	fmt.Printf("GetMatrix(%d, %d, %d, %d)\n", i, j, rows, cols)
-	fmt.Printf(" r:%d c:%d s:%d\n", A.rows, A.cols, A.step)
-	fmt.Printf(" l:%d\n", len(A.elements))
+	//fmt.Printf("GetMatrix(%d, %d, %d, %d)\n", i, j, rows, cols)
+	//fmt.Printf(" r:%d c:%d s:%d\n", A.rows, A.cols, A.step)
+	//fmt.Printf(" l:%d\n", len(A.elements))
 	B.elements = A.elements[i*A.step+j : i*A.step+j+(rows-1)*A.step+cols]
 	B.rows = rows
 	B.cols = cols
