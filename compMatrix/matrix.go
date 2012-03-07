@@ -193,7 +193,7 @@ func String(A MatrixRO) string {
 	if A == nil {
 		return "{nil}"
 	}
-	s := "{"
+	s := "["
 
 	maxLen := 0
 	for i := 0; i < A.Rows(); i++ {
@@ -223,9 +223,9 @@ func String(A MatrixRO) string {
 			}
 		}
 		if i != A.Rows()-1 {
-			s += "\n "
+			s += ";\n "
 		}
 	}
-	s += "}"
+	s += "]"
 	return s
 }
