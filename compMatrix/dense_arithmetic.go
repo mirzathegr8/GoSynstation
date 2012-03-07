@@ -315,15 +315,17 @@ func TimesHilbert(A, B, C *DenseMatrix) {
 
 	//Bt := B.Transpose()
 
-	Brows := B.Arrays()
+	//Brows := B.Arrays()
 
 	for i := 0; i < A.rows; i++ {
 		Arow := A.elements[i*A.step : i*A.step+A.cols]
 		for j := 0; j < B.rows; j++ {
-			Brow := Brows[j]
-			for k := range Arow {
-				C.elements[i*C.step+j] += Arow[k] * cmplx.Conj(Brow[k])
+			Brow := B.elements[j*B.step : j*B.step+B.cols]
+			var Val complex128
+			for k := range Brow {
+				Val += Arow[k] * cmplx.Conj(Brow[k])
 			}
+			C.elements[i*C.step+j] =Val
 		}
 	}
 
