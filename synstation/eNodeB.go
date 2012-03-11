@@ -303,7 +303,7 @@ func (dbs *DBS) connectionAgent() {
 					if !dbs.IsConnected(&Mobiles[Rc.Signal[i]].Emitter) {
 						//fmt.Println("is not connected")
 						if 10*math.Log10(Eval) > SNRThresConnec {
-							dbs.connect(&Mobiles[Rc.Signal[i]].Emitter, 0.001)
+							dbs.connect(&Mobiles[Rc.Signal[i]].Emitter, 0.5)
 							conn++
 							//fmt.Println("connected")
 
@@ -462,12 +462,16 @@ func (dbs *DBS) SetReceiverGains() {
 	// hence sigma2 is the shadowing+ path loss * emitted power of all interferers  plus Wnoise
 	// this is a worst case scenario
 
-	var MobileList [NConnec]*Emitter
 	var ConnecList [NConnec]*Connection
 
 	R := compMatrix.Zeros(NA, NA)
 
 	ConnectedArray:=dbs.GetConnectedMobiles()
+
+	It := compMatrix.Zeros(NA,NA)
+	II := compMatrix.Zeros(NA,NA)
+
+	Iv:=compMatrix.Zeros(1,NA)
 
 	for rb := 0; rb < NCh; rb++ {
 
@@ -475,25 +479,46 @@ func (dbs *DBS) SetReceiverGains() {
 		Sigma2:=0.0
 		for m := range Mobiles { 
 			if !ConnectedArray[m] {				
-				if Mobiles[m].ARB[rb] {										
-					Sigma2 += dbs.Channels[rb].pr[m] 
+				if Mobiles[m].ARB[rb] {
+					Pi := dbs.Channels[rb].pr[m] 
+					AoA:= dbs.AoA[m]
+					//Compute the antenna geometrical phase shift for the signal
+
+		cosAoA_2 := math.Cos(AoA) / 2.0
+		sin, cos := math.Sincos(cosAoA_2)
+		phase := complex(cos, sin)
+		coef:=complex(1.0, 0.0)
+		Iv.Set(0,0, coef)
+		for na := 1; na < NA; na++ {
+			 coef *= phase
+			Iv.Set(0,na,coef)
+		}
+					
+
+		compMatrix.HilbertTimes(Iv,Iv,It)
+		II.add(It)
+
 				}
 			}
 		}
-		Sigma2+=WNoise	
+
+		Sigma2=WNoise	
+
+		//Sigma2*=1000000
 
 		Nc := 0
-		for n, e := 0, dbs.Connec.Front(); e != nil; n, e = n+1, e.Next() {
+		for  e :=  dbs.Connec.Front(); e != nil;  e = e.Next() {
 			c := e.Value.(*Connection)
-			if c.E.ARB[rb] {
+			if c.E.ARB[rb]  {
 				ConnecList[Nc] = c
-				MobileList[Nc] = c.E
 				Nc++
 			}
 
 		}
 
 		if Nc>0 {
+
+		//fmt.Print(" ",Nc)
 
 		H := compMatrix.Zeros(Nc, NA)
 		Wh := compMatrix.Zeros(NA, Nc)
@@ -503,6 +528,7 @@ func (dbs *DBS) SetReceiverGains() {
 				H.Set(m, na, ConnecList[m].antennaChans[rb][na])
 			}
 		}	
+		//H.Scale(1000000)
 
 
 		//H.Scale(1e7)
@@ -514,8 +540,10 @@ func (dbs *DBS) SetReceiverGains() {
 
 		Eye:=compMatrix.Eye(NA)
 		Eye.Scale(complex(Sigma2, 0))
-		R.Plus(Eye)
-		
+		R.Add(Eye)
+		R.Add(II)
+		//R.Scale(complex(1000,0))		
+
 		Ri,err := R.Inverse()
 	
 		if err==nil{	
@@ -526,7 +554,7 @@ func (dbs *DBS) SetReceiverGains() {
 
 		//fmt.Print(Wh.Rows(),Wh.Cols())
 
-		W:=Wh.Transpose()//Hilbert()
+		W:=Wh.Transpose() //Hilbert()
 
 	//	fmt.Println(W)
 
@@ -537,10 +565,13 @@ func (dbs *DBS) SetReceiverGains() {
 		Wrows := W.Arrays()
 
 		
+		//fmt.Println("H=",H,";Sigma2=",Sigma2,";R=",R,";Ri=",Ri,";W =",W)
 
 		for m := 0; m < Nc; m++ {			
 				ConnecList[m].SetGains(dbs,Wrows[m],rb)			
 		}
+		}else{
+			fmt.Println(err)
 		}
 
 		}
