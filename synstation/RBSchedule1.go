@@ -38,6 +38,8 @@ func (d *ARBScheduler1) Schedule(dbs *DBS, Rgen *rand.Rand) {
 
 				snrrb := E.SNRrb[rb]
 
+				if E.ARB[rb] {snrrb*=float64(E.GetNumARB())}
+
 				m := EffectiveBW * math.Log2(1+beta*snrrb)
 
 				if m > 100 {

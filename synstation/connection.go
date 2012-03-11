@@ -13,8 +13,8 @@ var num_con int
 
 func GetDiversity() int { a := num_con; num_con = 0; return a }
 
-const NP = 1  // numbers of simulated paths
-const NA = 3//numbers of antennas at receiver
+const NP = 3  // numbers of simulated paths
+const NA = 8 //numbers of antennas at receiver
 
 var PathGain = [5]float64{1, .5, 0.25, 0.05, 0.01} //0.5, 0.125} // relative powers of each path
 
@@ -154,7 +154,7 @@ func (co *Connection) EvalVectPath(dbs *DBS) {
 
 	//antenna total gains
 
-	PrEst := complex( math.Sqrt(dbs.pr[co.E.Id] / float64(co.E.GetNumARB())),0) //estimated Power that *would be* on unsused RBs // TODO needs thinking, on how to code this estimate properly 
+	PrEst := complex( math.Sqrt(dbs.pr[co.E.Id]),0) // float64(co.E.GetNumARB())),0) //estimated Power that *would be* on unsused RBs // TODO needs thinking, on how to code this estimate properly 
 
 	for rb := 0; rb < NCh; rb++ {
 		power := complex(1,0)
