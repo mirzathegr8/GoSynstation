@@ -466,6 +466,7 @@ func (dbs *DBS) SetReceiverGains() {
 
 	R := compMatrix.Zeros(NA, NA)
 
+
 	ConnectedArray := dbs.GetConnectedMobiles()
 
 	//	It := compMatrix.Zeros(NA,NA)
@@ -553,9 +554,11 @@ func (dbs *DBS) SetReceiverGains() {
 				}
 			} else {
 				fmt.Println(err)
+
 			}
 
 		}
+
 
 	}
 }
@@ -658,6 +661,7 @@ func (dbs *DBS) SetReceiverGains() {
 //	}
 //}
 
+
 //func (dbs *DBS) SetReceiverGains() {
 
 //for rb := 0; rb < NCh; rb++ {
@@ -678,3 +682,4 @@ func (dbs *DBS) SetReceiverGains() {
 //		}
 //}
 //}
+
