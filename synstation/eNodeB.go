@@ -3,8 +3,8 @@ package synstation
 import "container/list"
 import "math"
 
-//import "compMatrix"
-import "math/cmplx"
+import "compMatrix"
+//import "math/cmplx"
 import "fmt"
 
 func init() {
@@ -513,11 +513,16 @@ func (dbs *DBS) SetReceiverGains() {
 
 			//add vectors of interferers
 			nc := Nc
+		
+			farInt:=0.0
+
 			for m := range Mobiles {
-				if !ConnectedArray[m] {
-					if Mobiles[m].ARB[rb] {
+				if !ConnectedArray[m] && Mobiles[m].ARB[rb] {
 
 						Pi := dbs.Channels[rb].pr[m]
+
+						farInt+=Pi
+
 						AoA := dbs.AoA[m]
 						//Compute the antenna geometrical phase shift for the signal
 
@@ -534,8 +539,11 @@ func (dbs *DBS) SetReceiverGains() {
 						nc++
 
 					}
-				}
 			}
+
+		//	Sigma2+=farInt
+		//Sigma2=farInt	+WNoise	
+		//	fmt.Println(farInt)
 
 			compMatrix.HilbertTimes(H, H, R)
 			Eye := compMatrix.Eye(NA)
@@ -550,6 +558,16 @@ func (dbs *DBS) SetReceiverGains() {
 				Wrows := W.Arrays()				
 
 				for m := 0; m < Nc; m++ {
+					P:=0.0
+					for _,v:=range Wrows[m]{
+						P+=Mag(v)
+					}
+					P=math.Sqrt(P)
+					for na,v:=range Wrows[m]{
+						Wrows[m][na]= v/complex(P,0)
+					}
+
+
 					ConnecList[m].SetGains(dbs, Wrows[m], rb)
 				}
 			} else {
@@ -573,10 +591,11 @@ func (dbs *DBS) SetReceiverGains() {
 
 //	R := compMatrix.Zeros(NA, NA)
 
-//	ConnectedArray := dbs.GetConnectedMobiles()
 
-//	It := compMatrix.Zeros(NA, NA)
-//	Iv := compMatrix.Zeros(1, NA)
+//	//ConnectedArray := dbs.GetConnectedMobiles()
+
+//	//It := compMatrix.Zeros(NA, NA)
+//	//Iv := compMatrix.Zeros(1, NA)
 //	II := compMatrix.Zeros(NA, NA)
 
 //	// var zerosV [NA*NA]float64
@@ -585,7 +604,7 @@ func (dbs *DBS) SetReceiverGains() {
 
 //		//out of reach mobiles interferer included in sigma noise
 //		Sigma2 := WNoise
-//		for m := range Mobiles {
+//	/*	for m := range Mobiles {
 //			if !ConnectedArray[m] && Mobiles[m].ARB[rb] {
 //				Pi := dbs.Channels[rb].pr[m]
 //				AoA := dbs.AoA[m]
@@ -610,10 +629,12 @@ func (dbs *DBS) SetReceiverGains() {
 //				compMatrix.HilbertTimes(Iv, Iv, It)
 //				II.Add(It)
 
-//				//Sigma2+=Pi
+////				Sigma2+=Pi
 
 //			}
 //		}
+//*/
+//		Sigma2+=1e-12
 
 //		Nc := 0
 //		for e := dbs.Connec.Front(); e != nil; e = e.Next() {
@@ -645,11 +666,34 @@ func (dbs *DBS) SetReceiverGains() {
 
 //			Ri, err := R.Inverse()
 
-//			if err == nil {
+
+//		/*	Ri,err := R.Inverse()
+//			Eye.Scale(complex(Sigma2+1, 0))
+//			BC,_ := Ri.TimesDense(II)
+//			BCB,_ := BC.TimesDense(Ri)
+//			BC.Add(Eye)
+//			IBCinv,err3 :=  BC.Inverse()
+
+//			MM,_:=IBCinv.TimesDense(BCB)			
+
+//			Ri.Subtract( MM )*/
+//			
+
+//			if err == nil  {
 //				compMatrix.TimesHilbert(Ri, H, Wh)
 //				W := Wh.Transpose()
 //				Wrows := W.Arrays()
 //				for m := 0; m < Nc; m++ {
+//					
+//					P:=0.0
+//					for _,v:=range Wrows[m]{
+//						P+=Mag(v)
+//					}
+//					P=math.Sqrt(P)
+//					for na,v:=range Wrows[m]{
+//						Wrows[m][na]= v/complex(P,0)
+//					}
+
 //					ConnecList[m].SetGains(dbs, Wrows[m], rb)
 //				}
 //			} else {
