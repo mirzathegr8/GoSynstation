@@ -4,7 +4,7 @@ import "container/list"
 import "math"
 
 import "compMatrix"
-//import "math/cmplx"
+import "math/cmplx"
 import "fmt"
 
 func init() {
@@ -85,7 +85,7 @@ func (dbs *DBS) RunPhys() {
 		c.SetGains(dbs)
 	}*/
 
-	dbs.SetReceiverGains()
+	dbs.SetReceiverGainsMMSE()
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
@@ -456,7 +456,7 @@ func (dbs *DBS) MU_factor_measure() (fact, nARB float64) {
 
 }
 
-func (dbs *DBS) SetReceiverGains() {
+func (dbs *DBS) SetReceiverGainsMMSE() {
 
 	//sigma2 is the estimated variance of the noise + interferes far awway and not connected to the enode
 	// hence sigma2 is the shadowing+ path loss * emitted power of all interferers  plus Wnoise
@@ -706,24 +706,24 @@ func (dbs *DBS) SetReceiverGains() {
 //}
 
 
-//func (dbs *DBS) SetReceiverGains() {
+func (dbs *DBS) SetReceiverGainsMRC() {
 
-//for rb := 0; rb < NCh; rb++ {
+	for rb := 0; rb < NCh; rb++ {
 
-//		//out of reach mobiles interferer included in sigma noise
-//		
-//		var Wh [NA]complex128
+		//out of reach mobiles interferer included in sigma noise
+		
+		var Wh [NA]complex128
 
-//		for e := dbs.Connec.Front(); e != nil; e = e.Next() {
-//			c := e.Value.(*Connection)
-//			if c.E.ARB[rb] {
-//				for na := 0; na < NA; na++ {
-//					Wh[na] = cmplx.Conj(c.antennaChans[rb][na])
-//				}
-//				c.SetGains(dbs, Wh[0:NA], rb)			
-//			}
+		for e := dbs.Connec.Front(); e != nil; e = e.Next() {
+			c := e.Value.(*Connection)
+			if c.E.ARB[rb] {
+				for na := 0; na < NA; na++ {
+					Wh[na] = cmplx.Conj(c.antennaChans[rb][na])
+				}
+				c.SetGains(dbs, Wh[0:NA], rb)			
+			}
 
-//		}
-//}
-//}
+		}
+}
+}
 
