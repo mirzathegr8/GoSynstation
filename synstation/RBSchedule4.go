@@ -75,7 +75,7 @@ func (d *ARBScheduler4) Schedule(dbs *DBS, Rgen *rand.Rand) {
 				} else {
 					snrrb = E.SNRrb[rb]
 				}
-				if E.ARB[rb] {snrrb*=float64(E.GetNumARB())} //since we redivide the power according to the new number of allocated RBs
+		if E.ARB[rb] {snrrb*=float64(E.GetNumARB())} //since we redivide the power according to the new number of allocated RBs
 				d.Metric[j][rb] = snrrb
 			}
 			Nmaster++
@@ -219,7 +219,7 @@ func Trimm(AL []int, Metric *[NConnec][NCh]float64, MasterMobs []*Emitter) (metr
 			}
 
 			m_m := MasterMobs[v].meanTR.Get()
-			metricT += m/(0.00001+m_m)// math.Log2(1+m) / math.Log2(1+m_m+0.0001)
+			metricT += m/(0.00001+m_m) //math.Log(m+0.0000000000001) //math.Log2(1+m) / math.Log2(1+m_m+0.0001) //m/(0.00001+m_m)//
 
 			i += nARBmOrg
 		}

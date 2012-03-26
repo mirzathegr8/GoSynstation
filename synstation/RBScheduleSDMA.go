@@ -70,6 +70,7 @@ func (d *ARBSchedulerSDMA) Schedule(dbs *DBS, Rgen *rand.Rand) {
 				} else {
 					snrrb = E.SNRrb[rb]
 				}
+	if E.ARB[rb] {snrrb*=float64(E.GetNumARB())} //since we redivide the power according to the new number of allocated RBs
 				d.SNRrbAll[Nmaster][rb] = snrrb
 				d.Pr[Nmaster] = dbs.pr[E.Id] * math.Max(1, float64(E.GetNumARB())) //total power before splitted over RBs
 			}
