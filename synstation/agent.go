@@ -42,12 +42,27 @@ func GoFetchData() {
 
 func GoRunAgent() {
 
-	for i := range Agents {
-		go func(i int) {
-			Agents[i].RunAgent()
-		}(i)
+
+	for _, a := range Agents {
+		go func(a Agent) {
+			a.RunAgent()
+		}(a)
 	}
 	Sync(len(Agents))
 
 }
+
+
+//go tutorial
+
+/*	A := new(DBS)
+	var B Agent
+	B = A	// B i not a pointer to DBS
+	B->MyAgentmehod() // not go
+	B.MyDBSmethod()	  // this is not OK
+	B.MyAgentmethod() // this OK
+	C := B.(*DBS) // C is a *DBS
+	
+	C.MyDBSmethod() // this is ok
+*/
 
