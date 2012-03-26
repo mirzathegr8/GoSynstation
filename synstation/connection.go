@@ -14,7 +14,7 @@ var num_con int
 func GetDiversity() int { a := num_con; num_con = 0; return a }
 
 const NP = 3  // numbers of simulated paths
-const NA = 4 //numbers of antennas at receiver
+const NA = 8 //numbers of antennas at receiver
 
 var PathGain = [5]float64{1, .5, 0.25, 0.05, 0.01} //0.5, 0.125} // relative powers of each path
 
@@ -200,26 +200,27 @@ func (co *Connection) EvalVectPath(dbs *DBS) {
 
 func (co *Connection) EvalInterference(dbs *DBS) {
 
-	var MPMA [NCh]float64
+	//var MPMA [NCh]float64
+	//var I2 [NCh]float64
+
 
 	//eval power received with updated antenna gains
 	for rb := 0; rb < NCh; rb++ {	
 		Val := complex(0,0)
-		Val2:=complex(0,0)
+		//Val2:=complex(0,0)
 		for na := 0; na < NA; na++ {			
 			Val +=  co.antennaChans[rb][na] * co.antennaGains[rb][na] 
-			Val2+= co.antennaChans[rb][na] * co.antennaGains2[rb][na] 
+		//	Val2+= co.antennaChans[rb][na] * co.antennaGains2[rb][na] 
 		}
 		co.MultiPathMAgain[rb] = Mag(Val)
-		MPMA[rb] = Mag(Val2)
+		//MPMA[rb] = Mag(Val2)
 	}
 
 	//add approximation for non connected mobiles (mean interference) without fading
 
 	ConnectedArray := dbs.GetConnectedMobiles()
 
-	var I2 [NCh]float64
-
+	
 	for rb := range co.Channels {
 		co.InterferencePower[rb] = 0
 	}
@@ -234,8 +235,8 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 					gain := Mag(co.Gain(dbs.AoA[m],rb))
 					co.InterferencePower[rb] += dbs.Channels[rb].pr[m] * gain
 
-					gain = Mag(co.Gain2(dbs.AoA[m],rb))  //compare
-					I2[rb]+=dbs.Channels[rb].pr[m] * gain	//compare		
+				//	gain = Mag(co.Gain2(dbs.AoA[m],rb))  //compare
+				//	I2[rb]+=dbs.Channels[rb].pr[m] * gain	//compare		
 				}
 			}
 		}
@@ -259,15 +260,15 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 
 			for rb, use := range c.E.ARB {	
 				Val:=complex(0,0)
-				Val2:=complex(0,0)			
+			//	Val2:=complex(0,0)			
 				if use {					
 					for na := 0; na < NA; na++ {
 						Val += co.antennaGains[rb][na] * c.antennaChans[rb][na] 
-						Val2 += co.antennaGains2[rb][na] * c.antennaChans[rb][na] 
+			//			Val2 += co.antennaGains2[rb][na] * c.antennaChans[rb][na] 
 					}
 				}
 				co.InterferencePower[rb] += Mag(Val) 
-				I2[rb]+=Mag(Val2)
+			//	I2[rb]+=Mag(Val2)
 			}
 		
 		}
