@@ -9,6 +9,8 @@ import "fmt"
 
 const ChRX = 0
 
+const MaxNumHOP = 2
+
 func init() {
 	fmt.Println("init to keep fmt")
 }
@@ -102,7 +104,7 @@ func (d *ChHopping2) Schedule(dbs *DBS, Rgen *rand.Rand) {
 						Hopcount++
 					}
 					stop++
-					if stop > 2 {
+					if stop > MaxNumHOP {
 						return
 					}
 				}
@@ -156,7 +158,7 @@ func (d *ChHopping2) Schedule(dbs *DBS, Rgen *rand.Rand) {
 		MobileListUSE = d.MobileList[0:nML]
 	}
 
-	for k := 0; k < len(MobileListUSE) && k < 2; k++ {
+	for k := 0; k < len(MobileListUSE) && k < MaxNumHOP; k++ {
 		co := MobileListUSE[k]
 		E := co.E
 		ratio := EvalRatio(E) * fact
