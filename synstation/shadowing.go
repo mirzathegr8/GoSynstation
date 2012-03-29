@@ -3,6 +3,11 @@ package synstation
 import "math"
 import "geom"
 import rand "math/rand"
+import "image"
+import "image/png"
+import "image/color"
+import "os"
+import "fmt"
 
 type shadowMapInt interface {
 	Init(corr float64, Rgen *rand.Rand)
@@ -68,6 +73,7 @@ func (s *shadowMap) Init(corr_dist float64, Rgen2 *rand.Rand) {
 		s.ycos[i] /= s.power
 	}
 
+	var ValMax float32
 	s.smap = make([][]float32, mapsize)
 	for i := 0; i < mapsize; i++ {
 		s.smap[i] = make([]float32, mapsize)
@@ -79,10 +85,56 @@ func (s *shadowMap) Init(corr_dist float64, Rgen2 *rand.Rand) {
 			if s.smap[i][j] < 0.0000001 {
 				s.smap[i][j] = 0.0000001
 			}
+			if s.smap[i][j] > ValMax {ValMax=s.smap[i][j]}
 		}
 	}
 
+	m := image.NewRGBA(image.Rect(0, 0, mapsize, mapsize))
+	var r,g,b float64
+	for i := 0; i < mapsize; i++ {
+		for j := 0; j < mapsize; j++ {
+			v:=float64(s.smap[i][j]/ValMax)
+			switch {
+			case v > .5:
+				b = 2*(1-b) 
+				g = 2*v-1
+			default:
+				r = 1-2*v
+				b = 2*v
+			}
+			r = r * 255
+			g = g * 255
+			b = b * 255
+			if r < 0 {
+				r = 0
+			}
+			if r > 255 {
+				r = 255
+			}
+			if g < 0 {
+				g = 0
+			}
+			if g > 255 {
+				g = 255
+			}
+			if b < 0 {
+				b = 0
+			}
+			if b > 255 {
+				b = 255
+			}
+			m.Set(i, j, color.NRGBA{uint8(r), uint8(g), uint8(b), uint8(255)})
+	}
+	}
+
+	shadowint++
+	f, err := os.OpenFile(fmt.Sprint("shadow",shadowint,".png" ), os.O_CREATE|os.O_WRONLY, 0666)
+
+	if err = png.Encode(f, m); err != nil {
+		os.Exit(-1)
+	}
 }
+ var shadowint int
 
 func (s *shadowMap) interpolFading(d geom.Pos) (val float64) {
 
