@@ -40,7 +40,7 @@ type Connection struct {
 
 	Status int //0 master ,1 slave
 
-	RBsReceiver
+	//RBsReceiver
 
 	meanPr   MeanData
 	meanSNR  MeanData
@@ -52,7 +52,9 @@ type Connection struct {
 	ff_R     [NP][NCh]complex128 // stores channel gain and phase for every RB every path
 
 	MultiPathMAgain   [NCh]float64
-	InterferencePower [NCh]float64
+	InterferencePowerExtra [NCh]float64
+	InterferencePowerIntra [NCh]float64
+	InterferersP [NConnec][NCh]float64
 	//CorrelationMatrix [NA][NA]float64
 
 	SNRrb [NCh]float64 //stores SNR per RB
@@ -78,6 +80,8 @@ type Connection struct {
 	pathGains [NP]float64 //amplitutes ,  delay is already in filter fading
 
 	//gainM [M]float64
+
+	
 
 }
 
@@ -203,26 +207,53 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 	//var MPMA [NCh]float64
 	//var I2 [NCh]float64
 
-
-	//eval power received with updated antenna gains
-	for rb := 0; rb < NCh; rb++ {	
-		Val := complex(0,0)
-		//Val2:=complex(0,0)
-		for na := 0; na < NA; na++ {			
-			Val +=  co.antennaChans[rb][na] * co.antennaGains[rb][na] 
-		//	Val2+= co.antennaChans[rb][na] * co.antennaGains2[rb][na] 
-		}
-		co.MultiPathMAgain[rb] = Mag(Val)
-		//MPMA[rb] = Mag(Val2)
-	}
-
 	//add approximation for non connected mobiles (mean interference) without fading
 
 	ConnectedArray := dbs.GetConnectedMobiles()
 
 	
-	for rb := range co.Channels {
-		co.InterferencePower[rb] = 0
+	for rb := range co.InterferencePowerIntra {
+		co.InterferencePowerIntra[rb] = 0
+		co.InterferencePowerExtra[rb] = 0
+	}
+
+
+	for e,i := dbs.Connec.Front(),0; e != nil; e = e.Next() {
+		c := e.Value.(*Connection)
+		nbRB := float64(c.E.GetNumARB())
+		for rb, use := range c.E.ARB {	
+			Val:=complex(0,0)
+		//	Val2:=complex(0,0)			
+								
+			for na := 0; na < NA; na++ {
+				Val += co.antennaGains[rb][na] * c.antennaChans[rb][na] 
+	//			Val2 += co.antennaGains2[rb][na] * c.antennaChans[rb][na] 
+			}
+				
+			vv:=Mag(Val)
+
+			co.InterferersP[i][rb]+=vv //this to save for scheduler 
+
+			if use {
+
+				co.InterferersP[i][rb]*=nbRB // to normalize value without numARB included 
+
+				if c.E.Id != co.E.Id {
+					co.InterferencePowerIntra[rb] += vv
+				}/* else{
+					co.MultiPathMAgain[rb] = vv
+				}*/
+			}
+			if c.E.Id == co.E.Id {
+				co.MultiPathMAgain[rb] = vv
+			}
+
+
+			//	I2[rb]+=Mag(Val2)
+		}
+		
+		//}
+		i++
 	}
 
 		
@@ -233,7 +264,7 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 				if use {
 					
 					gain := Mag(co.Gain(dbs.AoA[m],rb))
-					co.InterferencePower[rb] += dbs.Channels[rb].pr[m] * gain
+					co.InterferencePowerExtra[rb] += dbs.Channels[rb].pr[m] * gain
 
 				//	gain = Mag(co.Gain2(dbs.AoA[m],rb))  //compare
 				//	I2[rb]+=dbs.Channels[rb].pr[m] * gain	//compare		
@@ -253,26 +284,6 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 		*/
 
 	// sum multipaths for all connections with appropriate gainM
-
-	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
-		c := e.Value.(*Connection)
-		if c.E.Id != co.E.Id {
-
-			for rb, use := range c.E.ARB {	
-				Val:=complex(0,0)
-			//	Val2:=complex(0,0)			
-				if use {					
-					for na := 0; na < NA; na++ {
-						Val += co.antennaGains[rb][na] * c.antennaChans[rb][na] 
-			//			Val2 += co.antennaGains2[rb][na] * c.antennaChans[rb][na] 
-					}
-				}
-				co.InterferencePower[rb] += Mag(Val) 
-			//	I2[rb]+=Mag(Val2)
-			}
-		
-		}
-	}
 
 //	if co.Status==0 {
 //	for rb,use :=range co.E.ARB {
@@ -383,7 +394,7 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 		if use {
 
 			Pr := co.MultiPathMAgain[rb] 
-			co.SNRrb[rb] = Pr / (co.InterferencePower[rb] + NoisePower)
+			co.SNRrb[rb] = Pr / (co.InterferencePowerExtra[rb]+ co.InterferencePowerIntra[rb] + NoisePower)
 
 			//fmt.Println(dbs.Channels[rb].pr[co.E.Id],Pr, co.InterferencePower[rb],co.SNRrb[rb])
 
@@ -396,7 +407,7 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 
 			touch = true
 		} else {
-			co.SNRrb[rb] = co.MultiPathMAgain[rb] / (co.InterferencePower[rb] + NoisePower) * conservationFactor
+			co.SNRrb[rb] = co.MultiPathMAgain[rb] / (co.InterferencePowerExtra[rb] + co.InterferencePowerIntra[rb] + NoisePower) * conservationFactor
 		}
 	}
 
