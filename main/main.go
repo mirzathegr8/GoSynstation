@@ -29,6 +29,7 @@ func main() {
         if err != nil {
             log.Fatal(err)
         }
+	fmt.Println("generating cpu profile output file :", *cpuprofile)
         pprof.StartCPUProfile(f)
         defer pprof.StopCPUProfile()
     }
@@ -59,7 +60,7 @@ func main() {
 	fmt.Println("Start Simulation")
 
 	// precondition
-	for s.Tti = -50; s.Tti < 0; s.Tti++ {
+	for s.Tti = -400; s.Tti < 0; s.Tti++ {
 		/*fmt.Print("---- 1---- ", s.Mobiles[0].Diversity, " ")
 		fmt.Print( &s.Mobiles[0].MasterConnection)
 		fmt.Println()

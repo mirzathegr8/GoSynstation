@@ -279,7 +279,7 @@ func (e *Emitter) FetchData() {
 					effectSNR += e.SNRrb[rb]
 				case NORMAL:
 					s := EffectiveBW * math.Log2(1+beta*e.SNRrb[rb])
-					s = math.Min(s, 10000)
+					s = math.Min(s, 1500)
 					if s > 100 {
 						effectSNR += s
 					}

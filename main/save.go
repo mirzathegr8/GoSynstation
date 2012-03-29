@@ -52,11 +52,11 @@ type saveTraceItem struct {
 
 
 
-func CreateStart(method func(t *s.Trace, i int) float64, m int, file string) saveTraceItem {
+func CreateStart(myfunc func(t *s.Trace, i int) float64, m int, file string) saveTraceItem {
 	var a saveTraceItem
 	a.save = make(chan *s.Trace, 1000)
-	//go WriteDataToFile(method, m, a.save, file)
-	go a.save_binary_data(method, m, file)
+	//go WriteDataToFile(myfunc, m, a.save, file)
+	go a.save_binary_data(myfunc, m, file)
 	return a
 }
 

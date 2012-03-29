@@ -300,10 +300,12 @@ func HilbertTimes(A, B, C *DenseMatrix) error {
 	for i := 0; i < At.rows; i++ {
 		Arow := At.elements[i*At.step : i*At.step+At.cols]
 		for j := 0; j < B.cols; j++ {
+			Val:=complex(0,0)
 			Bcol := Bcols[j]
 			for k := range Arow {
-				C.elements[i*C.step+j] += cmplx.Conj(Arow[k]) * Bcol[k]
+				Val += cmplx.Conj(Arow[k]) * Bcol[k]
 			}
+			C.elements[i*C.step+j]=Val
 		}
 	}
 

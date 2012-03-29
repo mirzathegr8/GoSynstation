@@ -4,12 +4,12 @@ import "container/list"
 import "math"
 
 import "compMatrix"
+import "math/cmplx"
 import "fmt"
-
 
 func init() {
 
- fmt.Println("initEnodeB.go")
+	fmt.Println("initEnodeB.go")
 }
 
 // counters to observe connection agents health
@@ -85,7 +85,7 @@ func (dbs *DBS) RunPhys() {
 		c.SetGains(dbs)
 	}*/
 
-	dbs.SetReceiverGains()
+	dbs.SetReceiverGainsMMSE()
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
@@ -303,7 +303,7 @@ func (dbs *DBS) connectionAgent() {
 					if !dbs.IsConnected(&Mobiles[Rc.Signal[i]].Emitter) {
 						//fmt.Println("is not connected")
 						if 10*math.Log10(Eval) > SNRThresConnec {
-							dbs.connect(&Mobiles[Rc.Signal[i]].Emitter, 0.001)
+							dbs.connect(&Mobiles[Rc.Signal[i]].Emitter, 0.5)
 							conn++
 							//fmt.Println("connected")
 
@@ -433,16 +433,16 @@ func (dbs *DBS) MU_factor_measure() (fact, nARB float64) {
 	var reuse [NCh]int
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
-		if c.Status == 0 {
-			for m := 1; m < NCh; m++ {
-				if c.E.ARBfutur[m] {
-					reuse[m]++
-					if reuse[m] == 1 {
-						nARB++
-					} //=float64(r)
-				}
+		//if c.Status == 0 {
+		for m := 1; m < NCh; m++ {
+			if c.E.ARBfutur[m] {
+				reuse[m]++
+				if reuse[m] == 1 {
+					nARB++
+				} //=float64(r)
 			}
 		}
+		//}
 	}
 
 	for _, r := range reuse {
@@ -456,97 +456,274 @@ func (dbs *DBS) MU_factor_measure() (fact, nARB float64) {
 
 }
 
-func (dbs *DBS) SetReceiverGains() {
+func (dbs *DBS) SetReceiverGainsMMSE() {
 
 	//sigma2 is the estimated variance of the noise + interferes far awway and not connected to the enode
 	// hence sigma2 is the shadowing+ path loss * emitted power of all interferers  plus Wnoise
 	// this is a worst case scenario
 
-	var MobileList [NConnec]*Emitter
 	var ConnecList [NConnec]*Connection
 
 	R := compMatrix.Zeros(NA, NA)
 
-	ConnectedArray:=dbs.GetConnectedMobiles()
+
+	ConnectedArray := dbs.GetConnectedMobiles()
+
+	//	It := compMatrix.Zeros(NA,NA)
+	//II := compMatrix.Zeros(NA,NA)
+
+	//Iv:=compMatrix.Zeros(1,NA)
+
+	Sigma2 := WNoise
 
 	for rb := 0; rb < NCh; rb++ {
 
-		//out of reach mobiles interferer included in sigma noise
-		Sigma2:=0.0
-		for m := range Mobiles { 
-			if !ConnectedArray[m] {				
-				if Mobiles[m].ARB[rb] {										
-					Sigma2 += dbs.Channels[rb].pr[m] 
-				}
-			}
-		}
-		Sigma2+=WNoise	
-
 		Nc := 0
-		for n, e := 0, dbs.Connec.Front(); e != nil; n, e = n+1, e.Next() {
+		for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 			c := e.Value.(*Connection)
 			if c.E.ARB[rb] {
 				ConnecList[Nc] = c
-				MobileList[Nc] = c.E
 				Nc++
 			}
 
 		}
 
-		if Nc>0 {
+		//out of reach mobiles interferer included in sigma noise
 
-		H := compMatrix.Zeros(Nc, NA)
-		Wh := compMatrix.Zeros(NA, Nc)
+		if Nc > 0 {
 
-		for m := 0; m < Nc; m++ {
-			for na := 0; na < NA; na++ {
-				H.Set(m, na, ConnecList[m].antennaChans[rb][na])
+			//number of other interferers
+			Nc2 := 0
+			for m := range Mobiles {
+				if !ConnectedArray[m] {
+					if Mobiles[m].ARB[rb] {
+						Nc2++
+					}
+				}
 			}
-		}	
 
+			H := compMatrix.Zeros(Nc+Nc2, NA)
+			Wh := compMatrix.Zeros(NA, Nc)
 
-		//H.Scale(1e7)
+			for m := 0; m < Nc; m++ {
+				for na := 0; na < NA; na++ {
+					H.Set(m, na, ConnecList[m].antennaChans[rb][na])
+				}
+			}
 
-		compMatrix.HilbertTimes(H, H, R)
+			//add vectors of interferers
+			nc := Nc
 		
+			farInt:=0.0
 
-		//fmt.Println( Ri)
+			for m := range Mobiles {
+				if !ConnectedArray[m] && Mobiles[m].ARB[rb] {
 
-		Eye:=compMatrix.Eye(NA)
-		Eye.Scale(complex(Sigma2, 0))
-		R.Plus(Eye)
-		
-		Ri,err := R.Inverse()
-	
-		if err==nil{	
+						Pi := dbs.Channels[rb].pr[m]
 
-		//fmt.Println(" Ri inverse ok")
+						farInt+=Pi
 
-		compMatrix.TimesHilbert(Ri,H,Wh)
+						AoA := dbs.AoA[m]
+						//Compute the antenna geometrical phase shift for the signal
 
-		//fmt.Print(Wh.Rows(),Wh.Cols())
+						cosAoA_2 := math.Cos(AoA) / 2.0
+						sin, cos := math.Sincos(cosAoA_2)
+						phase := complex(cos, sin)
+						coef := complex(Pi, 0.0)
+						H.Set(nc, 0, coef)
+						for na := 1; na < NA; na++ {
+							coef *= phase
+							H.Set(nc, na, coef)
+						}
 
-		W:=Wh.Transpose()//Hilbert()
+						nc++
 
-	//	fmt.Println(W)
+					}
+			}
 
-		//fmt.Println("  ",W.Rows(),W.Cols())
+		//	Sigma2+=farInt
+		//Sigma2=farInt	+WNoise	
+		//	fmt.Println(farInt)
 
-	//	W.Scale(1000)
+			compMatrix.HilbertTimes(H, H, R)
+			Eye := compMatrix.Eye(NA)
+			Eye.Scale(complex(Sigma2, 0))
+			R.Add(Eye)		
+			Ri, err := R.Inverse()
 
-		Wrows := W.Arrays()
+			if err == nil {
 
-		
+				compMatrix.TimesHilbert(Ri, H.GetMatrix(0, 0, Nc, NA), Wh)
+				W := Wh.Transpose() //Hilbert()
+				Wrows := W.Arrays()				
 
-		for m := 0; m < Nc; m++ {			
-				ConnecList[m].SetGains(dbs,Wrows[m],rb)			
+				for m := 0; m < Nc; m++ {
+					P:=0.0
+					for _,v:=range Wrows[m]{
+						P+=Mag(v)
+					}
+					P=math.Sqrt(P)
+					for na,v:=range Wrows[m]{
+						Wrows[m][na]= v/complex(P,0)
+					}
+
+
+					ConnecList[m].SetGains(dbs, Wrows[m], rb)
+				}
+			} else {
+				fmt.Println(err)
+
+			}
+
 		}
-		}
 
-		}
 
 	}
 }
 
-//   Reformatted by   lerouxp    Thu Mar 1 09:27:55 EST 2012
+//func (dbs *DBS) SetReceiverGains() {
+
+//	//sigma2 is the estimated variance of the noise + interferes far awway and not connected to the enode
+//	// hence sigma2 is the shadowing+ path loss * emitted power of all interferers plus Wnoise
+//	// this is a worst case scenario
+
+//	var ConnecList [NConnec]*Connection
+
+//	R := compMatrix.Zeros(NA, NA)
+
+
+//	//ConnectedArray := dbs.GetConnectedMobiles()
+
+//	//It := compMatrix.Zeros(NA, NA)
+//	//Iv := compMatrix.Zeros(1, NA)
+//	II := compMatrix.Zeros(NA, NA)
+
+//	// var zerosV [NA*NA]float64
+
+//	for rb := 0; rb < NCh; rb++ {
+
+//		//out of reach mobiles interferer included in sigma noise
+//		Sigma2 := WNoise
+//	/*	for m := range Mobiles {
+//			if !ConnectedArray[m] && Mobiles[m].ARB[rb] {
+//				Pi := dbs.Channels[rb].pr[m]
+//				AoA := dbs.AoA[m]
+//				//Compute the antenna geometrical phase shift for the signal
+
+//				cosAoA_2 := math.Cos(AoA) / 2.0
+//				sin, cos := math.Sincos(cosAoA_2)
+//				phase := complex(cos, sin)
+//				coef := complex(Pi, 0.0)
+//				Iv.Set(0, 0, coef)
+//				for na := 1; na < NA; na++ {
+//					coef *= phase
+//					Iv.Set(0, na, coef)
+//				}
+//				for i := 0; i < NA; i++ {
+//					for j := 0; j < NA; j++ {
+//						It.Set(i, j, 0)
+//					}
+//				}
+//				//It.elements
+
+//				compMatrix.HilbertTimes(Iv, Iv, It)
+//				II.Add(It)
+
+////				Sigma2+=Pi
+
+//			}
+//		}
+//*/
+//		Sigma2+=1e-12
+
+//		Nc := 0
+//		for e := dbs.Connec.Front(); e != nil; e = e.Next() {
+//			c := e.Value.(*Connection)
+//			if c.E.ARB[rb] {
+//				ConnecList[Nc] = c
+//				Nc++
+//			}
+
+//		}
+
+//		if Nc > 0 {
+
+//			H := compMatrix.Zeros(Nc, NA)
+//			Wh := compMatrix.Zeros(NA, Nc)
+
+//			for m := 0; m < Nc; m++ {
+//				for na := 0; na < NA; na++ {
+//					H.Set(m, na, ConnecList[m].antennaChans[rb][na])
+//				}
+//			}
+
+//			compMatrix.HilbertTimes(H, H, R)
+
+//			Eye := compMatrix.Eye(NA)
+//			Eye.Scale(complex(Sigma2, 0))
+//			R.Add(Eye)
+//			R.Add(II)
+
+//			Ri, err := R.Inverse()
+
+
+//		/*	Ri,err := R.Inverse()
+//			Eye.Scale(complex(Sigma2+1, 0))
+//			BC,_ := Ri.TimesDense(II)
+//			BCB,_ := BC.TimesDense(Ri)
+//			BC.Add(Eye)
+//			IBCinv,err3 :=  BC.Inverse()
+
+//			MM,_:=IBCinv.TimesDense(BCB)			
+
+//			Ri.Subtract( MM )*/
+//			
+
+//			if err == nil  {
+//				compMatrix.TimesHilbert(Ri, H, Wh)
+//				W := Wh.Transpose()
+//				Wrows := W.Arrays()
+//				for m := 0; m < Nc; m++ {
+//					
+//					P:=0.0
+//					for _,v:=range Wrows[m]{
+//						P+=Mag(v)
+//					}
+//					P=math.Sqrt(P)
+//					for na,v:=range Wrows[m]{
+//						Wrows[m][na]= v/complex(P,0)
+//					}
+
+//					ConnecList[m].SetGains(dbs, Wrows[m], rb)
+//				}
+//			} else {
+//				fmt.Println(err)
+//			}
+
+//		}
+
+//	}
+//}
+
+
+func (dbs *DBS) SetReceiverGainsMRC() {
+
+	for rb := 0; rb < NCh; rb++ {
+
+		//out of reach mobiles interferer included in sigma noise
+		
+		var Wh [NA]complex128
+
+		for e := dbs.Connec.Front(); e != nil; e = e.Next() {
+			c := e.Value.(*Connection)
+			if c.E.ARB[rb] {
+				for na := 0; na < NA; na++ {
+					Wh[na] = cmplx.Conj(c.antennaChans[rb][na])
+				}
+				c.SetGains(dbs, Wh[0:NA], rb)			
+			}
+
+		}
+}
+}
 

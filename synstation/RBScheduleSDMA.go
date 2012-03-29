@@ -22,10 +22,12 @@ continue
 */
 
 type ARBSchedulerSDMA struct {
-	SNRrbAll     [NConnec][NCh]float64
+	Nmaster      int
+	//SNRrbAll     [NConnec][NCh]float64
 	MasterMobs   [NConnec]*Emitter
 	MasterConnec [NConnec]*Connection
-	Pr           [NConnec]float64
+	MasterConnecId [NConnec]int
+	//Pr           [NConnec]float64
 	index        [popsize * 11]int
 	S            Sequence
 	PopulAr      [popsize]SDMA_alloc
@@ -48,10 +50,10 @@ func initARBSchedulerSDMA() Scheduler {
 
 func (d *ARBSchedulerSDMA) Schedule(dbs *DBS, Rgen *rand.Rand) {
 
-	// Eval Metric for all connections
-	var Nmaster int
-
+	
 	//Get SNR for all master mobiles all rbs	
+
+	d.Nmaster=0 //reset num master
 
 	for i, e := 0, dbs.Connec.Front(); e != nil; e, i = e.Next(), i+1 {
 
@@ -60,25 +62,15 @@ func (d *ARBSchedulerSDMA) Schedule(dbs *DBS, Rgen *rand.Rand) {
 
 		if c.Status == 0 {
 
-			d.MasterConnec[Nmaster] = c
-			d.MasterMobs[Nmaster] = E
-
-			for rb := 0; rb < NCh; rb++ {
-				var snrrb float64
-				if DiversityType == SELECTION {
-					snrrb = c.SNRrb[rb]
-				} else {
-					snrrb = E.SNRrb[rb]
-				}
-				d.SNRrbAll[Nmaster][rb] = snrrb
-				d.Pr[Nmaster] = dbs.pr[E.Id] * math.Max(1, float64(E.GetNumARB())) //total power before splitted over RBs
-			}
-			Nmaster++
+			d.MasterConnec[d.Nmaster] = c
+			d.MasterMobs[d.Nmaster] = E
+			d.MasterConnecId[d.Nmaster] = i
+			d.Nmaster++
 
 		}
 	}
 
-	if Nmaster == 0 { // in this case nothing to assign
+	if d.Nmaster == 0 { // in this case nothing to assign
 		return
 	}
 
@@ -93,7 +85,7 @@ func (d *ARBSchedulerSDMA) Schedule(dbs *DBS, Rgen *rand.Rand) {
 			}
 		}
 
-		a := Rgen.Perm(Nmaster)
+		a := Rgen.Perm(d.Nmaster)
 
 		var k, l int
 		for _, v := range a {
@@ -106,14 +98,14 @@ func (d *ARBSchedulerSDMA) Schedule(dbs *DBS, Rgen *rand.Rand) {
 
 		}
 
-		//fmt.Println(Nmaster)
+		//fmt.Println(d.Nmaster)
 
 		//fmt.Println(subGroups)
 
 		for s := 0; s < mDf; s++ {
 
-			NSubMaster := Nmaster/mDf +
-				int(math.Ceil(float64(Nmaster%mDf-s)/float64(mDf)))
+			NSubMaster := d.Nmaster/mDf +
+				int(math.Ceil(float64(d.Nmaster%mDf-s)/float64(mDf)))
 
 			nbrb := int(float64(NCh)/(float64(NSubMaster))) / 2
 			if nbrb == 0 {
@@ -167,7 +159,7 @@ func (d *ARBSchedulerSDMA) Schedule(dbs *DBS, Rgen *rand.Rand) {
 			}
 
 			d.ALtmp = d.poolAr[i].vect //copies
-			d.metricpool[i] = MetricSDMA(&d.ALtmp, &d.SNRrbAll, &d.Pr, d.MasterConnec[0:Nmaster], dbs)
+			d.metricpool[i] = d.MetricSDMA(&d.ALtmp)
 		}
 
 		//find the best 100
@@ -181,12 +173,12 @@ func (d *ARBSchedulerSDMA) Schedule(dbs *DBS, Rgen *rand.Rand) {
 
 	d.ALtmp = d.PopulAr[0].vect
 	//for trimming	
-	MetricSDMA(&d.ALtmp, &d.SNRrbAll, &d.Pr, d.MasterConnec[0:Nmaster], dbs)
+	d.MetricSDMA(&d.ALtmp)
 
 	//fmt.Println("before ",PopulAr[0].vect)
 	//fmt.Println("after ", ALtmp)
 
-	AllocateSDMA(&d.ALtmp, d.MasterMobs[0:Nmaster])
+	AllocateSDMA(&d.ALtmp, d.MasterMobs[0:d.Nmaster])
 
 }
 
@@ -195,11 +187,12 @@ func (d *ARBSchedulerSDMA) Schedule(dbs *DBS, Rgen *rand.Rand) {
 *	
 *
  */
-func MetricSDMA(AL *[mDf][NCh]int, SNRrbAll *[NConnec][NCh]float64, Pr *[NConnec]float64, MasterConn []*Connection, dbs *DBS) (metric float64) {
+func (d *ARBSchedulerSDMA)  MetricSDMA(AL  *[mDf][NCh]int) (metric float64) {
 
 	var SNRres [NConnec][NCh]float64
 	var NumARB [NConnec]int
-	var Corr [NConnec][NConnec]float64
+	var metricM [NConnec]float64
+	//var Corr [NCh][NConnec][NConnec]float64
 
 	// rememeber the number of allocated RB with the porposed allocation
 	for _, ALsub := range AL {
@@ -210,99 +203,31 @@ func MetricSDMA(AL *[mDf][NCh]int, SNRrbAll *[NConnec][NCh]float64, Pr *[NConnec
 		}
 	}
 
-	//TODO TODO
-	// remember the intra-interference ratios
-	for m1, C1 := range MasterConn {
-		for m2, C2 := range MasterConn {
+		
+	for rb:=0;rb<NCh;rb++{
+	for i:=0;i<mDf;i++{
 
-			//a := C1.gainM[C1.E.Id]
-			b := C1.GetGain(dbs.AoA[C2.E.Id],C2.E.GetFirstRB())
-
-			Corr[m1][m2] = b /// a
-
-		}
-	}
-
-	// inverse the estimated SINR per rb to process for new allocation
-	for v1, C1 := range MasterConn {
-		for rb := range C1.Channels[:] {
-			SNRres[v1][rb] = C1.Channels[rb].Pint - C1.Channels[rb].pr[C1.E.Id]
-			//alternative : 1.0 / SNRrbAll[v1][rb]
-		}
-	}
-
-	//substract power received from local master mobiles on the same rb
-	for v1, C1 := range MasterConn {
-
-		for rb := range C1.Channels[:] {
-
-			for v2, C2 := range MasterConn {
-				if C2.E.ARB[rb] && v2 != v1 {
-					SNRres[v1][rb] -= C1.Channels[rb].pr[C2.E.Id]
-
+		Cid:=AL[i][rb]
+		if Cid>= 0{
+		Mconn:=d.MasterConnec[Cid]
+		Int := Mconn.InterferencePowerExtra[rb] + WNoise
+		//Int += d.MasterConnec[Cid].InterferencePowerIntra[rb] //no need to add intra interference, will be added afterwords
+		for j:=0;j<mDf;j++{
+			if i!=j{
+				Iid:=AL[j][rb]
+				if Iid>=0{
+					Int += Mconn.InterferersP[d.MasterConnecId[Iid]][rb] / float64(NumARB[Iid])
 				}
 			}
 		}
 
-	}
+		Power :=  Mconn.InterferersP[d.MasterConnecId[Cid]][rb] / float64(NumARB[Cid])
 
-	// add the possible intra-interference genereated by the new allocation
-	for i, ALsub := range AL {
-		for rb, v1 := range ALsub {
-			if v1 > -1 {
-				for j := 0; j < mDf; j++ {
-					v2 := AL[j][rb]
-					if v2 > -1 {
-						if i != j {
-							SNRres[v1][rb] += Pr[v2] / (float64(NumARB[v2])) * Corr[v1][v2]
-						}
-
-					}
-				}
-			}
+		SNRres[Cid][rb]= Power/Int
 		}
 	}
-
-	var metricM [NConnec]float64
-	// taking the new evaluated SINR, evaluate the new metric
-	for rb := range SNRres {
-		for m := range MasterConn {
-			a := Pr[m] / float64(NumARB[m]) / (SNRres[m][rb] + WNoise)
-			SNRres[m][rb] = a
-		}
 	}
-
-	//Trim	
-
-	/*	for s:=0;s<mDf;s++{
-		for rb:=0;rb<NCh; {
-			v:=AL[s][rb]
-			if v>-1	{
-			//find max
-				max:=SNRres[v][rb]
-				s_m :=rb
-				rb2:=rb
-				for ;rb2<NCh && AL[s][rb2]==v;rb2++{
-					if max<SNRres[v][rb2] {max=SNRres[v][rb2]; s_m = rb2}
-				}
-				rb3:=s_m+1
-				for ;rb3<rb2;rb3++{
-					if SNRres[v][rb3] < max/50 {break}
-				}
-				for ;rb3<rb2;rb3++{
-					AL[s][rb3]=-1
-				}
-
-				for rb3 =s_m-1;rb3>=rb;rb3--{
-					if SNRres[v][rb3] < max/50 { break}
-				}
-				for rb3 =s_m-1;rb3>=rb;rb3--{	AL[s][rb3]=-1}
-
-				//fmt.Println(rb,rb2)
-				rb=rb2
-			}else {rb++}
-		}
-	}*/
+	
 
 	// eval capacity per mobiles
 	for m, ALsub := range AL {
@@ -314,15 +239,16 @@ func MetricSDMA(AL *[mDf][NCh]int, SNRrbAll *[NConnec][NCh]float64, Pr *[NConnec
 	}
 
 	mean_mm := 0.0
-	for v, C := range MasterConn {
+	for v, C := range d.MasterConnec[0:d.Nmaster] {
 		m_m := C.E.meanTR.Get()
 		mean_mm += m_m
 		//o := math.Fmax(1,float64(C.E.Outage-100))
 		//* math.Log2(1+float64(o)) 
-		metric += math.Log2(1+metricM[v]) / math.Log2(1+m_m+0.0001)
+		metric += math.Log2(1+metricM[v]) / math.Log2(1+ m_m+0.00001)
 	}
+
 	//add cost for unused RB
-	for rb := 0; rb < NCh; rb++ {
+/*	for rb := 0; rb < NCh; rb++ {
 		s := 0
 		for ; s < mDf; s++ {
 			if AL[s][rb] > -1 {
@@ -332,7 +258,7 @@ func MetricSDMA(AL *[mDf][NCh]int, SNRrbAll *[NConnec][NCh]float64, Pr *[NConnec
 		if s == mDf {
 			metric += 1 / math.Log2(1+mean_mm/float64(len(MasterConn))+0.0001) / NCh
 		}
-	}
+	}*/
 
 	//fmt.Print(metric," ", len(MasterConn)," ")
 
