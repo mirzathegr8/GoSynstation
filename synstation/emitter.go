@@ -35,6 +35,8 @@ type EmitterS struct {
 	IdB int // saves the id of the master BS
 
 	MasterMultiPath [NCh]float64
+
+	NA	int // number of emitting antennas
 }
 
 // EmitterS with additional registers for BER and diversity evaluation, 

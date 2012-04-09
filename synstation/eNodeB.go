@@ -89,6 +89,7 @@ func (dbs *DBS) RunPhys() {
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
+
 		c.EvalInterference(dbs)
 		c.BitErrorRate(dbs)
 	}

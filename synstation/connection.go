@@ -81,7 +81,7 @@ type Connection struct {
 
 	//gainM [M]float64
 
-	
+	vHt	[]complex128 // vector correlation of transmitted signals for MIMO	
 
 }
 
@@ -487,9 +487,28 @@ func (co *Connection) InitConnection(E *Emitter, v float64, dbs *DBS) {
 		co.pathAoA[np] = PI2 * co.Rgen.Float64()
 		co.pathGains[np] = PathGain[np] //co.Rgen.ExpFloat64() / divF
 		//	divF *= 5.0
-
 	}
 
+	//generate vHt
+
+	co.vHt= new([]complex128, co.E.NAt)
+	
+	for np:=0;np<NP;p++{
+	var Val complex128
+	AoA:=co.Rgen.Float64*pi2
+	
+	cosAoA_2 := math.Cos(AoA) / 2.0
+	sin, cos := math.Sincos(cosAoA_2)
+	phase := complex(cos, sin)
+	delta := complex(1.0, 0.0)
+		for i:=range co.vHt{
+			Val += vHt[i]+= * delta
+		delta *= phase
+			vHt[i]+=
+			
+
+		}
+	}
 }
 
 func (co *Connection) clear() {
