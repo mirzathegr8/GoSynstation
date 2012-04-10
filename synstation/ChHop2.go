@@ -9,7 +9,7 @@ import "fmt"
 
 const ChRX = 0
 
-const MaxNumHOP = 2
+const MaxNumHOP = 1
 
 func init() {
 	fmt.Println("init to keep fmt")
@@ -111,7 +111,7 @@ func (d *ChHopping2) Schedule(dbs *DBS, Rgen *rand.Rand) {
 
 				// sort mobile connection for channel hopping
 			} else {
-				//ratio := c.EvalRatio(dbs.R)
+					//ratio := c.EvalRatio(dbs.R)
 				ratio := EvalRatio(c.E)
 				i := 0
 				if c.E.GetFirstRB() < NChRes+subsetSize*ChRX {

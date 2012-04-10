@@ -2,12 +2,12 @@ package synstation
 
 import "math"
 
-const Field = 6000 //length in meters
+const Field = 4000 //length in meters
 
-const Duration =1000// in iterations 
+const Duration =500// in iterations 
 
-const M = 1000 //numbers of mobiles
-const D =  100// numbers of DBS
+const M = 500 //numbers of mobiles
+const D =  50// numbers of DBS
 
 //for M-QAM, km*km=M
 const km = 4.0
@@ -190,8 +190,7 @@ const ICIMdistRatio=0.3
 
 
 
-// The enodebclock, that sets the interval before reactivation
-const EnodeBClock = 3
+
 
 //var ICIMfunc=ICIMSplitEdgeCenter2
 var ICIMfunc=ICIMNone

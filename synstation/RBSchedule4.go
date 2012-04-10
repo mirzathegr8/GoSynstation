@@ -219,7 +219,7 @@ func Trimm(AL []int, Metric *[NConnec][NCh]float64, MasterMobs []*Emitter) (metr
 			}
 
 			m_m := MasterMobs[v].meanTR.Get()
-			metricT += m/(0.00001+m_m) //math.Log(m+0.0000000000001) //math.Log2(1+m) / math.Log2(1+m_m+0.0001) //m/(0.00001+m_m)//
+			metricT += math.Log(1+m)/(0.00001+m_m) //math.Log(m+0.0000000000001) //math.Log2(1+m) / math.Log2(1+m_m+0.0001) //m/(0.00001+m_m)//
 
 			i += nARBmOrg
 		}
