@@ -508,7 +508,7 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 
 			for m := 0; m < Nc; m++ {
 				for na := 0; na < NA; na++ {
-					H.Set(m, na, ConnecList[m].antennaChans[rb][na])
+					H.Set(m, na, ConnecList[m].H[rb][na])
 				}
 			}
 
@@ -654,7 +654,7 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 
 //			for m := 0; m < Nc; m++ {
 //				for na := 0; na < NA; na++ {
-//					H.Set(m, na, ConnecList[m].antennaChans[rb][na])
+//					H.Set(m, na, ConnecList[m].H[rb][na])
 //				}
 //			}
 
@@ -719,7 +719,7 @@ func (dbs *DBS) SetReceiverGainsMRC() {
 			c := e.Value.(*Connection)
 			if c.E.ARB[rb] {
 				for na := 0; na < NA; na++ {
-					Wh[na] = cmplx.Conj(c.antennaChans[rb][na])
+					Wh[na] = cmplx.Conj(c.H[rb][na])
 				}
 				c.SetGains(dbs, Wh[0:NA], rb)			
 			}

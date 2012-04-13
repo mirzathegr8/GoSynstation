@@ -18,6 +18,8 @@ type PhysReceiverBase struct {
 	AoA [M]float64
 
 	RBsReceiver
+
+	NAr int
 }
 
 // Initialise the receiver:
