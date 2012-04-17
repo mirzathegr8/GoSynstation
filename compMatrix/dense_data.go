@@ -4,6 +4,12 @@
 
 package compMatrix
 
+
+//returns a slice to the rows
+func (A *DenseMatrix) GetRow (i int) []complex128{
+	return A.elements[A.step*i: A.step*(i+1)]
+}
+
 //returns a copy of the row (not a slice)
 func (A *DenseMatrix) RowCopy(i int) []complex128 {
 	row := make([]complex128, A.cols)

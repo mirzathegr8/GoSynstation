@@ -334,10 +334,10 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 	NAt:=co.E.NAt
 	var touch bool
 
-	co.Wh.SumRowMag(co.NoisePower);
+	co.WhRB.SumRowMag(co.NoisePower);
 
-	for nat, Pr :=  range co.MultiPathMGain {
-		co.SNRrb[nat] = Pr / (co.InterferencePowerExtra[nat]+ co.InterferencePowerIntra[nat] + NoisePower[nat])
+	for nat, Pr :=  range co.MultiPathMAgain {
+		co.SNRrb[nat] = Pr / (co.InterferencePowerExtra[nat]+ co.InterferencePowerIntra[nat] + co.NoisePower[nat])
 	}
 
 	for rb, use := range co.E.ARB{
@@ -345,7 +345,7 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 		if use {
 			for nat:=rb*NAt; nat<=(rb+1)*NAt;nat++{
 				BER:= L1 * math.Exp(- co.SNRrb[nat] /2/L2) / 2.0
-				co.meanPr.Add(co.MultiPathMGain[nat])
+				co.meanPr.Add(co.MultiPathMAgain[nat])
 				co.meanSNR.Add(co.SNRrb[nat])
 				co.meanBER.Add(BER)
 			}
@@ -442,18 +442,18 @@ func (co *Connection) InitConnection(E *Emitter, v float64, dbs *DBS) {
 	NAr:=dbs.NAr
 
 	
-	co.HhHRB = Zeros(NAt,NAt*NCh)
+	//co.HhHRB = Zeros(NAt,NAt*NCh)
 	co.HRB = Zeros(NAr,NAt*NCh)
 	
 
-	co.sRt= compMatrix.Zeros(NP,NAt)
+	co.sRt= Zeros(NP,NAt)
 	
-	co.sRr= compMatrix.Zeros(NAr,NP)
+	co.sRr= Zeros(NAr,NP)
 
-	co.Wh= compMatrix.Zeros(NAt,NAr)
+	co.WhRB = Zeros(NAt*NCh,NAr)
 
-	for np:=0;np<NP;p++{
-		co.pathAoD[np]=co.Rgen.Float64*pi2
+	for np:=0;np<NP;np++{
+		co.pathAoD[np]=co.Rgen.Float64()*PI2
 	}
 
 
@@ -466,7 +466,7 @@ func (co *Connection) InitConnection(E *Emitter, v float64, dbs *DBS) {
 	}
 	co.SNRrb = make([]float64, NAt*NCh)
 
-	co.MoisePower = make([]float64, NAt*NCh)
+	co.NoisePower = make([]float64, NAt*NCh)
 
 }
 

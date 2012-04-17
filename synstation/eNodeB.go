@@ -54,7 +54,7 @@ func (dbs *DBS) Init(i int) {
 	dbs.NMaxConnec = NConnec
 
 	for i := 0; i < NConnec; i++ {
-		dbs.ConnectionBank.PushBack(NewConnection(dbs.Id))
+		dbs.ConnectionBank.PushBack(NewConnection(dbs))
 	}
 
 	dbs.Connec = list.New()
@@ -77,7 +77,7 @@ func (dbs *DBS) RunPhys() {
 	//must be done for all before evaluting gains and interfernce
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
-		c.EvalVectPath(dbs)
+		c.GenerateChannel(dbs)
 	}
 
 	/*for e := dbs.Connec.Front(); e != nil; e = e.Next() {
