@@ -20,6 +20,7 @@ type PhysReceiverBase struct {
 	RBsReceiver
 
 	NAr int
+	SqrtNAr float64
 }
 
 // Initialise the receiver:
@@ -36,6 +37,9 @@ func (r *PhysReceiverBase) Init() {
 		r.shadow = new(shadowMap)
 	}
 	r.shadow.Init(corr_res, r.Rgen)
+
+	r.NAr=NA // TODO dynamic assignement
+	r.SqrtNAr= math.Sqrt(float64(r.NAr))
 }
 
 // Getters/Setters

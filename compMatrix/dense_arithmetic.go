@@ -409,40 +409,33 @@ func (A *DenseMatrix) Hilbert() (B *DenseMatrix) {
 // This function consideres eah A,B matrix as concantenated matrix that are to be multiplied seperatly 
 //  A=[Ab1 ; Ab2] B=[Bb1, Bb2] ; C= []Ab1*Bb1, Ab2*Bb2]
 func (A *DenseMatrix) BlockTimes(B, C *DenseMatrix, NB int) (err error) {
-	if C.rows != A.rows/NB || C.cols != B.cols || A.cols != B.rows {
+
+	if C.cols != A.rows/NB || C.rows!=A.rows || C.cols != B.cols || A.cols != B.rows {
 		err = ErrorDimensionMismatch
 		return
 	}
 
-//	if runtime.GOMAXPROCS(0) > 1 {
-//		switch WhichParMethod {
-//		case 1:
-//			parTimes1(A, B, C)
-//		case 2:
-//			parTimes2(A, B, C)
-//		}
-//	} else {
-//		switch {
-//		case A.cols > 100 && WhichSyncMethod == 2:
-//			transposeTimes(A, B, C)
-//		default:
 
-		
+		NA:=A.cols
+		NAt:=A.rows/NB
 
-		for l:=0;l<A.rows;l+=NB{
-			for i := 0; i < C.rows; i++ {
-				sums := C.elements[l+i*C.step : l+(i+1)*C.step]
-				for k, a := range A.elements[i*A.step : i*A.step + A.cols] {
-					for j, b := range B.elements[k*B.step + l : k * B.step + B.cols + l] {
-						sums[j] += a * b
-					}
+		for row:=0; row< A.rows;row++{
+			Aslice:= A.elements[row*A.step:row*A.step+NA]
+			
+			bl:=row/NAt
+			bl=bl*NAt
+
+			for j:= 0; j<NAt; j++{
+				var sum complex128
+				for k,v:=range Aslice{
+					sum+= v*B.Get(k,j+bl)
 				}
+				C.Set(row,j,sum)
 			}
+			
+
 		}
-
-	//	}
-	//}
-
+		
 	return
 }
 
@@ -457,10 +450,11 @@ func (Mat *DenseMatrix) BlockDiagMag(diag []float64){
 func (Mat *DenseMatrix) SumNotDiagMag(diag []float64){
 	for i := 0; i < Mat.rows;i++ {
 		diag[i]=0.0
-		for _,v:=range Mat.elements[i*Mat.step : i*Mat.step +  i]{
+		j:=i%Mat.cols
+		for _,v:=range Mat.elements[i*Mat.step : i*Mat.step +  j]{
 			diag[i]+=Mag(v)
 		}
-		for _,v:=range Mat.elements[i*Mat.step + i + 1 : i*Mat.step +  Mat.cols] {
+		for _,v:=range Mat.elements[i*Mat.step + j + 1 : i*Mat.step +  Mat.cols] {
 			diag[i]+=Mag(v)
 		}
 	}
@@ -477,3 +471,31 @@ func (Mat *DenseMatrix) SumRowMag(sum []float64) {
 }
 
 
+
+// This function consideres eah A,B matrix as concantenated matrix that are to be multiplied seperatly 
+//  A=[Ab1 ; Ab2] B=[Bb1, Bb2] ; C= []Ab1*Bb1, Ab2*Bb2]
+func (A *DenseMatrix) BlockTimesSumMag(B *DenseMatrix, sliceR []float64, NB int) (err error) {
+
+	/*if C.rows != A.rows/NB || C.cols != B.cols || A.cols != B.rows {
+		err = ErrorDimensionMismatch
+		return
+	}*/
+	NAt2:=B.cols/NB
+	
+	NAr:= A.cols
+	
+	for row:=0; row< A.rows;row++{
+		l:=row/NAt2
+		l*=NAt2
+		sliceR[row]=0
+		for j:=0;j<NAt2;j++{
+			var val complex128			
+			for na,va := range A.elements[row*A.step: row*A.step+NAr]{
+				val+=va*B.Get(na,j+l)
+			}
+			sliceR[row]+=Mag(val)
+		}		
+	}
+
+	return
+}

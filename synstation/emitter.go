@@ -87,6 +87,8 @@ func (e *Emitter) Init(){
 	B := Cheby(10, e.DopplerF)
 	e.DoppFilter = MultFilter(A, B)
 
+	e.NAt=1 //default
+
 }
 
 func (e *EmitterS) GetDataState() int {

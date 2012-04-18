@@ -465,26 +465,24 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 
 	var ConnecList [NConnec]*Connection
 
-	R := compMatrix.Zeros(NA, NA)
+	R := compMatrix.Zeros(dbs.NAr, dbs.NAr)
 
 
 	ConnectedArray := dbs.GetConnectedMobiles()
 
-	//	It := compMatrix.Zeros(NA,NA)
-	//II := compMatrix.Zeros(NA,NA)
-
-	//Iv:=compMatrix.Zeros(1,NA)
 
 	Sigma2 := WNoise
 
 	for rb := 0; rb < NCh; rb++ {
 
 		Nc := 0
+		Nm := 0
 		for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 			c := e.Value.(*Connection)
 			if c.E.ARB[rb] {
 				ConnecList[Nc] = c
-				Nc++
+				Nc+= c.E.NAt
+				Nm++
 			}
 
 		}
@@ -503,12 +501,16 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 				}
 			}
 
-			H := compMatrix.Zeros(Nc+Nc2, NA)
-			Wh := compMatrix.Zeros(NA, Nc)
+			H := compMatrix.Zeros(Nc+Nc2, dbs.NAr)
+			Wh := compMatrix.Zeros(dbs.NAr, Nc)
 
-			for m := 0; m < Nc; m++ {
-				for na := 0; na < NA; na++ {
-					H.Set(m, na, ConnecList[m].H[rb][na])
+			row:=0
+			for m := 0; m < Nm; m++ {
+				NAt:=ConnecList[m].E.NAt				
+				for nat := 0; nat < NAt; nat++ {	
+					//copies col from HHRB to H
+					 ConnecList[m].HRB.BufferCol(rb*NAt+nat, H.GetRow(row))
+					row++
 				}
 			}
 
@@ -532,7 +534,7 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 						phase := complex(cos, sin)
 						coef := complex(Pi, 0.0)
 						H.Set(nc, 0, coef)
-						for na := 1; na < NA; na++ {
+						for na := 1; na < dbs.NAr; na++ {
 							coef *= phase
 							H.Set(nc, na, coef)
 						}
@@ -547,29 +549,33 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 		//	fmt.Println(farInt)
 
 			compMatrix.HilbertTimes(H, H, R)
-			Eye := compMatrix.Eye(NA)
+			Eye := compMatrix.Eye(dbs.NAr)
 			Eye.Scale(complex(Sigma2, 0))
 			R.Add(Eye)		
 			Ri, err := R.Inverse()
 
 			if err == nil {
 
-				compMatrix.TimesHilbert(Ri, H.GetMatrix(0, 0, Nc, NA), Wh)
+				compMatrix.TimesHilbert(Ri, H.GetMatrix(0, 0, Nc, dbs.NAr), Wh)
 				W := Wh.Transpose() //Hilbert()
 				Wrows := W.Arrays()				
 
-				for m := 0; m < Nc; m++ {
-					P:=0.0
-					for _,v:=range Wrows[m]{
-						P+=Mag(v)
-					}
-					P=math.Sqrt(P)
-					for na,v:=range Wrows[m]{
-						Wrows[m][na]= v/complex(P,0)
-					}
+				row:=0
+				for m := 0; m < Nm ; m++ {
+					for nat:=0;nat<ConnecList[m].E.NAt; nat++{
+						P:=0.0
+						for _,v:=range Wrows[m]{
+							P+=compMatrix.Mag(v)
+						}
+						P=math.Sqrt(P)
+						for na,v:=range Wrows[m]{
+							Wrows[m][na]= v/complex(P,0)
+						}
 
 
-					ConnecList[m].SetGains(dbs, Wrows[m], rb)
+						ConnecList[m].SetGains(dbs, Wrows[row], rb,nat)
+						row++
+					}
 				}
 			} else {
 				fmt.Println(err)
@@ -717,11 +723,17 @@ func (dbs *DBS) SetReceiverGainsMRC() {
 
 		for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 			c := e.Value.(*Connection)
+			NAt:=c.E.NAt
 			if c.E.ARB[rb] {
-				for na := 0; na < NA; na++ {
-					Wh[na] = cmplx.Conj(c.H[rb][na])
+				for nat:=0; nat< c.E.NAt;nat++{
+
+					c.HRB.BufferCol(NAt*rb+nat, Wh[0:dbs.NAr])
+					for nar:=0;nar<dbs.NAr;nar++{
+						Wh[nar] = cmplx.Conj(Wh[nar])
+					}
+			
+					c.SetGains(dbs, Wh[0:NAt], rb,nat)			
 				}
-				c.SetGains(dbs, Wh[0:NA], rb)			
 			}
 
 		}

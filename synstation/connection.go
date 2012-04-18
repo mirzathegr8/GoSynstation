@@ -16,10 +16,10 @@ func GetDiversity() int { a := num_con; num_con = 0; return a }
 
 const NP = 3  // numbers of simulated paths
 const NA = 8 //numbers of antennas at receiver
+const NAtMAX = 2 
 
 var PathGain = [5]float64{1, .5, 0.25, 0.05, 0.01} //0.5, 0.125} // relative powers of each path
 
-var SqrtNA float64
 
 func init() {
 
@@ -29,9 +29,7 @@ func init() {
 	}
 	for np := 0; np < NP; np++ {
 		PathGain[np] = math.Sqrt(PathGain[np] / sum)
-	}
-
-	SqrtNA= math.Sqrt(NA)
+	}	
 
 }
 
@@ -62,7 +60,7 @@ type Connection struct {
 	InterferencePowerIntra []float64
 	InterferersP [NConnec][]float64
 	
-	InterferersResidual [NConnec][]float64 //residual interference ifusing the channel
+	InterferersResidual []float64 //residual interference ifusing the channel
 
 
 	SNRrb []float64 //stores SNR per RB per NAt
@@ -79,7 +77,7 @@ type Connection struct {
 	HRB *DenseMatrix 
 
 	WhHRB *DenseMatrix
-
+	CorrI *DenseMatrix
 
 	pathAoA   [NP]float64
 	pathAoD   [NP]float64
@@ -175,10 +173,10 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 		sin, cos := math.Sincos(cosAoA_2)
 		phase := complex(cos, sin)
 		Val := complex(co.pathGains[np],0)
-		co.sRt.Set(0,np, Val )
+		co.sRt.Set(np,0, Val )
 		for na := 1; na < co.E.NAt; na++ {
 			Val = Val*phase
-			 co.sRt.Set(na,np,Val) 
+			 co.sRt.Set(np,na,Val) 
 		}
 	}
 
@@ -199,7 +197,7 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 		}
 		
 		for np:=range power{
-			power[NP]=p*co.ff_R[np][rb]*Pt //we do this multiplication so not to repeat it...
+			power[np]=p*co.ff_R[np][rb]*Pt //we do this multiplication so not to repeat it...
 		}
 		
 		
@@ -223,8 +221,8 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 	phase := complex(cos, -sin)
 
 	//gain direction
-	var defaultGain [NArMax]complex128
-	defaultGain[0]=complex(1/SqrtNA,0)
+	var defaultGain [NA]complex128
+	defaultGain[0]=complex(1/dbs.SqrtNAr,0)
 	for nar := 1; nar < NAr; nar++ {
 		defaultGain[nar]=phase*defaultGain[nar-1]
 		
@@ -249,33 +247,40 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 		co.InterferencePowerIntra[i] = 0
 		co.InterferencePowerExtra[i] = 0
 	}
-
-	ArrayTmp := make( []complex128 , NAt*NCh )
+	
 
 	for e,i := dbs.Connec.Front(),0; e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
 		nbRB := float64(c.E.GetNumARB())
 		
-		co.WhRB.BlockTimes(c.HRB,co.WhHRB,NCh) //multiply block matrix
-
-		co.WhHRB.BlockDiagMag(co.InterferersP[i]) //this to save for scheduler 
-		
-		co.WhHRB.SumNotDiagMag(co.InterferersResidual[i])
-
 		if c.E.Id == co.E.Id {
+
+			co.WhRB.BlockTimes(c.HRB,co.WhHRB,NCh) //multiply block matrix
+
+			co.WhHRB.BlockDiagMag(co.InterferersP[i]) //this to save for scheduler 
+		
+			co.WhHRB.SumNotDiagMag(co.InterferersResidual) // for mmse without iterative canceling
+		
 			copy(co.MultiPathMAgain, co.InterferersP[i])
+
+		} else{
+
+			co.WhRB.BlockTimesSumMag(c.HRB,co.InterferersP[i],NCh)
+
 		}
+
 
 		for rb, use := range c.E.ARB {	
 			if use {
 
 				for nat:=rb*NAt; nat<=(rb+1)*NAt;nat++{
-					co.InterferersP[i][nat]*=nbRB // to normalize value without numARB included 
-					co.InterferencePowerIntra[nat] +=  nbRB*co.InterferersResidual[i][nat] // we add residual interference here
 
 					if c.E.Id != co.E.Id {
 						co.InterferencePowerIntra[nat] += co.InterferersP[i][nat]
-					}
+					} 
+		
+					co.InterferersP[i][nat]*=nbRB // to normalize value without numARB included 					
+					
 				}
 			}
 
@@ -337,13 +342,13 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 	co.WhRB.SumRowMag(co.NoisePower);
 
 	for nat, Pr :=  range co.MultiPathMAgain {
-		co.SNRrb[nat] = Pr / (co.InterferencePowerExtra[nat]+ co.InterferencePowerIntra[nat] + co.NoisePower[nat])
+		co.SNRrb[nat] = Pr / (co.InterferencePowerExtra[nat]+ co.InterferencePowerIntra[nat] + co.InterferersResidual[nat] + WNoise*co.NoisePower[nat])
 	}
 
 	for rb, use := range co.E.ARB{
 
 		if use {
-			for nat:=rb*NAt; nat<=(rb+1)*NAt;nat++{
+			for nat:=rb*NAt; nat<(rb+1)*NAt;nat++{
 				BER:= L1 * math.Exp(- co.SNRrb[nat] /2/L2) / 2.0
 				co.meanPr.Add(co.MultiPathMAgain[nat])
 				co.meanSNR.Add(co.SNRrb[nat])
@@ -351,7 +356,7 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 			}
 			touch = true
 		} else {
-			for nat:=rb*NAt; nat<=(rb+1)*NAt;nat++{
+			for nat:=rb*NAt; nat<(rb+1)*NAt;nat++{
 				co.SNRrb[nat] *= conservationFactor
 			}
 		}
@@ -452,6 +457,9 @@ func (co *Connection) InitConnection(E *Emitter, v float64, dbs *DBS) {
 
 	co.WhRB = Zeros(NAt*NCh,NAr)
 
+	co.WhHRB = Zeros(NAt*NCh,NAt)
+	co.CorrI = Zeros(NAt*NCh,NAt)
+
 	for np:=0;np<NP;np++{
 		co.pathAoD[np]=co.Rgen.Float64()*PI2
 	}
@@ -462,8 +470,8 @@ func (co *Connection) InitConnection(E *Emitter, v float64, dbs *DBS) {
 	co.InterferencePowerIntra = make([]float64, NAt*NCh)
 	for n:=0;n<NConnec;n++{
 		co.InterferersP[n] = make([]float64, NAt*NCh)
-		co.InterferersResidual[n] = make([]float64, NAt*NCh)
 	}
+	co.InterferersResidual = make([]float64, NAt*NCh)
 	co.SNRrb = make([]float64, NAt*NCh)
 
 	co.NoisePower = make([]float64, NAt*NCh)
