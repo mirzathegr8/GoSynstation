@@ -273,7 +273,7 @@ func (co *Connection) EvalInterference(dbs *DBS) {
 		for rb, use := range c.E.ARB {	
 			if use {
 
-				for nat:=rb*NAt; nat<=(rb+1)*NAt;nat++{
+				for nat:=rb*NAt; nat<(rb+1)*NAt;nat++{
 
 					if c.E.Id != co.E.Id {
 						co.InterferencePowerIntra[nat] += co.InterferersP[i][nat]

@@ -410,7 +410,7 @@ func (A *DenseMatrix) Hilbert() (B *DenseMatrix) {
 //  A=[Ab1 ; Ab2] B=[Bb1, Bb2] ; C= []Ab1*Bb1, Ab2*Bb2]
 func (A *DenseMatrix) BlockTimes(B, C *DenseMatrix, NB int) (err error) {
 
-	if C.cols != A.rows/NB || C.rows!=A.rows || C.cols != B.cols || A.cols != B.rows {
+	if C.cols != A.rows/NB || C.rows!=A.rows || A.cols != B.rows {
 		err = ErrorDimensionMismatch
 		return
 	}
