@@ -26,15 +26,12 @@ type EmitterS struct {
 	Outage int
 
 	ARB   [NCh]bool //allocated RB
-	SNRrb [NCh]float64
 
 	TransferRate float64
 
 	Data int //quantity of data to send in bits
 
 	IdB int // saves the id of the master BS
-
-	MasterMultiPath [NCh]float64
 
 	NAt	int // number of emitting antennas
 }
@@ -44,6 +41,11 @@ type EmitterS struct {
 type Emitter struct {
 	EmitterS
 
+
+	SNRrb []float64
+	MasterMultiPath []float64
+
+
 	//data used during calculation runtime
 	SBERtotal   float64
 	SMaxBER     float64
@@ -52,8 +54,8 @@ type Emitter struct {
 	SMinDist    float64
 	SSNRb       float64
 
-	SBERrb [NCh]float64
-	SSNRrb [NCh]float64
+	SBERrb []float64
+	SSNRrb []float64
 
 	MCSjoint float64
 
@@ -88,6 +90,12 @@ func (e *Emitter) Init(){
 	e.DoppFilter = MultFilter(A, B)
 
 	e.NAt=1 //default
+
+	
+	e.SNRrb = make([]float64,NCh*e.NAt)
+	e.MasterMultiPath = make([]float64,NCh*e.NAt)
+	e.SBERrb = make([]float64,NCh*e.NAt)
+	e.SSNRrb = make([]float64,NCh*e.NAt)
 
 }
 
@@ -184,7 +192,7 @@ func (e *Emitter) AddConnection(c *Connection, dbs *DBS) {
 
 		//for test with selection diversity
 		if DiversityType == SELECTION {
-			for rb := range e.ARB {
+			for rb := range e.SSNRrb {
 				e.SSNRrb[rb] = c.SNRrb[rb]
 			}
 		}
@@ -193,10 +201,11 @@ func (e *Emitter) AddConnection(c *Connection, dbs *DBS) {
 
 	// for maximal RC
 	if DiversityType == MRC {
-		for rb, use := range e.ARB {
-			e.SSNRrb[rb] += c.SNRrb[rb]
-			if use {
-				e.SSNRb += math.Exp(-c.SNRrb[rb] / betae)
+		for nat, snr  := range c.SNRrb {
+			e.SSNRrb[nat] += snr
+			rb:=nat/e.NAt
+			if e.ARB[rb] {
+				e.SSNRb += math.Exp(- snr / betae)
 			}
 		}
 	}
@@ -241,8 +250,8 @@ func (e *Emitter) FetchData() {
 
 	e.SNRb, e.BERtotal, e.Diversity, e.MaxBER, e.InstMaxBER = e.SSNRb, e.SBERtotal, e.SDiversity, e.SMaxBER, e.SInstMaxBER
 	e.SSNRb, e.SInstMaxBER, e.SBERtotal, e.SDiversity, e.SMaxBER, e.SMinDist = 0, 0, 0, 0, 0, Field*16*Field
-	for rb := 0; rb < NCh; rb++ {
-		e.SNRrb[rb], e.SSNRrb[rb] = e.SSNRrb[rb], 0
+	for rb ,snr := range e.SSNRrb{
+		e.SNRrb[rb], e.SSNRrb[rb] = snr, 0
 	}
 
 	e.TransferRate = 0
@@ -272,31 +281,32 @@ func (e *Emitter) FetchData() {
 
 		copy(e.MasterMultiPath[:], e.MasterConnection.MultiPathMAgain[:])
 
-		for rb := 1; rb < NCh; rb++ {
+		for nat,snr := range e.SNRrb {
 
+			rb:=nat/e.NAt
 			if e.ARB[rb] {
 
 				switch TRATETECH {
 				case OFDM:
-					effectSNR += math.Exp(-e.SNRrb[rb] / betae)
+					effectSNR += math.Exp(-snr / betae)
 				case SCFDM:
 					effectSNR += e.SNRrb[rb]
 				case NORMAL:
-					s := EffectiveBW * math.Log2(1+beta*e.SNRrb[rb])
+					s := EffectiveBW * math.Log2(1+beta*snr)
 					s = math.Min(s, 1500)
 					if s > 100 {
 						effectSNR += s
 					}
 				}
 
-				if minSNR > e.SNRrb[rb] {
-					minSNR = e.SNRrb[rb]
+				if minSNR > snr {
+					minSNR = snr
 				}
 
 				nARB++
 
-				if e.InstSNR < e.SNRrb[rb] {
-					e.InstSNR = e.SNRrb[rb]
+				if e.InstSNR < snr {
+					e.InstSNR = snr
 				}
 			}
 		}
