@@ -485,12 +485,14 @@ func (A *DenseMatrix) BlockTimesSumMag(B *DenseMatrix, sliceR []float64, NB int)
 	NAr:= A.cols
 	
 	for row:=0; row< A.rows;row++{
+		Arow:=A.elements[row*A.step: row*A.step+NAr]
+
 		l:=row/NAt2
 		l*=NAt2
 		sliceR[row]=0
 		for j:=0;j<NAt2;j++{
 			var val complex128			
-			for na,va := range A.elements[row*A.step: row*A.step+NAr]{
+			for na,va := range Arow{
 				val+=va*B.Get(na,j+l)
 			}
 			sliceR[row]+=Mag(val)
