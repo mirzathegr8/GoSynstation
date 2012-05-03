@@ -85,7 +85,7 @@ func (dbs *DBS) RunPhys() {
 		c.SetGains(dbs)
 	}*/
 
-	dbs.SetReceiverGainsMMSE()
+	//dbs.SetReceiverGainsMMSE()
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
@@ -480,11 +480,10 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 		for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 			c := e.Value.(*Connection)
 			if c.E.ARB[rb] {
-				ConnecList[Nc] = c
+				ConnecList[Nm] = c
 				Nc+= c.E.NAt
 				Nm++
 			}
-
 		}
 
 		//out of reach mobiles interferer included in sigma noise
@@ -509,11 +508,12 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 				NAt:=ConnecList[m].E.NAt				
 				for nat := 0; nat < NAt; nat++ {	
 					//copies col from HHRB to H
-					 ConnecList[m].HRB.BufferCol(rb*NAt+nat, H.GetRow(row))
+					ConnecList[m].HRB.BufferCol(rb*NAt+nat, H.GetRow(row))
 					row++
 				}
 			}
 
+		
 			//add vectors of interferers
 			nc := Nc
 		
@@ -544,6 +544,9 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 					}
 			}
 
+	//fmt.Println(H)
+
+
 		//	Sigma2+=farInt
 		//Sigma2=farInt	+WNoise	
 		//	fmt.Println(farInt)
@@ -563,15 +566,15 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 				row:=0
 				for m := 0; m < Nm ; m++ {
 					for nat:=0;nat<ConnecList[m].E.NAt; nat++{
-						P:=0.0
-						for _,v:=range Wrows[m]{
+						/*P:=0.0
+						for _,v:=range Wrows[row]{
 							P+=compMatrix.Mag(v)
 						}
 						P=math.Sqrt(P)
-						for na,v:=range Wrows[m]{
-							Wrows[m][na]= v/complex(P,0)
+						for na,v:=range Wrows[row]{
+							Wrows[row][na]= v/complex(P,0)
 						}
-
+*/
 
 						ConnecList[m].SetGains(dbs, Wrows[row], rb,nat)
 						row++
