@@ -185,6 +185,14 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 	//Channel gains computation including power path loss and FF 
 
 	PrEst := complex( math.Sqrt(dbs.pr[co.E.Id]),0) //total power for SINR on unsued RB, to be divided by numARB in scheduler for metric estimation
+	Pc:=0.0 //powercont
+	numARB:=0.0
+	for rb,use:=range co.E.ARB{
+		if use{ Pc+=co.E.Power[rb]; numARB++}
+	}
+	Pc/=float64(numARB)
+	PrEst*=complex(Pc,0) // to account for current power control TODO rethink about how to handle that
+
 	Pt := complex(1/math.Sqrt(float64(NAt)),0) // normalizing power for transmit power
 
 	for rb := 0; rb < NCh; rb++ {
@@ -341,8 +349,12 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 
 	co.WhRB.SumRowMag(co.NoisePower);
 
+//	fmt.Println(co.NoisePower)
+//	fmt.Println(co.InterferersResidual)
 	for nat, Pr :=  range co.MultiPathMAgain {
-		co.SNRrb[nat] = Pr / (co.InterferencePowerExtra[nat]+ co.InterferencePowerIntra[nat] + co.InterferersResidual[nat] + WNoise*co.NoisePower[nat])
+		co.SNRrb[nat] = Pr / (co.InterferencePowerExtra[nat]+ co.InterferencePowerIntra[nat] +  
+					 co.InterferersResidual[nat] +
+						 WNoise*co.NoisePower[nat])
 	}
 
 	for rb, use := range co.E.ARB{
