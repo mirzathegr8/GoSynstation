@@ -2,7 +2,7 @@ package synstation
 
 import "math"
 
-const Field = 4000 //length in meters
+const Field = 1500 //length in meters
 
 const Duration =500// in iterations 
 
@@ -194,7 +194,7 @@ const ICIMdistRatio=0.3
 
 //var ICIMfunc=ICIMSplitEdgeCenter2
 var ICIMfunc=ICIMNone
-var PowerAllocation =  optimizePowerAllocationAgent // optimizePowerAllocationAgentRB//  optimizePowerAllocationAgent // optimizePowerNone // 
+var PowerAllocation = optimizePowerNone// optimizePowerAllocationAgent // optimizePowerAllocationAgentRB//  optimizePowerAllocationAgent // optimizePowerNone // 
 const PowerAgentFact = 0.8//0.8//0.2 
 const PowerAgentAlpha = 1 //0.8//0.2 
 
