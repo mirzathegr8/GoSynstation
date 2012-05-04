@@ -415,7 +415,6 @@ func (A *DenseMatrix) BlockTimes(B, C *DenseMatrix, NB int) (err error) {
 		return
 	}
 
-
 		NA:=A.cols
 		NAt:=A.rows/NB
 
@@ -464,7 +463,7 @@ func (Mat *DenseMatrix) SumRowMag(sum []float64) {
 	for i := 0; i<Mat.rows;i++ {
 		sum[i]=0.0
 		for _,v:= range Mat.elements[i*Mat.step : i*Mat.step + Mat.cols]{
-			sum[i]=Mag(v)
+			sum[i]+=Mag(v)
 		}
 	}
 
@@ -476,10 +475,11 @@ func (Mat *DenseMatrix) SumRowMag(sum []float64) {
 //  A=[Ab1 ; Ab2] B=[Bb1, Bb2] ; C= []Ab1*Bb1, Ab2*Bb2]
 func (A *DenseMatrix) BlockTimesSumMag(B *DenseMatrix, sliceR []float64, NB int) (err error) {
 
-	/*if C.rows != A.rows/NB || C.cols != B.cols || A.cols != B.rows {
+	if  A.cols != B.rows {
 		err = ErrorDimensionMismatch
 		return
-	}*/
+	}
+
 	NAt2:=B.cols/NB
 	
 	NAr:= A.cols
