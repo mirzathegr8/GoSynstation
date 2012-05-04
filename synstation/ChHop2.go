@@ -19,7 +19,7 @@ func init() {
 type ChHopping2 struct {
 	MobileList   []*Connection
 	MobileListRX []*Connection
-	SNR          [NCh]float64
+	SNR          [NCh*NAtMAX]float64
 }
 
 func initChHopping2() Scheduler {
@@ -183,8 +183,10 @@ func EvalRatio(E *Emitter) float64 {
 	nrb := 0
 	for rb, use := range E.ARB {
 		if use {
-			ratio += E.SNRrb[rb]
-			nrb++
+			for nat:=0;nat<E.NAt;nat++{
+				ratio += E.SNRrb[rb*E.NAt+nat]
+				nrb++
+			}
 		}
 	}
 	ratio /= float64(nrb)
@@ -196,7 +198,7 @@ func EvalRatio(E *Emitter) float64 {
 	return ratio
 }
 
-func FindFreeChan(dbs *DBS, E *Emitter, ratio float64, SNRs *[NCh]float64) (nch int) {
+func FindFreeChan(dbs *DBS, E *Emitter, ratio float64, SNRs *[NCh*NAtMAX]float64) (nch int) {
 
 	copy(SNRs[:], E.SNRrb[:])
 
@@ -206,10 +208,10 @@ func FindFreeChan(dbs *DBS, E *Emitter, ratio float64, SNRs *[NCh]float64) (nch 
 		rb := j // dbs.RndCh[j]
 		if !dbs.IsInFuturUse(rb) {
 			snr := 0.0
-			for l := 0; l < subsetSize; l++ {
-				snr += SNRs[rb+l]
+			for l := 0; l < subsetSize*E.NAt; l++ {
+				snr += SNRs[rb*E.NAt+l]
 			}
-			snr /= float64(subsetSize * subsetSize) //we divide by subsetsize for mean and again because emitter power is split accross these RBs
+			snr /= float64(subsetSize * subsetSize*E.NAt) //we divide by subsetsize for mean and again because emitter power is split accross these RBs
 			if snr > ratio {
 				ratio = snr
 				nch = rb
