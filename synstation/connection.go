@@ -14,11 +14,12 @@ var num_con int
 
 func GetDiversity() int { a := num_con; num_con = 0; return a }
 
-const NP = 3  // numbers of simulated paths
+const NP = 5  // numbers of simulated paths
 const NA = 8 //numbers of antennas at receiver
 const NAtMAX = 2 
 
-var PathGain = [5]float64{1, .5, 0.25, 0.05, 0.01} //0.5, 0.125} // relative powers of each path
+//var PathGain = [5]float64{1, .5, 0.25, 0.05, 0.01} //0.5, 0.125} // relative powers of each path
+var PathGain = [5]float64{1, 1, 1, 1, 1} //0.5, 0.125} // relative powers of each path
 
 
 func init() {
@@ -77,7 +78,9 @@ type Connection struct {
 	HRB *DenseMatrix 
 
 	WhHRB *DenseMatrix
-	CorrI *DenseMatrix
+//	CorrI *DenseMatrix
+
+	HhH *DenseMatrix
 
 	pathAoA   [NP]float64
 	pathAoD   [NP]float64
@@ -156,6 +159,8 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 	}
 
 	//signals phase at each antenna (for each path)
+
+	if Tti%5 ==0 {
 	for np := 0; np < NP; np++ {
 		cosAoA_2 := math.Cos(co.pathAoA[np]) / 2.0
 		sin, cos := math.Sincos(cosAoA_2)
@@ -172,7 +177,7 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 		cosAoA_2 := math.Cos(co.pathAoD[np]) / 2.0
 		sin, cos := math.Sincos(cosAoA_2)
 		phase := complex(cos, sin)
-		Val := complex(co.pathGains[np],0)
+		Val := complex(1,0)
 		co.sRt.Set(np,0, Val )
 		for na := 1; na < co.E.NAt; na++ {
 			Val = Val*phase
@@ -180,7 +185,7 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 		}
 	}
 
-
+	}
 
 	//Channel gains computation including power path loss and FF 
 
@@ -194,6 +199,8 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 	PrEst*=complex(Pc,0) // to account for current power control TODO rethink about how to handle that
 
 	Pt := complex(1/math.Sqrt(float64(NAt)),0) // normalizing power for transmit power
+
+	//fmt.Println(co.sRt)
 
 	for rb := 0; rb < NCh; rb++ {
 		var power [NP]complex128
@@ -352,9 +359,11 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 //	fmt.Println(co.NoisePower)
 //	fmt.Println(co.InterferersResidual)
 	for nat, Pr :=  range co.MultiPathMAgain {
-		co.SNRrb[nat] = Pr / (co.InterferencePowerExtra[nat]+ co.InterferencePowerIntra[nat] +  
-					 co.InterferersResidual[nat] +
-						 WNoise*co.NoisePower[nat])
+		co.SNRrb[nat] = Pr / (
+co.InterferencePowerExtra[nat]+ 
+co.InterferencePowerIntra[nat] +  
+//co.InterferersResidual[nat] + 
+WNoise*co.NoisePower[nat])
 	}
 
 	for rb, use := range co.E.ARB{
@@ -470,7 +479,7 @@ func (co *Connection) InitConnection(E *Emitter, v float64, dbs *DBS) {
 	co.WhRB = Zeros(NAt*NCh,NAr)
 
 	co.WhHRB = Zeros(NAt*NCh,NAt)
-	co.CorrI = Zeros(NAt*NCh,NAt)
+	//co.CorrI = Zeros(NAt*NCh,NAt)
 
 	for np:=0;np<NP;np++{
 		co.pathAoD[np]=co.Rgen.Float64()*PI2
@@ -487,6 +496,35 @@ func (co *Connection) InitConnection(E *Emitter, v float64, dbs *DBS) {
 	co.SNRrb = make([]float64, NAt*NCh)
 
 	co.NoisePower = make([]float64, NAt*NCh)
+
+
+	//init sRt sRr in case they are not updated immediately
+
+		//signals phase at each antenna (for each path)
+	for np := 0; np < NP; np++ {
+		cosAoA_2 := math.Cos(co.pathAoA[np]) / 2.0
+		sin, cos := math.Sincos(cosAoA_2)
+		phase := complex(cos, sin)
+		Val := complex(1,0)
+		co.sRr.Set(0,np, Val )
+		for na := 1; na < dbs.NAr; na++ {
+			Val = Val*phase
+			 co.sRr.Set(na,np,Val) 
+		}
+	}
+
+	for np := 0; np < NP; np++ {
+		cosAoA_2 := math.Cos(co.pathAoD[np]) / 2.0
+		sin, cos := math.Sincos(cosAoA_2)
+		phase := complex(cos, sin)
+		Val := complex(1,0)
+		co.sRt.Set(np,0, Val )
+		for na := 1; na < co.E.NAt; na++ {
+			Val = Val*phase
+			 co.sRt.Set(np,na,Val) 
+		}
+	}
+
 
 }
 
