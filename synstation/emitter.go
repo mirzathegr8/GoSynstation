@@ -89,7 +89,7 @@ func (e *Emitter) Init(){
 	B := Cheby(10, e.DopplerF)
 	e.DoppFilter = MultFilter(A, B)
 
-	e.NAt=1 //default
+	e.NAt=2 //default
 
 	
 	e.SNRrb = make([]float64,NCh*e.NAt)

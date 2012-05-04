@@ -1,12 +1,12 @@
 package synstation
 const BERThres= 0.15
 const SNRThresConnec= 00
-var initScheduler= initChHopping2//  initARBSchedulerSDMA //initARBScheduler5 // initChHopping2  // initARBScheduler4 // initARBScheduler1//
+var initScheduler= initChHopping2  // initARBSchedulerSDMA //initARBScheduler5 // initChHopping2  // initARBScheduler4 // initARBScheduler1//
 //var estimateFactor=estimateFactor0
 const conservationFactor=1
-const DiversityType=SELECTION
+const DiversityType=MRC
 //const BeamAngle=  1.4345//  1.1345//
-const mDf=1
+const mDf=4
 const NetLayout=  HONEYCOMB 
 const subsetSize= 5
 
