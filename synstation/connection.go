@@ -14,13 +14,14 @@ var num_con int
 
 func GetDiversity() int { a := num_con; num_con = 0; return a }
 
-const NP = 5  // numbers of simulated paths
+const NP = 3  // numbers of simulated paths
 const NA = 8 //numbers of antennas at receiver
 const NAtMAX = 2 
 
 //var PathGain = [5]float64{1, .5, 0.25, 0.05, 0.01} //0.5, 0.125} // relative powers of each path
 var PathGain = [5]float64{1, 1, 1, 1, 1} //0.5, 0.125} // relative powers of each path
 
+const NPdiv= NP*NA
 
 func init() {
 
@@ -50,10 +51,10 @@ type Connection struct {
 	//Variables for generating fast fading
 	filterF *Filter //Coherence Frequency filter	
 	Rgen *rand.Rand
-	initz [NP][NCh]complex128 //generation of random number per RB	
+	initz [NPdiv][NCh]complex128 //generation of random number per RB	
 	//filterAr FilterBank   //filter ban to use for channel gain FF generator
-	filterAr [NP][NCh]*Filter    //filter ban to use for channel gain FF generator
-	ff_R     [NP][NCh]complex128 // stores channel gain and phase for every RB every path
+	filterAr [NPdiv][NCh]*Filter    //filter ban to use for channel gain FF generator
+	ff_R     [NPdiv][NCh]complex128 // stores channel gain and phase for every RB every path
 
 	//Variables for storing received powers 
 	MultiPathMAgain   []float64 		// NAt*NCh vector length
@@ -128,7 +129,7 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 
 
 	// Generate Fading values for all RBs and paths
-	for np := 0; np < NP; np++ {
+	for np := 0; np < NPdiv; np++ {
 		//first decorelate freq filter
 		for i := 0; i < 50*corrF; i++ {
 			co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))
@@ -139,7 +140,7 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 		}
 		// output values for each path on each rb, multiplied by gain
 		for rb := range co.initz[np] {
-			co.initz[np][rb] = co.filterAr[np][rb].nextValue(co.initz[np][rb])  * complex(co.pathGains[np],0)
+			co.initz[np][rb] = co.filterAr[np][rb].nextValue(co.initz[np][rb]) 
 		}
 	}
 
@@ -151,7 +152,7 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 		co.ff_R[0][rb] = (co.initz[0][rb] + complex(K, 0)) / complex(NormFac, 0) //(real(a * cmath.Conj(a))) / (2 + K*K)
 	}
 
-	for np := 1; np < NP; np++ {
+	for np := 1; np < NPdiv; np++ {
 		for rb := range co.ff_R[np] {
 			co.ff_R[np][rb] = co.initz[np][rb] / complex(1.4142, 0)
 
@@ -177,7 +178,7 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 		cosAoA_2 := math.Cos(co.pathAoD[np]) / 2.0
 		sin, cos := math.Sincos(cosAoA_2)
 		phase := complex(cos, sin)
-		Val := complex(1,0)
+		Val := complex(co.pathGains[np],0)
 		co.sRt.Set(np,0, Val )
 		for na := 1; na < co.E.NAt; na++ {
 			Val = Val*phase
@@ -212,7 +213,7 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 		}
 		
 		for np:=range power{
-			power[np]=p*co.ff_R[np][rb]*Pt //we do this multiplication so not to repeat it...
+			power[np]=p*Pt //we do this multiplication so not to repeat it...
 		}
 		
 		
@@ -220,7 +221,7 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 			for nat := 0; nat < NAt; nat++ {
 				var Val complex128
 				for np := 0; np < NP; np++ {			
-					Val += co.sRr.Get(nar,np)*power[np]*co.sRt.Get(np,nat)	
+					Val += co.sRr.Get(nar,np)*co.ff_R[np+nar*NP][rb]*power[np]*co.sRt.Get(np,nat)	
 				}
 				co.HRB.Set(nar, nat+ NAt*rb, Val )
 			}
@@ -430,7 +431,7 @@ func (co *Connection) InitConnection(E *Emitter, v float64, dbs *DBS) {
 
 	co.filterF = CoherenceFilter.CopyNew()
 
-	for np := 0; np < NP; np++ {
+	for np := 0; np < NPdiv; np++ {
 		for i := 0; i < NCh; i++ {
 			co.filterAr[np][i] = C.CopyNew()
 		}
@@ -530,7 +531,7 @@ func (co *Connection) InitConnection(E *Emitter, v float64, dbs *DBS) {
 
 func (co *Connection) clear() {
 	// free some memory . perhaps need to rethink this and have a filterbank
-	for np := 0; np < NP; np++ {
+	for np := 0; np < NPdiv; np++ {
 		for rb := range co.filterAr {
 			co.filterAr[np][rb] = nil
 		}
