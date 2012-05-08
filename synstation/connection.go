@@ -16,7 +16,7 @@ func GetDiversity() int { a := num_con; num_con = 0; return a }
 
 const NP = 3  // numbers of simulated paths
 const NA = 8 //numbers of antennas at receiver
-const NAtMAX = 2 
+
 
 //var PathGain = [5]float64{1, .5, 0.25, 0.05, 0.01} //0.5, 0.125} // relative powers of each path
 var PathGain = [5]float64{1, 1, 1, 1, 1} //0.5, 0.125} // relative powers of each path
@@ -64,6 +64,7 @@ type Connection struct {
 	
 	InterferersResidual []float64 //residual interference ifusing the channel
 
+	InstEqSNR float64
 
 	SNRrb []float64 //stores SNR per RB per NAt
 
@@ -190,39 +191,36 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 
 	//Channel gains computation including power path loss and FF 
 
-	PrEst := complex( math.Sqrt(dbs.pr[co.E.Id]),0) //total power for SINR on unsued RB, to be divided by numARB in scheduler for metric estimation
+	PrEst :=  math.Sqrt(dbs.pr[co.E.Id]) //total power for SINR on unsued RB, to be divided by numARB in scheduler for metric estimation
 	Pc:=0.0 //powercont
 	numARB:=0.0
 	for rb,use:=range co.E.ARB{
 		if use{ Pc+=co.E.Power[rb]; numARB++}
 	}
 	Pc/=float64(numARB)
-	PrEst*=complex(Pc,0) // to account for current power control TODO rethink about how to handle that
+	PrEst*=Pc // to account for current power control TODO rethink about how to handle that
 
-	Pt := complex(1/math.Sqrt(float64(NAt)),0) // normalizing power for transmit power
+//	Pt := complex(1/math.Sqrt(float64(NAt)),0) // normalizing power for transmit power
 
 	//fmt.Println(co.sRt)
 
 	for rb := 0; rb < NCh; rb++ {
-		var power [NP]complex128
-		var p complex128		
+		
+		var p float64		
 		if co.E.ARB[rb] {
-			p=complex(math.Sqrt(dbs.Channels[rb].pr[co.E.Id]),0) //emitted power on rb + shadowing + path loss
+			p=math.Sqrt(dbs.Channels[rb].pr[co.E.Id]) //emitted power on rb + shadowing + path loss
 		}else{
 			p=PrEst
 		}
 		
-		for np:=range power{
-			power[np]=p*Pt //we do this multiplication so not to repeat it...
-		}
-		
-		
 		for nar:= 0 ; nar< NAr; nar++{
 			for nat := 0; nat < NAt; nat++ {
+				
 				var Val complex128
 				for np := 0; np < NP; np++ {			
-					Val += co.sRr.Get(nar,np)*co.ff_R[np+nar*NP][rb]*power[np]*co.sRt.Get(np,nat)	
+					Val += co.sRr.Get(nar,np)*co.ff_R[np+nar*NP][rb]*co.sRt.Get(np,nat)	
 				}
+				Val*=complex(p*co.E.PowerNt[nat],0)
 				co.HRB.Set(nar, nat+ NAt*rb, Val )
 			}
 		}
@@ -367,16 +365,25 @@ co.InterferencePowerIntra[nat] +
 WNoise*co.NoisePower[nat])
 	}
 
+	var nrbnt int
+
 	for rb, use := range co.E.ARB{
 
 		if use {
 			for nat:=rb*NAt; nat<(rb+1)*NAt;nat++{
+				if co.SNRrb[nat]>0.001 {
+
 				BER:= L1 * math.Exp(- co.SNRrb[nat] /2/L2) / 2.0
 				co.meanPr.Add(co.MultiPathMAgain[nat])
 				co.meanSNR.Add(co.SNRrb[nat])
 				co.meanBER.Add(BER)
+
+				co.InstEqSNR += co.SNRrb[nat]
+				nrbnt++
+				touch = true
+				}
 			}
-			touch = true
+
 		} else {
 			for nat:=rb*NAt; nat<(rb+1)*NAt;nat++{
 				co.SNRrb[nat] *= conservationFactor
@@ -389,8 +396,11 @@ WNoise*co.NoisePower[nat])
 		co.meanPr.Add(0)
 		co.meanSNR.Add(0)
 		co.meanBER.Add(1)
+	}else{
+		co.InstEqSNR/=float64(nrbnt)
 	}
 
+	
 
 	co.Status = 1 //let mobile set master state		
 	co.E.AddConnection(co, dbs)
