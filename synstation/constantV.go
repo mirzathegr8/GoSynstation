@@ -8,7 +8,7 @@ const DiversityType=MRC
 //const BeamAngle=  1.4345//  1.1345//
 const mDf=4
 const NetLayout=  HONEYCOMB 
-const subsetSize= 5
+const subsetSize= 7
 
 // The enodebclock, that sets the interval before reactivation
 const EnodeBClock = 1
@@ -30,5 +30,5 @@ const EnodeBClock = 1
 // number of signal id saved in the list of the ChanReceiver
 const SizeES = 5
 
-const NArMax =5
-const NAtMax =5
+const NArMax =8
+const NAtMAX = 2 
