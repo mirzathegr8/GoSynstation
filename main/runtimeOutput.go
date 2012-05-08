@@ -8,6 +8,8 @@ func init() {
 
 	// initialize var
 	outChannel = make(chan outputData, 8000)
+	//Create a channel of type outputData (a structure defined just bellow) with buffer length 8000.
+
 }
 
 type outputData struct {

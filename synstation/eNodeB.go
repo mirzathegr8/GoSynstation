@@ -25,8 +25,8 @@ func GetHopCount() int    { a := Hopcount; Hopcount = 0; return a }
 // it also is an agent and has a clock and internal random number generator
 // RndCh stores channels sequence used when parsing channels for allocation
 type DBS struct {
-	PhysReceiverBase
-	Connec *list.List
+	PhysReceiverBase // PhysReceiverBase is a structure defined in physReceiverBase.go file. This structure stores different parameters related to the physical channel, i.e., k rice factor, shadowing, received power, AoA, etc.
+	Connec *list.List  // Connec object is a link list that keeps pointers to connected mobiles however it stores pointer to the Connection objects which themselves point to the connected mobiles. It does not points directly to the mobile.
 	Clock  int
 
 	RndCh []int
@@ -53,8 +53,8 @@ func (dbs *DBS) Init(i int) {
 	dbs.Id = i
 	dbs.NMaxConnec = NConnec
 
-	for i := 0; i < NConnec; i++ {
-		dbs.ConnectionBank.PushBack(NewConnection(dbs))
+	for i := 0; i < NConnec; i++ {//NConnec: Number of connections per DBS = 40 defined in constant.go file.
+		dbs.ConnectionBank.PushBack(NewConnection(dbs)) /* NewConnection() is a function defined in connection.go file. The return type of NewConnection() is pointer to the Connection structure (Connection structure is also defined in connection.go file). PushBack is a method from the list pakage which inserts the return type of NewConnection() (which is the pointer to the Connection structure) at the back of the list. Thus, this for loop create a link list of 40 elements and each element is a structure of type Connection. */ 
 	}
 
 	dbs.Connec = list.New()

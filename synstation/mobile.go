@@ -6,7 +6,7 @@ import "math"
 //  a mobile is an emitter with mobility : speed data, 
 // it also is an agent and has an internal clock
 type Mob struct {
-	Emitter
+	Emitter //Emitter is a structure defined in emitter.go file.
 	//R    PhysReceiver
 	Rgen  *rand.Rand
 	clock int

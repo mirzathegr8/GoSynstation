@@ -17,7 +17,7 @@ type PhysReceiverBase struct {
 	//no powerlevel nor fast fading (dependant on RB) 
 	AoA [M]float64
 
-	RBsReceiver
+	RBsReceiver /* RBsReceiver is a structure defined in ChanReceiver.go file. 
 
 	NAr int
 	SqrtNAr float64
