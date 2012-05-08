@@ -18,7 +18,7 @@ func GetHopCount() int    { a := Hopcount; Hopcount = 0; return a }
 type DBS struct {
 	PhysReceiverBase // PhysReceiverBase is a structure defined in physReceiverBase.go file. This structure stores different parameters related to the physical channel, i.e., k rice factor, shadowing, received power, AoA, etc.
 	
-	Connec *list.List  // Connec is the pointer to the linked-list. list.List is defined in pakage container/list. It keeps the record of connected mobile (i guess).
+	Connec *list.List  // Connec object is a link list that keeps pointers to connected mobiles however it stores pointer to the Connection objects which themselves point to the connected mobiles. It does not points directly to the mobile.
 
 	Clock  int	
 

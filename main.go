@@ -3,7 +3,7 @@ package main
 import  "runtime/pprof"
 
 import "fmt"
-import s "synstation" // synstation is a package defined in synstation.go file.
+import s "synstation" // synstation is a package defined by multiple files in the sub-directory synstation.
 import "runtime"
 //import "draw"
 import "os"
@@ -15,7 +15,7 @@ import "log"
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 //var mpf = flag.String("mpf", "main.mpf", "write memory profile to file") 
 
-var outD outputData  // one to print. outputData is a structure defined in runtimeOutput.go file. As the name suggests, it defines the number of useful output data like BER, no. of connections, no. of lost connection etc.
+var outD outputData  // outD is a variable of type outputData. outputData is a structure defined in runtimeOutput.go file. This structure defines the number of useful output data like BER, no. of connections, no. of lost connection etc.
 var outDs outputData // one to sum and take mean over simulation
 
 func main() {
@@ -44,7 +44,7 @@ func main() {
 
 	s.Init()
 
-/* Init() function is in init.go file (be careful with the capital "I" in Init() function, it is different from init() function). It initialize different parameters. s is of type package synstation. Package synstation is defined in synstation.go file. */
+/* Init() function is in init.go file (be careful with the capital "I" in Init() function, it is different from init() function). It initialize different parameters. s is package synstation. Package synstation is defined by multiple files in sub-directory synstation. */
 
  
 
@@ -157,8 +157,8 @@ func main() {
 }
 
 func readDataAndPrintToStd(save bool) {
-
-	outD.listened, outD.connected, outD.BER1, outD.BER2, outD.BER3 = 0, 0, 0, 0, 0
+	
+	outD.listened, outD.connected, outD.BER1, outD.BER2, outD.BER3 = 0, 0, 0, 0, 0 // outD is a variable of type outputData. outputData is a structure defined in runtimeOutput.go file. This structure defines the number of useful output data like BER, no. of connections, no. of lost connection etc.
 
 	n := 0
 	for v := range s.SyncChannel {
