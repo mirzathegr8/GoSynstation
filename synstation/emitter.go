@@ -23,6 +23,8 @@ type EmitterS struct {
 	PrMaster   float64
 	InstMaxBER float64
 
+	InstEqSNR float64
+
 	Outage int
 
 	ARB   [NCh]bool //allocated RB
@@ -41,7 +43,8 @@ type EmitterS struct {
 type Emitter struct {
 	EmitterS
 
-
+	PowerNt [NAtMAX]float64
+	
 	SNRrb []float64
 	MasterMultiPath []float64
 
@@ -53,6 +56,7 @@ type Emitter struct {
 	SInstMaxBER float64
 	SMinDist    float64
 	SSNRb       float64
+	SInstEqSNR  float64
 
 	SBERrb []float64
 	SSNRrb []float64
@@ -89,7 +93,7 @@ func (e *Emitter) Init(){
 	B := Cheby(10, e.DopplerF)
 	e.DoppFilter = MultFilter(A, B)
 
-	e.NAt=2 //default
+	e.NAt=NAtMAX //default
 
 	
 	e.SNRrb = make([]float64,NCh*e.NAt)
@@ -199,6 +203,8 @@ func (e *Emitter) AddConnection(c *Connection, dbs *DBS) {
 
 	}
 
+	e.SInstEqSNR += c.InstEqSNR
+
 	// for maximal RC
 	if DiversityType == MRC {
 		for nat, snr  := range c.SNRrb {
@@ -209,6 +215,7 @@ func (e *Emitter) AddConnection(c *Connection, dbs *DBS) {
 			}
 		}
 	}
+
 
 }
 
@@ -256,7 +263,7 @@ func (e *Emitter) FetchData() {
 
 	e.TransferRate = 0
 	e.InstSNR = 0
-
+	e.InstEqSNR,e.SInstEqSNR=e.SInstEqSNR/float64(e.Diversity),0
 	e.Outage++
 
 	syncval = 1
@@ -362,6 +369,16 @@ func (e *Emitter) FetchData() {
 	}
 
 	e.meanTR.Add(e.TransferRate)
+
+	if e.InstEqSNR<200 {
+		e.PowerNt[0]=1
+		e.PowerNt[1]=0
+	}else{
+		e.PowerNt[0]=math.Sqrt(.5)
+		e.PowerNt[1]=math.Sqrt(.5)
+
+	}
+
 
 	SyncChannel <- syncval
 
