@@ -475,10 +475,10 @@ func (Mat *DenseMatrix) SumRowMag(sum []float64) {
 //  A=[Ab1 ; Ab2] B=[Bb1, Bb2] ; C= []Ab1*Bb1, Ab2*Bb2]
 func (A *DenseMatrix) BlockTimesSumMag(B *DenseMatrix, sliceR []float64, NB int) (err error) {
 
-	if  A.cols != B.rows {
+	/*if  A.cols != B.rows {
 		err = ErrorDimensionMismatch
 		return
-	}
+	}*/
 
 	NAt2:=B.cols/NB
 	
