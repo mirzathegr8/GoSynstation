@@ -189,7 +189,7 @@ func (d *ARBSchedulerMUMIMO) Schedule(dbs *DBS, Rgen *rand.Rand) {
  */
 func (d *ARBSchedulerMUMIMO)  MetricMUMIMO(AL  *[mDf][NCh*NAtMAX]int) (metric float64) {
 
-	var SNRres [NConnec][NCh]float64
+	//var SNRres [NConnec][NCh]float64
 	var NumARB [NConnec]int
 	var metricM [NConnec]float64
 	//var Corr [NCh][NConnec][NConnec]float64
@@ -207,36 +207,50 @@ func (d *ARBSchedulerMUMIMO)  MetricMUMIMO(AL  *[mDf][NCh*NAtMAX]int) (metric fl
 	for rb:=0;rb<NCh;rb++{
 	for i:=0;i<mDf;i++{
 
-		Cid:=AL[i][rb]
+		Cid:=AL[i][rb] //ID of the considered UE for this allocation
 		if Cid>= 0{
 		Mconn:=d.MasterConnec[Cid]
-		Int := Mconn.InterferencePowerExtra[rb] + WNoise
+		NAt := Mconn.E.NAt
+
+		//var Int [NAtMAX]float64
+
+		for nat:=0;nat<NAt;nat++{
+
+		RBsubChan:=rb*NAt+nat
+
+		Int:= Mconn.InterferencePowerExtra[RBsubChan] + Mconn.NoisePower[RBsubChan]
 		//Int += d.MasterConnec[Cid].InterferencePowerIntra[rb] //no need to add intra interference, will be added afterwords
 		for j:=0;j<mDf;j++{
 			if i!=j{
 				Iid:=AL[j][rb]
 				if Iid>=0{
-					Int += Mconn.InterferersP[d.MasterConnecId[Iid]][rb] / float64(NumARB[Iid])
+					Int += Mconn.InterferersP[d.MasterConnecId[Iid]][RBsubChan] / 
+							float64(NumARB[Iid])
 				}
 			}
 		}
+		Int+= Mconn.InterferersResidual[RBsubChan]/float64(NumARB[Cid])
 
-		Power :=  Mconn.InterferersP[d.MasterConnecId[Cid]][rb] / float64(NumARB[Cid])
+		
+		Power :=  Mconn.InterferersP[d.MasterConnecId[Cid]][RBsubChan] / float64(NumARB[Cid])
 
-		SNRres[Cid][rb]= Power/Int
+		//SNRres[Cid][rb]= +Power/Int
+		metricM[Cid]+= 	EffectiveBW * math.Log2(1+Power/Int)
+		}
+		//SNRres[Cid][rb]/= float64(NAt)
 		}
 	}
 	}
 	
 
 	// eval capacity per mobiles
-	for m, ALsub := range AL {
+	/*for m, ALsub := range AL {
 		for rb, v := range ALsub {
 			if v > -1 {
 				metricM[v] += EffectiveBW * math.Log2(1+SNRres[m][rb])
 			}
 		}
-	}
+	}*/
 
 	mean_mm := 0.0
 	for v, C := range d.MasterConnec[0:d.Nmaster] {
