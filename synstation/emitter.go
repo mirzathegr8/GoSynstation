@@ -94,7 +94,7 @@ func (e *Emitter) Init(){
 	e.DoppFilter = MultFilter(A, B)
 
 	e.NAt=NAtMAX //default
-
+	e.PowerNt[0]=1
 	
 	e.SNRrb = make([]float64,NCh*e.NAt)
 	e.MasterMultiPath = make([]float64,NCh*e.NAt)
@@ -370,14 +370,15 @@ func (e *Emitter) FetchData() {
 
 	e.meanTR.Add(e.TransferRate)
 
-	if e.InstEqSNR<200 {
+	if e.NAt>1{
+	if e.InstEqSNR<5 {
 		e.PowerNt[0]=1
 		e.PowerNt[1]=0
 	}else{
 		e.PowerNt[0]=math.Sqrt(.5)
 		e.PowerNt[1]=math.Sqrt(.5)
 
-	}
+	}}
 
 
 	SyncChannel <- syncval
