@@ -5,7 +5,7 @@ import "geom"
 import rand "math/rand"
 import . "compMatrix"
 
-//import "math/cmplx"
+import "math/cmplx"
 //import "fmt"
 
 // TODO what difference for SNR estimates on used/unsued rbs. should be equal for gensearch
@@ -14,7 +14,7 @@ var num_con int
 
 func GetDiversity() int { a := num_con; num_con = 0; return a }
 
-const NP = 3  // numbers of simulated paths
+const NP = 2  // numbers of simulated paths
 const NA = 8 //numbers of antennas at receiver
 
 
@@ -228,7 +228,7 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 
 	
 	//SetGains for all rb including unsuded ones
-	AoA := dbs.AoA[co.E.Id]
+/*	AoA := dbs.AoA[co.E.Id]
 
 	cosAoA_2 := math.Cos(AoA) / 2
 	sin, cos := math.Sincos(cosAoA_2)
@@ -246,6 +246,13 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 	for nat:=0 ;nat<NAt*NCh;nat++{
 		co.WhRB.FillRow(nat,defaultGain[0:NAr])		
 	}
+*/
+
+	for nat:=0 ;nat<NAt*NCh;nat++{
+	for nar:=0 ;nar<NAr;nar++{ 
+		co.WhRB.Set(nat,nar,cmplx.Conj(co.HRB.Get(nar,nat)))		
+	}}
+
 
 }
 

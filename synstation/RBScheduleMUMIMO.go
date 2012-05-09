@@ -33,12 +33,12 @@ type ARBSchedulerMUMIMO struct {
 	PopulAr      [popsize]MUMIMO_alloc
 	poolAr       [popsize * (10 + 1)]MUMIMO_alloc
 	subGroups    [mDf][NConnec]int
-	ALtmp        [mDf][NCh*NAtMAX]int
+	ALtmp        [mDf][NCh]int
 	metricpool   [popsize * 11]float64
 }
 
 type MUMIMO_alloc struct {
-	vect    [mDf][NCh*NAtMAX]int
+	vect    [mDf][NCh]int
 	subSize [mDf]int
 }
 
@@ -187,7 +187,7 @@ func (d *ARBSchedulerMUMIMO) Schedule(dbs *DBS, Rgen *rand.Rand) {
 *	
 *
  */
-func (d *ARBSchedulerMUMIMO)  MetricMUMIMO(AL  *[mDf][NCh*NAtMAX]int) (metric float64) {
+func (d *ARBSchedulerMUMIMO)  MetricMUMIMO(AL  *[mDf][NCh]int) (metric float64) {
 
 	//var SNRres [NConnec][NCh]float64
 	var NumARB [NConnec]int
@@ -279,7 +279,7 @@ func (d *ARBSchedulerMUMIMO)  MetricMUMIMO(AL  *[mDf][NCh*NAtMAX]int) (metric fl
 	return
 }
 
-func AllocateMUMIMO(ALv *[mDf][NCh*NAtMAX]int, MasterMobs []*Emitter) {
+func AllocateMUMIMO(ALv *[mDf][NCh]int, MasterMobs []*Emitter) {
 
 	for _, M := range MasterMobs {
 		M.ClearFuturARB()

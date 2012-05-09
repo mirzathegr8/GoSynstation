@@ -203,7 +203,9 @@ func (e *Emitter) AddConnection(c *Connection, dbs *DBS) {
 
 	}
 
-	e.SInstEqSNR += c.InstEqSNR
+	if e.SInstEqSNR<c.InstEqSNR {
+		e.SInstEqSNR = c.InstEqSNR
+	}
 
 	// for maximal RC
 	if DiversityType == MRC {
@@ -370,8 +372,10 @@ func (e *Emitter) FetchData() {
 
 	e.meanTR.Add(e.TransferRate)
 
+
 	if e.NAt>1{
-	if e.InstEqSNR<5 {
+	if e.InstEqSNR<80 {
+
 		e.PowerNt[0]=1
 		e.PowerNt[1]=0
 	}else{
