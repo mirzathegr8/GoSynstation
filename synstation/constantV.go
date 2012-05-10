@@ -30,5 +30,5 @@ const EnodeBClock = 3
 // number of signal id saved in the list of the ChanReceiver
 const SizeES = 5
 
-const NArMax =8
+const NArMAX =8
 const NAtMAX = 2

@@ -76,6 +76,8 @@ type Emitter struct {
 
 	DoppFilter *Filter
 	DopplerF float64
+
+	ConnectionBank list.List
 }
 
 
@@ -100,6 +102,13 @@ func (e *Emitter) Init(){
 	e.MasterMultiPath = make([]float64,NCh*e.NAt)
 	e.SBERrb = make([]float64,NCh*e.NAt)
 	e.SSNRrb = make([]float64,NCh*e.NAt)
+
+
+	for i := 0; i < MaxMacrodiv; i++ {
+		c :=NewConnection()
+		e.ConnectionBank.PushBack(c)
+		c.InitConnection(e)
+	}
 
 }
 
@@ -390,4 +399,12 @@ func (e *Emitter) FetchData() {
 
 	SyncChannel <- syncval
 
+}
+
+
+func (e *Emitter) MakeConnection(v float64, dbs *DBS)  *Connection{
+	c:= e.ConnectionBank.Back().Value.(*Connection)
+	e.ConnectionBank.Remove(e.ConnectionBank.Back())
+	c.Reset(v, dbs)
+	return c
 }

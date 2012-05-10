@@ -209,3 +209,4 @@ const (
 	NORMAL
 )
 
+const MaxMacrodiv = 4

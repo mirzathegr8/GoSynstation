@@ -31,7 +31,7 @@ type DBS struct {
 
 	RndCh []int
 
-	ConnectionBank list.List
+	//ConnectionBank list.List
 
 	Color int // This value is used to store some colorisation of the eNodeB, that is for example to use inside schedulers in honeycomb layout, where it will use a subset of RBs for ICIM
 
@@ -53,9 +53,9 @@ func (dbs *DBS) Init(i int) {
 	dbs.Id = i
 	dbs.NMaxConnec = NConnec
 
-	for i := 0; i < NConnec; i++ {
+	/*for i := 0; i < NConnec; i++ {
 		dbs.ConnectionBank.PushBack(NewConnection(dbs))
-	}
+	}*/
 
 	dbs.Connec = list.New()
 	dbs.PhysReceiverBase.Init()
@@ -103,8 +103,10 @@ func (dbs *DBS) FetchData() {
 
 func (dbs *DBS) disconnect(e *list.Element) {
 	dbs.Connec.Remove(e)
-	e.Value.(*Connection).clear()
-	dbs.ConnectionBank.PushBack(e.Value.(*Connection))
+	c := e.Value.(*Connection)
+	c.clear()
+	c.PushBack()
+	//.ConnectionBank.PushBack(e.Value.(*Connection))
 	sens_disconnect++
 }
 
@@ -138,15 +140,16 @@ func (dbs *DBS) IsInFuturUse(rb int) bool { //
 
 }
 
-func (dbs *DBS) connect(e *Emitter, m float64) {
+func (dbs *DBS) connect(e *Emitter, m float64) *Connection {
 	//Connection instance are now created once and reused for memory consumption purpose
 	// so the Garbage Collector needs not to lots of otherwise unessary work
-	Conn := dbs.ConnectionBank.Back().Value.(*Connection)
-	dbs.ConnectionBank.Remove(dbs.ConnectionBank.Back())
+	Conn := e.MakeConnection(m,dbs)
 	// these connection instance of course need to be initialized
-	Conn.InitConnection(e, m, dbs)
-	dbs.Connec.PushBack(Conn)
-	sens_connect++
+	if Conn!=nil{
+		dbs.Connec.PushBack(Conn)
+		sens_connect++
+	}
+	return Conn
 }
 
 func (dbs *DBS) IsConnected(tx *Emitter) bool {
@@ -304,8 +307,9 @@ func (dbs *DBS) connectionAgent() {
 					if !dbs.IsConnected(&Mobiles[Rc.Signal[i]].Emitter) {
 						//fmt.Println("is not connected")
 						if 10*math.Log10(Eval) > SNRThresConnec {
-							dbs.connect(&Mobiles[Rc.Signal[i]].Emitter, 0.5)
-							conn++
+							if dbs.connect(&Mobiles[Rc.Signal[i]].Emitter, 0.5)!=nil{
+								conn++
+							}
 							//fmt.Println("connected")
 
 							//return // we are done connecting
@@ -334,8 +338,9 @@ func (dbs *DBS) connectionAgent() {
 				}
 			}
 			if EmitterId >= 0 {
-				dbs.connect(&Mobiles[EmitterId].Emitter, 0.001)
-				conn++
+				if  dbs.connect(&Mobiles[EmitterId].Emitter, 0.001)!=nil{
+					conn++
+				} 
 			} else {
 				break
 			}
@@ -359,7 +364,8 @@ func (dbs *DBS) EvalSignalConnection(rb int) (EvalMax float64, EmitterId int) {
 	EmitterId = -1
 	for S := 0; S < SizeES; S++ {
 		if Rc.Signal[S] >= 0 {
-			if dbs.BelongsToNetwork(Rc.Signal[S]) && !dbs.IsConnected(&Mobiles[Rc.Signal[S]].Emitter) {
+			if dbs.BelongsToNetwork(Rc.Signal[S]) && !dbs.IsConnected(&Mobiles[Rc.Signal[S]].Emitter) &&
+					Mobiles[Rc.Signal[S]].Emitter.ConnectionBank.Len()>0	{
 
 				E := &Mobiles[Rc.Signal[S]].Emitter
 				BER := dbs.EvalSignalBER(E, rb)
