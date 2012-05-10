@@ -488,10 +488,9 @@ func (co *Connection) Reset(v float64, dbs *DBS){
 
 }
 
-func (co *Connection) InitConnection(E *Emitter) {
+func (co *Connection) InitConnection(E *Emitter, R *rand.Rand) {
 
 	co.E = E
-	
 
 	Speed := E.GetSpeed()
 	DopplerF := Speed * F / cel // 1000 samples per seconds speed already divided by 1000 for RB TTI
@@ -525,7 +524,7 @@ func (co *Connection) InitConnection(E *Emitter) {
 	co.WhHRB = Zeros(NAt*NCh,NAt)
 
 	for np:=0;np<NP;np++{
-		co.pathAoD[np]=co.Rgen.Float64()*PI2
+		co.pathAoD[np]=R.Float64()*PI2
 	}
 
 
@@ -551,10 +550,10 @@ func (co *Connection) InitConnection(E *Emitter) {
 		for l := 0; l < int(2.5/DopplerF); l++ {
 			// for speed optimization, decorelation samples or not used, it makes little difference 
 			for i := 0; i < 50; i++ {
-				co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))
+				co.filterF.nextValue(complex(R.NormFloat64(), R.NormFloat64()))
 			}
 			for i := 0; i < NCh; i++ {
-				co.filterAr[np][i].nextValue(co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())))
+				co.filterAr[np][i].nextValue(co.filterF.nextValue(complex(R.NormFloat64(), R.NormFloat64())))
 			}
 		}
 	}
@@ -564,11 +563,11 @@ func (co *Connection) InitConnection(E *Emitter) {
 
 func (co *Connection) clear() {
 	// free some memory . perhaps need to rethink this and have a filterbank
-	for np := 0; np < NPdiv; np++ {
+	/*for np := 0; np < NPdiv; np++ {
 		for rb := range co.filterAr {
 			co.filterAr[np][rb] = nil
 		}
-	}
+	}*/
 
 }
 

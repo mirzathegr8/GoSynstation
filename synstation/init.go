@@ -69,14 +69,13 @@ func init() {
 		}
 	}
 
-	for i := range Mobiles {
-		Mobiles[i].Init(i)
-	}
 
 	// we use that to create a filter used to generates inputs to the doppler filters for each signals	
 	A := Butter(corrF)
 	B := Cheby(10, corrF)
 	CoherenceFilter = MultFilter(A, B)
+
+	
 
 }
 
@@ -89,6 +88,11 @@ var Rgen2 *rand.Rand //one used to init shadow maps
 var IntereNodeBDist float64
 
 func Init() {
+
+	for i := range Mobiles {		
+		go Mobiles[i].Init(i)
+	}
+	Sync(M)
 
 	for i := range Synstations {
 		go Synstations[i].Init(i)

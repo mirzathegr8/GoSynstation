@@ -37,7 +37,7 @@ func main() {
 
 
 
-	runtime.GOMAXPROCS(10)
+	runtime.GOMAXPROCS(15)
 
 	s.Init()
 

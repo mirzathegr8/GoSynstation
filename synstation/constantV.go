@@ -1,7 +1,7 @@
 package synstation
 const BERThres= 0.15
 const SNRThresConnec= 00
-var initScheduler=  initARBSchedulerMUMIMO //initARBSchedulerSDMA //initARBScheduler5 // initChHopping2  // initARBScheduler4 // initARBScheduler1//
+var initScheduler= initChHopping2  // initARBSchedulerMUMIMO //initARBSchedulerSDMA //initARBScheduler5 // initChHopping2  // initARBScheduler4 // initARBScheduler1//
 //var estimateFactor=estimateFactor0
 const conservationFactor=1
 const DiversityType=MRC
@@ -11,7 +11,7 @@ const NetLayout=  HONEYCOMB
 const subsetSize= 10
 
 // The enodebclock, that sets the interval before reactivation
-const EnodeBClock = 3
+const EnodeBClock = 1
 
 //const InterferenceCancel= SIZEESCANCELATION //NOCANCEL ////NOCANCEL //
 //const SetReceiverType = BEAM

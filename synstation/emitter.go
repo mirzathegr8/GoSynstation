@@ -4,6 +4,7 @@ import "geom"
 import "math"
 import "fmt"
 import "container/list"
+import "math/rand"
 
 func init() {
 	fmt.Println(" fmt arb")
@@ -82,7 +83,7 @@ type Emitter struct {
 
 
 
-func (e *Emitter) Init(){
+func (e *Emitter) Init(R *rand.Rand){
 
 	Speed := e.GetSpeed()
 	e.DopplerF = Speed * F / cel // 1000 samples per seconds speed already divided by 1000 for RB TTI
@@ -107,7 +108,7 @@ func (e *Emitter) Init(){
 	for i := 0; i < MaxMacrodiv; i++ {
 		c :=NewConnection()
 		e.ConnectionBank.PushBack(c)
-		c.InitConnection(e)
+		c.InitConnection(e,R)
 	}
 
 }
@@ -403,8 +404,11 @@ func (e *Emitter) FetchData() {
 
 
 func (e *Emitter) MakeConnection(v float64, dbs *DBS)  *Connection{
-	c:= e.ConnectionBank.Back().Value.(*Connection)
-	e.ConnectionBank.Remove(e.ConnectionBank.Back())
+	if e.ConnectionBank.Len()==0 {
+	return nil
+	}
+	// e.ConnectionBank.Back().Value.(*Connection)
+	c:=e.ConnectionBank.Remove(e.ConnectionBank.Back()).(*Connection)
 	c.Reset(v, dbs)
 	return c
 }
