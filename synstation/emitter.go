@@ -374,13 +374,16 @@ func (e *Emitter) FetchData() {
 
 
 	if e.NAt>1{
-	if e.InstEqSNR<80 {
-
+	if e.InstEqSNR< -80 { //80 seems good balance
 		e.PowerNt[0]=1
-		e.PowerNt[1]=0
+		for nat:=1;nat<e.NAt;nat++{
+			e.PowerNt[nat]=0
+		}
 	}else{
-		e.PowerNt[0]=math.Sqrt(.5)
-		e.PowerNt[1]=math.Sqrt(.5)
+		p:=math.Sqrt(1/float64(e.NAt))
+		for nat:=0;nat<e.NAt;nat++{
+			e.PowerNt[nat]=p
+		}
 
 	}}
 
