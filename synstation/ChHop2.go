@@ -184,9 +184,9 @@ func EvalRatio(E *Emitter) float64 {
 	for rb, use := range E.ARB {
 		if use {
 			for nat:=0;nat<E.NAt;nat++{
-				ratio += E.SNRrb[rb*E.NAt+nat]
-				nrb++
+				ratio += E.SNRrb[rb*E.NAt+nat]*(E.PowerNt[nat])*(E.PowerNt[nat])
 			}
+			nrb++
 		}
 	}
 	ratio /= float64(nrb)
@@ -209,9 +209,9 @@ func FindFreeChan(dbs *DBS, E *Emitter, ratio float64, SNRs *[NCh*NAtMAX]float64
 		if !dbs.IsInFuturUse(rb) {
 			snr := 0.0
 			for l := 0; l < subsetSize*E.NAt; l++ {
-				snr += SNRs[rb*E.NAt+l]
+				snr += SNRs[rb*E.NAt+l]*(E.PowerNt[l%E.NAt])*(E.PowerNt[l%E.NAt])
 			}
-			snr /= float64(subsetSize * subsetSize*E.NAt) //we divide by subsetsize for mean and again because emitter power is split accross these RBs
+			snr /= float64(subsetSize * subsetSize) //we divide by subsetsize for mean and again because emitter power is split accross these RBs
 			if snr > ratio {
 				ratio = snr
 				nch = rb
