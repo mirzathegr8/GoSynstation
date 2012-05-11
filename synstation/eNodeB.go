@@ -140,16 +140,19 @@ func (dbs *DBS) IsInFuturUse(rb int) bool { //
 
 }
 
-func (dbs *DBS) connect(e *Emitter, m float64) *Connection {
+func (dbs *DBS) connect(e *Emitter, m float64) (c *Connection) {
 	//Connection instance are now created once and reused for memory consumption purpose
 	// so the Garbage Collector needs not to lots of otherwise unessary work
-	Conn := e.MakeConnection(m,dbs)
-	// these connection instance of course need to be initialized
-	if Conn!=nil{
-		dbs.Connec.PushBack(Conn)
-		sens_connect++
+	select {
+		case c =  <-e.ConnectionBank :
+			c.Reset(m, dbs)
+			dbs.Connec.PushBack(c)
+			sens_connect++
+		default:
+			c= nil
+		
 	}
-	return Conn
+	return
 }
 
 func (dbs *DBS) IsConnected(tx *Emitter) bool {
@@ -365,7 +368,7 @@ func (dbs *DBS) EvalSignalConnection(rb int) (EvalMax float64, EmitterId int) {
 	for S := 0; S < SizeES; S++ {
 		if Rc.Signal[S] >= 0 {
 			if dbs.BelongsToNetwork(Rc.Signal[S]) && !dbs.IsConnected(&Mobiles[Rc.Signal[S]].Emitter) &&
-					Mobiles[Rc.Signal[S]].Emitter.ConnectionBank.Len()>0	{
+					Mobiles[Rc.Signal[S]].Emitter.Diversity<MaxMacrodiv	{
 
 				E := &Mobiles[Rc.Signal[S]].Emitter
 				BER := dbs.EvalSignalBER(E, rb)

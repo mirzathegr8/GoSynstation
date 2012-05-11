@@ -581,7 +581,7 @@ func (co *Connection) GetLogMeanBER() float64 {
 }
 
 func (co *Connection) PushBack()  {
-	co.E.ConnectionBank.PushBack(co)	
+	co.E.ConnectionBank <- co
 }
 
 

@@ -36,7 +36,7 @@ type EmitterS struct {
 
 	IdB int // saves the id of the master BS
 
-	NAt	int // number of emitting antennas
+	NAt	int // number of emitting antennas	
 }
 
 // EmitterS with additional registers for BER and diversity evaluation, 
@@ -78,7 +78,9 @@ type Emitter struct {
 	DoppFilter *Filter
 	DopplerF float64
 
-	ConnectionBank list.List
+	//AskConnection chan<- chan *Connection
+	ConnectionBank chan *Connection
+	//ConnectionBank list.List
 }
 
 
@@ -104,11 +106,13 @@ func (e *Emitter) Init(R *rand.Rand){
 	e.SBERrb = make([]float64,NCh*e.NAt)
 	e.SSNRrb = make([]float64,NCh*e.NAt)
 
+	e.ConnectionBank= make(chan *Connection, MaxMacrodiv)
+	//e.AskConnection = make(chan<- chan *Connection)
 
 	for i := 0; i < MaxMacrodiv; i++ {
 		c :=NewConnection()
-		e.ConnectionBank.PushBack(c)
 		c.InitConnection(e,R)
+		e.ConnectionBank <- c
 	}
 
 }
@@ -403,12 +407,15 @@ func (e *Emitter) FetchData() {
 }
 
 
-func (e *Emitter) MakeConnection(v float64, dbs *DBS)  *Connection{
-	if e.ConnectionBank.Len()==0 {
-	return nil
-	}
-	// e.ConnectionBank.Back().Value.(*Connection)
-	c:=e.ConnectionBank.Remove(e.ConnectionBank.Back()).(*Connection)
-	c.Reset(v, dbs)
-	return c
-}
+//func (e *Emitter) MakeConnection(v float64, dbs *DBS)  *Connection{
+//	if v :<- e.ConnectionBank{
+//		
+//	}
+//	if e.ConnectionBank.Len()==0 {
+//	return nil
+//	}
+//	// e.ConnectionBank.Back().Value.(*Connection)
+//	c:=e.ConnectionBank.Remove(e.ConnectionBank.Back()).(*Connection)
+//	c.Reset(v, dbs)
+//	return c
+//}
