@@ -2,12 +2,12 @@ package synstation
 
 import "math"
 
-const Field = 1500 //length in meters
+const Field = 4000 //length in meters
 
-const Duration =500// in iterations 
+const Duration =1000// in iterations 
 
-const M = 500 //numbers of mobiles
-const D =  50// numbers of DBS
+const M = 1000 //numbers of mobiles
+const D =  100// numbers of DBS
 
 //for M-QAM, km*km=M
 const km = 4.0
@@ -209,4 +209,4 @@ const (
 	NORMAL
 )
 
-const MaxMacrodiv = 3
+const MaxMacrodiv = 5

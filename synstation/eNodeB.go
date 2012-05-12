@@ -101,9 +101,9 @@ func (dbs *DBS) FetchData() {
 	SyncChannel <- 1
 }
 
-func (dbs *DBS) disconnect(e *list.Element) {
-	dbs.Connec.Remove(e)
+func (dbs *DBS) disconnect(e *list.Element) {	
 	c := e.Value.(*Connection)
+	dbs.Connec.Remove(e)
 	c.clear()
 	c.PushBack()
 	//.ConnectionBank.PushBack(e.Value.(*Connection))
@@ -144,7 +144,7 @@ func (dbs *DBS) connect(e *Emitter, m float64) (c *Connection) {
 	//Connection instance are now created once and reused for memory consumption purpose
 	// so the Garbage Collector needs not to lots of otherwise unessary work
 	select {
-		case c =  <-e.ConnectionBank :
+		case c = <-e.ConnectionBank :
 			c.Reset(m, dbs)
 			dbs.Connec.PushBack(c)
 			sens_connect++
@@ -327,6 +327,7 @@ func (dbs *DBS) connectionAgent() {
 		// if no unconnected mobiles got connected, find one to provide it with macrodiversity
 
 		for j := dbs.NMaxConnec - dbs.Connec.Len(); j > 0; j-- {
+		//if dbs.Connec.Len()<dbs.NMaxConnec{
 			var max float64
 			max = -10.0
 

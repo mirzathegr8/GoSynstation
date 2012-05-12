@@ -469,10 +469,10 @@ func (co *Connection) Reset(v float64, dbs *DBS){
 	}
 
 	// Add some decorelation to the filters
-	Speed := co.E.GetSpeed()
+	/*Speed := co.E.GetSpeed()
 	DopplerF := Speed * F / cel //
 	for np := 0; np < NPdiv; np++ {
-		for l := 0; l < int(.5/DopplerF); l++ {
+		for l := 0; l < int(2.5/DopplerF); l++ {
 
 			// for speed optimization, decorelation samples or not used, it makes little difference 
 			for i := 0; i < 50; i++ {
@@ -483,7 +483,7 @@ func (co *Connection) Reset(v float64, dbs *DBS){
 				co.filterAr[np][i].nextValue(co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())))
 			}
 		}
-	}
+	}*/
 
 
 }
