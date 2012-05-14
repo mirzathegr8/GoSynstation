@@ -4,10 +4,10 @@ import "math"
 
 const Field = 4000 //length in meters
 
-const Duration =1000// in iterations 
+const Duration = 100// in iterations 
 
-const M = 1000 //numbers of mobiles
-const D =  100// numbers of DBS
+const M = 50 //numbers of mobiles
+const D =  5// numbers of DBS
 
 //for M-QAM, km*km=M
 const km = 4.0
@@ -194,7 +194,7 @@ const ICIMdistRatio=0.3
 
 //var ICIMfunc=ICIMSplitEdgeCenter2
 var ICIMfunc=ICIMNone
-var PowerAllocation =  optimizePowerAllocationAgent // optimizePowerAllocationAgentRB//  optimizePowerAllocationAgent // optimizePowerNone // 
+var PowerAllocation = optimizePowerNone //  optimizePowerAllocationAgentRB//  optimizePowerAllocationAgent // optimizePowerNone // 
 const PowerAgentFact = 0.8//0.8//0.2 
 const PowerAgentAlpha = 1 //0.8//0.2 
 
