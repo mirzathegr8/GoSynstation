@@ -37,6 +37,8 @@ type EmitterS struct {
 	IdB int // saves the id of the master BS
 
 	NAt	int // number of emitting antennas	
+
+	PowerNt [NAtMAX]float64
 }
 
 // EmitterS with additional registers for BER and diversity evaluation, 
@@ -44,7 +46,7 @@ type EmitterS struct {
 type Emitter struct {
 	EmitterS
 
-	PowerNt [NAtMAX]float64
+	
 	
 	SNRrb []float64
 	MasterMultiPath []float64
@@ -288,7 +290,8 @@ func (e *Emitter) FetchData() {
 
 	effectSNR := 0.0
 	minSNR := 100000000.0
-	nARB := 0
+	//nARB := e.GetNumARB()
+	nChan:=0
 	if e.Diversity == 0 {
 
 		e.MasterConnection = nil
@@ -296,6 +299,7 @@ func (e *Emitter) FetchData() {
 		e.SetPower(1)
 		e.ReSetARB()
 		syncval = 0
+		e.SNRb=0
 
 	} else {
 
@@ -309,6 +313,7 @@ func (e *Emitter) FetchData() {
 			rb:=nat/e.NAt
 			if e.ARB[rb] {
 
+			if snr>1{
 				switch TRATETECH {
 				case OFDM:
 					effectSNR += math.Exp(-snr / betae)
@@ -326,48 +331,51 @@ func (e *Emitter) FetchData() {
 					minSNR = snr
 				}
 
-				nARB++
+				nChan++
 
 				if e.InstSNR < snr {
 					e.InstSNR = snr
 				}
 			}
+			}
 		}
 
-		if nARB > 0 {
+	//	fmt.Println(nChan," ")
+
+		if nChan > 0 {
 			switch TRATETECH {
 			case OFDM2:
 				//this hack is to prevent overflow in the exponential /logarithm leading otherwise to +Inf transferrate
 				// at high SINR the TR is anyways limited by the RB's lowest SINR
-				e.SNRb = -betae * math.Log(e.SNRb/(float64(nARB)*float64(e.Diversity)))
+				e.SNRb = -betae * math.Log(e.SNRb/(float64(nChan)*float64(e.Diversity)))
 				if e.SNRb > 600 {
 					e.SNRb = minSNR
 				}
-				e.TransferRate = EffectiveBW * float64(e.Diversity) * float64(nARB) * math.Log2(1+e.SNRb)
-				if e.TransferRate < float64(100*nARB) {
+				e.TransferRate = EffectiveBW * float64(e.Diversity) * float64(nChan) * math.Log2(1+e.SNRb)
+				if e.TransferRate < float64(100*nChan) {
 					e.TransferRate = 0
 				}
 
 			case OFDM:
 				//this hack is to prevent overflow in the exponential /logarithm leading otherwise to +Inf transferrate
 				// at high SINR the TR is anyways limited by the RB's lowest SINR
-				e.SNRb = -betae * math.Log(effectSNR/float64(nARB))
+				e.SNRb = -betae * math.Log(effectSNR/float64(nChan))
 				if e.SNRb > 600 {
 					e.SNRb = minSNR
 				}
-				e.TransferRate = EffectiveBW * float64(nARB) * math.Log2(1+e.SNRb)
-				if e.TransferRate < float64(100*nARB) {
+				e.TransferRate = EffectiveBW * float64(nChan) * math.Log2(1+e.SNRb)
+				if e.TransferRate < float64(100*nChan) {
 					e.TransferRate = 0
 				}
 			case SCFDM:
-				effectSNR /= float64(nARB)
+				effectSNR /= float64(nChan)
 				e.SNRb = effectSNR
-				e.TransferRate = EffectiveBW * float64(nARB) * math.Log2(1+e.SNRb)
-				if e.TransferRate < float64(100*nARB) {
+				e.TransferRate = EffectiveBW * float64(nChan) * math.Log2(1+e.SNRb)
+				if e.TransferRate < float64(100*nChan) {
 					e.TransferRate = 0
 				}
 			case NORMAL:
-				e.SNRb = math.Pow(2, effectSNR/EffectiveBW/float64(nARB)) - 1
+				e.SNRb = math.Pow(2, effectSNR/EffectiveBW/float64(nChan)) - 1
 				e.TransferRate = effectSNR
 			}
 
