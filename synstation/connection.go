@@ -6,7 +6,7 @@ import rand "math/rand"
 import . "compMatrix"
 
 import "math/cmplx"
-//import "fmt"
+import "fmt"
 
 // TODO what difference for SNR estimates on used/unsued rbs. should be equal for gensearch
 
@@ -14,7 +14,7 @@ var num_con int
 
 func GetDiversity() int { a := num_con; num_con = 0; return a }
 
-const NP = 2  // numbers of simulated paths
+const NP = 1  // numbers of simulated paths
 const NA = 8 //numbers of antennas at receiver
 
 
@@ -32,7 +32,7 @@ func init() {
 	for np := 0; np < NP; np++ {
 		PathGain[np] = math.Sqrt(PathGain[np] / sum)
 	}	
-
+	fmt.Println("init connection done")
 }
 
 type Connection struct {
@@ -362,15 +362,25 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 
 	co.WhRB.SumRowMag(co.NoisePower);
 
+//
 //	fmt.Println(co.NoisePower)
 //	fmt.Println(co.InterferersResidual)
+//	fmt.Println(co.MultuPathMAgain)
 	for nat, Pr :=  range co.MultiPathMAgain {
-		co.SNRrb[nat] = Pr / (
+		if Pr>1e-35{ //we check since WhRB may not be defined if Pr too small (no significant emititng power) otherwise, we might get a NaN
+		co.SNRrb[nat] = (Pr ) / (
 co.InterferencePowerExtra[nat]+ 
 co.InterferencePowerIntra[nat] +  
-//co.InterferersResidual[nat] + 
+co.InterferersResidual[nat] + 
 WNoise*co.NoisePower[nat])
+		}else{
+			co.SNRrb[nat] =0
+		}
+		
 	}
+	
+
+	co.InstEqSNR=0
 
 	var nrbnt int
 
@@ -378,15 +388,17 @@ WNoise*co.NoisePower[nat])
 
 		if use {
 			for nat:=rb*NAt; nat<(rb+1)*NAt;nat++{
-				if co.SNRrb[nat]>0.001 {
+				if co.SNRrb[nat]> 1 {
 
 				BER:= L1 * math.Exp(- co.SNRrb[nat] /2/L2) / 2.0
 				co.meanPr.Add(co.MultiPathMAgain[nat])
 				co.meanSNR.Add(co.SNRrb[nat])
 				co.meanBER.Add(BER)
 
-				co.InstEqSNR += co.SNRrb[nat]
-				nrbnt++
+				//if co.InstEqSNR< co.SNRrn[nat]{
+					co.InstEqSNR += co.SNRrb[nat]
+				//}
+				//nrbnt++
 				touch = true
 				}
 			}
