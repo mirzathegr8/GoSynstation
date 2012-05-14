@@ -576,15 +576,15 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 				row:=0
 				for m := 0; m < Nm ; m++ {
 					for nat:=0;nat<ConnecList[m].E.NAt; nat++{
-					/*	P:=0.0
+						P:=0.0
 						for _,v:=range Wrows[row]{
 							P+=compMatrix.Mag(v)
 						}
+				if P>1e-16{
 						P=math.Sqrt(P)
 						for na,v:=range Wrows[row]{
 							Wrows[row][na]= v/complex(P,0)
-						}*/
-
+						}}
 
 						ConnecList[m].SetGains(dbs, Wrows[row], rb,nat)
 						row++
