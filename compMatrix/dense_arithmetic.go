@@ -449,13 +449,16 @@ func (Mat *DenseMatrix) BlockDiagMag(diag []float64){
 func (Mat *DenseMatrix) SumNotDiagMag(diag []float64){
 	for i := 0; i < Mat.rows;i++ {
 		diag[i]=0.0
-		j:=i%Mat.cols
-		for _,v:=range Mat.elements[i*Mat.step : i*Mat.step +  j]{
+		//j:=i%Mat.cols
+		for _,v:=range Mat.elements[i*Mat.step : i*Mat.step + Mat.cols]{
 			diag[i]+=Mag(v)
 		}
-		for _,v:=range Mat.elements[i*Mat.step + j + 1 : i*Mat.step +  Mat.cols] {
+
+/*		for _,v:=range Mat.elements[i*Mat.step + j + 1 : i*Mat.step +  Mat.cols] {
 			diag[i]+=Mag(v)
-		}
+		}*/
+			diag[i]-=Mag(Mat.elements[ i*Mat.step + i%Mat.cols ])
+		
 	}
 }
 
