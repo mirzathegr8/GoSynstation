@@ -473,7 +473,10 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 	// hence sigma2 is the shadowing+ path loss * emitted power of all interferers  plus Wnoise
 	// this is a worst case scenario
 
-	var ConnecList [NConnec]*Connection
+	var ConnecList [NConnec*NAtMAX]*Connection
+
+	//var IndexM [NConnec*NAtMAX]int
+	var IndexNAt [NConnec*NAtMAX]int
 
 	R := compMatrix.Zeros(dbs.NAr, dbs.NAr)
 
@@ -490,15 +493,26 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 		for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 			c := e.Value.(*Connection)
 			if c.E.ARB[rb] {
-				ConnecList[Nm] = c
-				Nc+= c.E.NAt
+				for nat,v := range c.E.PowerNt{
+					if v>0.000000000001 {
+						ConnecList[Nc] = c
+						IndexNAt[Nc]=nat
+						Nc++
+					}	
+				}
+				//Nc+= c.E.NAt
 				Nm++
 			}
 		}
 
+		ConnecListSlice:=ConnecList[0:Nc]//truncate the vector to the usefull part
+
 		//out of reach mobiles interferer included in sigma noise
 
+	//	fmt.Println(Nc)
+
 		if Nc > 0 {
+	//	fmt.Println(Nc)
 
 			//number of other interferers
 			Nc2 := 0
@@ -513,14 +527,10 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 			H := compMatrix.Zeros(Nc+Nc2, dbs.NAr)
 			Wh := compMatrix.Zeros(dbs.NAr, Nc)
 
-			row:=0
-			for m := 0; m < Nm; m++ {
-				NAt:=ConnecList[m].E.NAt				
-				for nat := 0; nat < NAt; nat++ {	
+			for nc,c := range ConnecListSlice{
 					//copies col from HHRB to H
-					ConnecList[m].HRB.BufferCol(rb*NAt+nat, H.GetRow(row))
-					row++
-				}
+					nat:=IndexNAt[nc]
+					c.HRB.BufferCol(rb*c.E.NAt+nat, H.GetRow(nc))
 			}
 
 		
@@ -573,22 +583,26 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 				W := Wh.Transpose() //Hilbert()
 				Wrows := W.Arrays()				
 
-				row:=0
-				for m := 0; m < Nm ; m++ {
-					for nat:=0;nat<ConnecList[m].E.NAt; nat++{
-						P:=0.0
-						for _,v:=range Wrows[row]{
+//				row:=0
+//				for m := 0; m < Nm ; m++ {
+//					for nat:=0;nat<ConnecList[m].E.NAt; nat++{
+				for nc,c := range ConnecListSlice{
+				
+					/*	P:=0.0
+						for _,v:=range Wrows[nc]{
 							P+=compMatrix.Mag(v)
 						}
 				if P>1e-16{
 						P=math.Sqrt(P)
-						for na,v:=range Wrows[row]{
-							Wrows[row][na]= v/complex(P,0)
-						}}
+						for na,v:=range Wrows[nc]{
+							//Wrows[nc][na]= -cmplx.Conj(v)/complex(P,0)
+							Wrows[nc][na]= v/complex(P,0)
+						}}*/
 
-						ConnecList[m].SetGains(dbs, Wrows[row], rb,nat)
-						row++
-					}
+
+						c.SetGains(dbs, Wrows[nc], rb, IndexNAt[nc])
+						
+	//				}
 				}
 			} else {
 				fmt.Println(err)

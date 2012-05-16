@@ -68,12 +68,12 @@ func (s *saveTraceItem) Stop() {
 }
 
 func SpaceChan(t *s.Trace, i int) float64       {
-s:=0.0
+/*s:=0.0
 for _,v:= range t.Mobs[i].PowerNt{
 	if v>0 {s++}
  }	
-return s
-
+return s*/
+return float64(t.Mobs[i].NChan)
 }
 func MaxBER(t *s.Trace, i int) float64       { return t.Mobs[i].MaxBER }
 func InstMaxBER(t *s.Trace, i int) float64   { return t.Mobs[i].InstMaxBER }

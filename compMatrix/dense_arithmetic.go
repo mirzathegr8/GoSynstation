@@ -312,7 +312,7 @@ func HilbertTimes(A, B, C *DenseMatrix) error {
 	return nil
 }
 
-
+// returns A*B^h where ^h is the hilbert transform
 func TimesHilbert(A, B, C *DenseMatrix) {
 
 	//Bt := B.Transpose()
@@ -457,7 +457,7 @@ func (Mat *DenseMatrix) SumNotDiagMag(diag []float64){
 /*		for _,v:=range Mat.elements[i*Mat.step + j + 1 : i*Mat.step +  Mat.cols] {
 			diag[i]+=Mag(v)
 		}*/
-			diag[i]-=Mag(Mat.elements[ i*Mat.step + i%Mat.cols ])
+		diag[i] -= Mag(Mat.elements[ i*Mat.step + i%Mat.cols ])
 		
 	}
 }

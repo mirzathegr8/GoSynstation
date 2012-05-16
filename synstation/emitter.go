@@ -38,7 +38,7 @@ type EmitterS struct {
 
 	NAt	int // number of emitting antennas	
 
-	PowerNt [NAtMAX]float64
+	NChan int
 }
 
 // EmitterS with additional registers for BER and diversity evaluation, 
@@ -46,7 +46,7 @@ type EmitterS struct {
 type Emitter struct {
 	EmitterS
 
-	
+	PowerNt [NAtMAX]float64
 	
 	SNRrb []float64
 	MasterMultiPath []float64
@@ -291,7 +291,7 @@ func (e *Emitter) FetchData() {
 	effectSNR := 0.0
 	minSNR := 100000000.0
 	//nARB := e.GetNumARB()
-	nChan:=0
+	e.NChan=0
 	if e.Diversity == 0 {
 
 		e.MasterConnection = nil
@@ -331,7 +331,7 @@ func (e *Emitter) FetchData() {
 					minSNR = snr
 				}
 
-				nChan++
+				e.NChan++
 
 				if e.InstSNR < snr {
 					e.InstSNR = snr
@@ -340,42 +340,42 @@ func (e *Emitter) FetchData() {
 			}
 		}
 
-	//	fmt.Println(nChan," ")
+	//	fmt.Println(e.NChan," ")
 
-		if nChan > 0 {
+		if e.NChan > 0 {
 			switch TRATETECH {
 			case OFDM2:
 				//this hack is to prevent overflow in the exponential /logarithm leading otherwise to +Inf transferrate
 				// at high SINR the TR is anyways limited by the RB's lowest SINR
-				e.SNRb = -betae * math.Log(e.SNRb/(float64(nChan)*float64(e.Diversity)))
+				e.SNRb = -betae * math.Log(e.SNRb/(float64(e.NChan)*float64(e.Diversity)))
 				if e.SNRb > 600 {
 					e.SNRb = minSNR
 				}
-				e.TransferRate = EffectiveBW * float64(e.Diversity) * float64(nChan) * math.Log2(1+e.SNRb)
-				if e.TransferRate < float64(100*nChan) {
+				e.TransferRate = EffectiveBW * float64(e.Diversity) * float64(e.NChan) * math.Log2(1+e.SNRb)
+				if e.TransferRate < float64(100*e.NChan) {
 					e.TransferRate = 0
 				}
 
 			case OFDM:
 				//this hack is to prevent overflow in the exponential /logarithm leading otherwise to +Inf transferrate
 				// at high SINR the TR is anyways limited by the RB's lowest SINR
-				e.SNRb = -betae * math.Log(effectSNR/float64(nChan))
+				e.SNRb = -betae * math.Log(effectSNR/float64(e.NChan))
 				if e.SNRb > 600 {
 					e.SNRb = minSNR
 				}
-				e.TransferRate = EffectiveBW * float64(nChan) * math.Log2(1+e.SNRb)
-				if e.TransferRate < float64(100*nChan) {
+				e.TransferRate = EffectiveBW * float64(e.NChan) * math.Log2(1+e.SNRb)
+				if e.TransferRate < float64(100*e.NChan) {
 					e.TransferRate = 0
 				}
 			case SCFDM:
-				effectSNR /= float64(nChan)
+				effectSNR /= float64(e.NChan)
 				e.SNRb = effectSNR
-				e.TransferRate = EffectiveBW * float64(nChan) * math.Log2(1+e.SNRb)
-				if e.TransferRate < float64(100*nChan) {
+				e.TransferRate = EffectiveBW * float64(e.NChan) * math.Log2(1+e.SNRb)
+				if e.TransferRate < float64(100*e.NChan) {
 					e.TransferRate = 0
 				}
 			case NORMAL:
-				e.SNRb = math.Pow(2, effectSNR/EffectiveBW/float64(nChan)) - 1
+				e.SNRb = math.Pow(2, effectSNR/EffectiveBW/float64(e.NChan)) - 1
 				e.TransferRate = effectSNR
 			}
 
@@ -396,7 +396,7 @@ func (e *Emitter) FetchData() {
 
 
 	if e.NAt>1{
-	if e.InstEqSNR< 80 { //80 seems good balance
+	if e.InstEqSNR< 0 { //80 seems good balance
 		e.PowerNt[0]=1
 		for nat:=1;nat<e.NAt;nat++{
 			e.PowerNt[nat]=0

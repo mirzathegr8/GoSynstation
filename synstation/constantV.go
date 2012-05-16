@@ -8,7 +8,7 @@ const DiversityType=MRC
 //const BeamAngle=  1.4345//  1.1345//
 const mDf=4
 const NetLayout=  HONEYCOMB 
-const subsetSize= 10
+const subsetSize= 3
 
 // The enodebclock, that sets the interval before reactivation
 const EnodeBClock = 1

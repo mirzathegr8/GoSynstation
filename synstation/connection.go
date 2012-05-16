@@ -14,12 +14,12 @@ var num_con int
 
 func GetDiversity() int { a := num_con; num_con = 0; return a }
 
-const NP = 1  // numbers of simulated paths
+const NP = 2  // numbers of simulated paths
 const NA = 8 //numbers of antennas at receiver
 
 
 //var PathGain = [5]float64{1, .5, 0.25, 0.05, 0.01} //0.5, 0.125} // relative powers of each path
-var PathGain = [5]float64{1, 1, 1, 1, 1} //0.5, 0.125} // relative powers of each path
+var PathGain = [10]float64{1, 1, 1, 1, 1, 1, 1, 1, 1, 1} //0.5, 0.125} // relative powers of each path
 
 const NPdiv= NP*NA
 
@@ -216,12 +216,16 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 		for nar:= 0 ; nar< NAr; nar++{
 			for nat := 0; nat < NAt; nat++ {
 				
-				var Val complex128
+				/*var Val complex128
 				for np := 0; np < NP; np++ {			
-					Val += co.sRr.Get(nar,np)*co.ff_R[np+nar*NP][rb]*co.sRt.Get(np,nat)	
+			Val += co.sRr.Get(nar,np)*co.ff_R[np+nar*NP][rb]*co.sRt.Get(np,nat)	
+					//Val += co.sRr.Get(nar,np)*co.ff_R[np][rb]*co.sRt.Get(np,nat)					
 				}
 				Val*=complex(p*co.E.PowerNt[nat],0)
-				co.HRB.Set(nar, nat+ NAt*rb, Val )
+				co.HRB.Set(nar, nat+ NAt*rb,  Val )
+				*/
+				//that represents an Hiid case.
+				co.HRB.Set(nar,nat + NAt*rb, complex(p*co.E.Power[nat],0)*co.ff_R[nat*NArMAX+nar][rb])
 			}
 		}
 	}
@@ -253,6 +257,12 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 		co.WhRB.Set(nat,nar,cmplx.Conj(co.HRB.Get(nar,nat)))		
 	}}
 
+
+	/*if co.E.PowerNt[1]>0 {
+		A:=co.HRB.GetMatrix(0,50,8,2).Copy()
+		A.Scale(complex(100000,0))
+		fmt.Println(A)
+	}*/
 
 }
 
@@ -378,8 +388,18 @@ WNoise*co.NoisePower[nat])
 		}
 		
 	}
-	
 
+
+	//if (co.Status==0) {fmt.Println(co.SNRrb)}
+
+
+/*	for nat, Pr :=  range co.MultiPathMAgain {
+		co.NoisePower[nat]=Pr/co.InterferersResidual[nat]
+	}
+	fmt.Println(co.NoisePower)
+*/
+
+//	fmt.Println(co.WhRB)
 	co.InstEqSNR=0
 
 	var nrbnt int
