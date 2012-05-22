@@ -4,10 +4,10 @@ import "math"
 
 const Field = 4000 //length in meters
 
-const Duration = 100// in iterations 
+const Duration = 500// in iterations 
 
-const M = 50 //numbers of mobiles
-const D =  5// numbers of DBS
+const M = 500 //numbers of mobiles
+const D =  50// numbers of DBS
 
 //for M-QAM, km*km=M
 const km = 4.0

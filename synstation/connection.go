@@ -216,16 +216,16 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 		for nar:= 0 ; nar< NAr; nar++{
 			for nat := 0; nat < NAt; nat++ {
 				
-				/*var Val complex128
+				var Val complex128
 				for np := 0; np < NP; np++ {			
 			Val += co.sRr.Get(nar,np)*co.ff_R[np+nar*NP][rb]*co.sRt.Get(np,nat)	
 					//Val += co.sRr.Get(nar,np)*co.ff_R[np][rb]*co.sRt.Get(np,nat)					
 				}
 				Val*=complex(p*co.E.PowerNt[nat],0)
 				co.HRB.Set(nar, nat+ NAt*rb,  Val )
-				*/
+				
 				//that represents an Hiid case.
-				co.HRB.Set(nar,nat + NAt*rb, complex(p*co.E.Power[nat],0)*co.ff_R[nat*NArMAX+nar][rb])
+				//co.HRB.Set(nar,nat + NAt*rb, complex(p*co.E.Power[nat],0)*co.ff_R[nat*NArMAX+nar][rb])
 			}
 		}
 	}
