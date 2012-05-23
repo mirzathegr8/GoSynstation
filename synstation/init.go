@@ -93,7 +93,7 @@ var IntereNodeBDist float64
 func Init() {/* Synstations is of type DBS (it is different from package synstation). It is a vector of length D (no. of DBS defined in constants.go file with D = 143). DBS is a structure defined in synstation.go file.*/
 	
 for i := range Synstations {
-		go Synstations[i].Init()/* Synstations[i].Init() is defined in synstation.go file (under DBS structure). It initializes the variables in DBS structure. */
+		go Synstations[i].Init(i)/* Synstations[i].Init() is defined in synstation.go file (under DBS structure). It initializes the variables in DBS structure. */
 	}
 
 	//sync
