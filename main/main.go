@@ -37,7 +37,7 @@ func main() {
 
 
 
-	runtime.GOMAXPROCS(10)
+	runtime.GOMAXPROCS(20)
 
 	s.Init() /* Init() function is in init.go file (be careful with the capital "I" in Init() function, it is different from init() function). It initialize different parameters. s is package synstation. Package synstation is defined by multiple files in sub-directory synstation. */
 

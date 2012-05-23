@@ -33,7 +33,9 @@ func (M *Mob) Init(i int) {
 
 	M.Data = 4e6
 
-	M.Emitter.Init()
+	M.Emitter.Init(M.Rgen)
+
+	SyncChannel <- 1
 }
 
 // 	applies agent functionality (move mobiles)

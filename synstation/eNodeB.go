@@ -31,7 +31,7 @@ type DBS struct {
 
 	RndCh []int
 
-	ConnectionBank list.List
+	//ConnectionBank list.List
 
 	Color int // This value is used to store some colorisation of the eNodeB, that is for example to use inside schedulers in honeycomb layout, where it will use a subset of RBs for ICIM
 
@@ -53,9 +53,15 @@ func (dbs *DBS) Init(i int) {
 	dbs.Id = i
 	dbs.NMaxConnec = NConnec
 
+<<<<<<< HEAD
 	for i := 0; i < NConnec; i++ {//NConnec: Number of connections per DBS = 40 defined in constant.go file.
 		dbs.ConnectionBank.PushBack(NewConnection(dbs)) /* NewConnection() is a function defined in connection.go file. The return type of NewConnection() is pointer to the Connection structure (Connection structure is also defined in connection.go file). PushBack is a method from the list pakage which inserts the return type of NewConnection() (which is the pointer to the Connection structure) at the back of the list. Thus, this for loop create a link list of 40 elements and each element is a structure of type Connection. */ 
 	}
+=======
+	/*for i := 0; i < NConnec; i++ {
+		dbs.ConnectionBank.PushBack(NewConnection(dbs))
+	}*/
+>>>>>>> de14f3ae79fd220ccd0eaf82334a4d38d04b5f3d
 
 	dbs.Connec = list.New()
 	dbs.PhysReceiverBase.Init()
@@ -86,6 +92,7 @@ func (dbs *DBS) RunPhys() {
 	}*/
 
 	dbs.SetReceiverGainsMMSE()
+	dbs.SetReceiverGainsForEstimation()
 
 	for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 		c := e.Value.(*Connection)
@@ -101,10 +108,12 @@ func (dbs *DBS) FetchData() {
 	SyncChannel <- 1
 }
 
-func (dbs *DBS) disconnect(e *list.Element) {
+func (dbs *DBS) disconnect(e *list.Element) {	
+	c := e.Value.(*Connection)
 	dbs.Connec.Remove(e)
-	e.Value.(*Connection).clear()
-	dbs.ConnectionBank.PushBack(e.Value.(*Connection))
+	c.clear()
+	c.PushBack()
+	//.ConnectionBank.PushBack(e.Value.(*Connection))
 	sens_disconnect++
 }
 
@@ -138,15 +147,19 @@ func (dbs *DBS) IsInFuturUse(rb int) bool { //
 
 }
 
-func (dbs *DBS) connect(e *Emitter, m float64) {
+func (dbs *DBS) connect(e *Emitter, m float64) (c *Connection) {
 	//Connection instance are now created once and reused for memory consumption purpose
 	// so the Garbage Collector needs not to lots of otherwise unessary work
-	Conn := dbs.ConnectionBank.Back().Value.(*Connection)
-	dbs.ConnectionBank.Remove(dbs.ConnectionBank.Back())
-	// these connection instance of course need to be initialized
-	Conn.InitConnection(e, m, dbs)
-	dbs.Connec.PushBack(Conn)
-	sens_connect++
+	select {
+		case c = <-e.ConnectionBank :
+			c.Reset(m, dbs)
+			dbs.Connec.PushBack(c)
+			sens_connect++
+		default:
+			c= nil
+		
+	}
+	return
 }
 
 func (dbs *DBS) IsConnected(tx *Emitter) bool {
@@ -304,8 +317,9 @@ func (dbs *DBS) connectionAgent() {
 					if !dbs.IsConnected(&Mobiles[Rc.Signal[i]].Emitter) {
 						//fmt.Println("is not connected")
 						if 10*math.Log10(Eval) > SNRThresConnec {
-							dbs.connect(&Mobiles[Rc.Signal[i]].Emitter, 0.5)
-							conn++
+							if dbs.connect(&Mobiles[Rc.Signal[i]].Emitter, 0.5)!=nil{
+								conn++
+							}
 							//fmt.Println("connected")
 
 							//return // we are done connecting
@@ -320,6 +334,7 @@ func (dbs *DBS) connectionAgent() {
 		// if no unconnected mobiles got connected, find one to provide it with macrodiversity
 
 		for j := dbs.NMaxConnec - dbs.Connec.Len(); j > 0; j-- {
+		//if dbs.Connec.Len()<dbs.NMaxConnec{
 			var max float64
 			max = -10.0
 
@@ -334,8 +349,9 @@ func (dbs *DBS) connectionAgent() {
 				}
 			}
 			if EmitterId >= 0 {
-				dbs.connect(&Mobiles[EmitterId].Emitter, 0.001)
-				conn++
+				if  dbs.connect(&Mobiles[EmitterId].Emitter, 0.001)!=nil{
+					conn++
+				} 
 			} else {
 				break
 			}
@@ -359,7 +375,8 @@ func (dbs *DBS) EvalSignalConnection(rb int) (EvalMax float64, EmitterId int) {
 	EmitterId = -1
 	for S := 0; S < SizeES; S++ {
 		if Rc.Signal[S] >= 0 {
-			if dbs.BelongsToNetwork(Rc.Signal[S]) && !dbs.IsConnected(&Mobiles[Rc.Signal[S]].Emitter) {
+			if dbs.BelongsToNetwork(Rc.Signal[S]) && !dbs.IsConnected(&Mobiles[Rc.Signal[S]].Emitter) &&
+					Mobiles[Rc.Signal[S]].Emitter.Diversity<MaxMacrodiv	{
 
 				E := &Mobiles[Rc.Signal[S]].Emitter
 				BER := dbs.EvalSignalBER(E, rb)
@@ -463,7 +480,10 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 	// hence sigma2 is the shadowing+ path loss * emitted power of all interferers  plus Wnoise
 	// this is a worst case scenario
 
-	var ConnecList [NConnec]*Connection
+	var ConnecList [NConnec*NAtMAX]*Connection
+
+	//var IndexM [NConnec*NAtMAX]int
+	var IndexNAt [NConnec*NAtMAX]int
 
 	R := compMatrix.Zeros(dbs.NAr, dbs.NAr)
 
@@ -480,15 +500,26 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 		for e := dbs.Connec.Front(); e != nil; e = e.Next() {
 			c := e.Value.(*Connection)
 			if c.E.ARB[rb] {
-				ConnecList[Nm] = c
-				Nc+= c.E.NAt
+				for nat,v := range c.E.PowerNt{
+					if v>0.000000000001 {
+						ConnecList[Nc] = c
+						IndexNAt[Nc]=nat
+						Nc++
+					}	
+				}
+				//Nc+= c.E.NAt
 				Nm++
 			}
 		}
 
+		ConnecListSlice:=ConnecList[0:Nc]//truncate the vector to the usefull part
+
 		//out of reach mobiles interferer included in sigma noise
 
+	//	fmt.Println(Nc)
+
 		if Nc > 0 {
+	//	fmt.Println(Nc)
 
 			//number of other interferers
 			Nc2 := 0
@@ -503,14 +534,10 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 			H := compMatrix.Zeros(Nc+Nc2, dbs.NAr)
 			Wh := compMatrix.Zeros(dbs.NAr, Nc)
 
-			row:=0
-			for m := 0; m < Nm; m++ {
-				NAt:=ConnecList[m].E.NAt				
-				for nat := 0; nat < NAt; nat++ {	
+			for nc,c := range ConnecListSlice{
 					//copies col from HHRB to H
-					ConnecList[m].HRB.BufferCol(rb*NAt+nat, H.GetRow(row))
-					row++
-				}
+					nat:=IndexNAt[nc]
+					c.HRB.BufferCol(rb*c.E.NAt+nat, H.GetRow(nc))
 			}
 
 		
@@ -563,22 +590,26 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 				W := Wh.Transpose() //Hilbert()
 				Wrows := W.Arrays()				
 
-				row:=0
-				for m := 0; m < Nm ; m++ {
-					for nat:=0;nat<ConnecList[m].E.NAt; nat++{
+//				row:=0
+//				for m := 0; m < Nm ; m++ {
+//					for nat:=0;nat<ConnecList[m].E.NAt; nat++{
+				for nc,c := range ConnecListSlice{
+				
 					/*	P:=0.0
-						for _,v:=range Wrows[row]{
+						for _,v:=range Wrows[nc]{
 							P+=compMatrix.Mag(v)
 						}
+				if P>1e-16{
 						P=math.Sqrt(P)
-						for na,v:=range Wrows[row]{
-							Wrows[row][na]= v/complex(P,0)
-						}*/
+						for na,v:=range Wrows[nc]{
+							//Wrows[nc][na]= -cmplx.Conj(v)/complex(P,0)
+							Wrows[nc][na]= v/complex(P,0)
+						}}*/
 
 
-						ConnecList[m].SetGains(dbs, Wrows[row], rb,nat)
-						row++
-					}
+						c.SetGains(dbs, Wrows[nc], rb, IndexNAt[nc])
+						
+	//				}
 				}
 			} else {
 				fmt.Println(err)
@@ -591,129 +622,141 @@ func (dbs *DBS) SetReceiverGainsMMSE() {
 	}
 }
 
-//func (dbs *DBS) SetReceiverGains() {
-
-//	//sigma2 is the estimated variance of the noise + interferes far awway and not connected to the enode
-//	// hence sigma2 is the shadowing+ path loss * emitted power of all interferers plus Wnoise
-//	// this is a worst case scenario
-
-//	var ConnecList [NConnec]*Connection
-
-//	R := compMatrix.Zeros(NA, NA)
 
 
-//	//ConnectedArray := dbs.GetConnectedMobiles()
-
-//	//It := compMatrix.Zeros(NA, NA)
-//	//Iv := compMatrix.Zeros(1, NA)
-//	II := compMatrix.Zeros(NA, NA)
-
-//	// var zerosV [NA*NA]float64
-
-//	for rb := 0; rb < NCh; rb++ {
-
-//		//out of reach mobiles interferer included in sigma noise
-//		Sigma2 := WNoise
-//	/*	for m := range Mobiles {
-//			if !ConnectedArray[m] && Mobiles[m].ARB[rb] {
-//				Pi := dbs.Channels[rb].pr[m]
-//				AoA := dbs.AoA[m]
-//				//Compute the antenna geometrical phase shift for the signal
-
-//				cosAoA_2 := math.Cos(AoA) / 2.0
-//				sin, cos := math.Sincos(cosAoA_2)
-//				phase := complex(cos, sin)
-//				coef := complex(Pi, 0.0)
-//				Iv.Set(0, 0, coef)
-//				for na := 1; na < NA; na++ {
-//					coef *= phase
-//					Iv.Set(0, na, coef)
-//				}
-//				for i := 0; i < NA; i++ {
-//					for j := 0; j < NA; j++ {
-//						It.Set(i, j, 0)
-//					}
-//				}
-//				//It.elements
-
-//				compMatrix.HilbertTimes(Iv, Iv, It)
-//				II.Add(It)
-
-////				Sigma2+=Pi
-
-//			}
-//		}
-//*/
-//		Sigma2+=1e-12
-
-//		Nc := 0
-//		for e := dbs.Connec.Front(); e != nil; e = e.Next() {
-//			c := e.Value.(*Connection)
-//			if c.E.ARB[rb] {
-//				ConnecList[Nc] = c
-//				Nc++
-//			}
-
-//		}
-
-//		if Nc > 0 {
-
-//			H := compMatrix.Zeros(Nc, NA)
-//			Wh := compMatrix.Zeros(NA, Nc)
-
-//			for m := 0; m < Nc; m++ {
-//				for na := 0; na < NA; na++ {
-//					H.Set(m, na, ConnecList[m].H[rb][na])
-//				}
-//			}
-
-//			compMatrix.HilbertTimes(H, H, R)
-
-//			Eye := compMatrix.Eye(NA)
-//			Eye.Scale(complex(Sigma2, 0))
-//			R.Add(Eye)
-//			R.Add(II)
-
-//			Ri, err := R.Inverse()
 
 
-//		/*	Ri,err := R.Inverse()
-//			Eye.Scale(complex(Sigma2+1, 0))
-//			BC,_ := Ri.TimesDense(II)
-//			BCB,_ := BC.TimesDense(Ri)
-//			BC.Add(Eye)
-//			IBCinv,err3 :=  BC.Inverse()
 
-//			MM,_:=IBCinv.TimesDense(BCB)			
 
-//			Ri.Subtract( MM )*/
-//			
+func (dbs *DBS) SetReceiverGainsForEstimation() {
 
-//			if err == nil  {
-//				compMatrix.TimesHilbert(Ri, H, Wh)
-//				W := Wh.Transpose()
-//				Wrows := W.Arrays()
-//				for m := 0; m < Nc; m++ {
-//					
-//					P:=0.0
-//					for _,v:=range Wrows[m]{
-//						P+=Mag(v)
-//					}
-//					P=math.Sqrt(P)
-//					for na,v:=range Wrows[m]{
-//						Wrows[m][na]= v/complex(P,0)
-//					}
+	//sigma2 is the estimated variance of the noise + interferes far awway and not connected to the enode
+	// hence sigma2 is the shadowing+ path loss * emitted power of all interferers plus Wnoise
+	// this is a worst case scenario
 
-//					ConnecList[m].SetGains(dbs, Wrows[m], rb)
-//				}
-//			} else {
-//				fmt.Println(err)
-//			}
+	var ConnecList [NConnec*NAtMAX]*Connection
+	var IndexNAt [NConnec*NAtMAX]int
 
-//		}
+	//list of all connect mobiles which are not emitting on the considered RB
+	var ConnecListNotEmitting [NConnec]*Connection
 
-//	}
-//}
+	R := compMatrix.Zeros(dbs.NAr, dbs.NAr)
+
+
+	ConnectedArray := dbs.GetConnectedMobiles()
+	It := compMatrix.Zeros(dbs.NAr, dbs.NAr)
+ 	Iv := compMatrix.Zeros(1, dbs.NAr)
+	II := compMatrix.Zeros(dbs.NAr, dbs.NAr) // interference matrix
+	II2 := compMatrix.Zeros(dbs.NAr, dbs.NAr) // interference matrix
+
+	HI := compMatrix.Zeros(NConnec*NAtMAX, dbs.NAr)
+	H := compMatrix.Zeros(NAtMAX, dbs.NAr)
+	Wh := compMatrix.Zeros(dbs.NAr, NAtMAX)
+
+
+	for rb := 0; rb < NCh; rb++ {
+
+		//out of reach mobiles interferer included in sigma noise
+		Sigma2 := WNoise
+		for m := range Mobiles {
+			if !ConnectedArray[m] && Mobiles[m].ARB[rb] {
+				Pi := dbs.Channels[rb].pr[m]
+				AoA := dbs.AoA[m]
+				//Compute the antenna geometrical phase shift for the signal
+
+				cosAoA_2 := math.Cos(AoA) / 2.0
+				sin, cos := math.Sincos(cosAoA_2)
+				phase := complex(cos, sin)
+				coef := complex(Pi, 0.0)
+				Iv.Set(0, 0, coef)
+				for na := 1; na < dbs.NAr; na++ {
+					coef *= phase
+					Iv.Set(0, na, coef)
+				}
+				for i := 0; i < dbs.NAr; i++ {
+					for j := 0; j < dbs.NAr; j++ {
+						It.Set(i, j, 0)
+					}
+				}
+
+				compMatrix.HilbertTimes(Iv, Iv, It)
+				II.Add(It)
+
+
+			}
+		}
+
+		Nc := 0
+		nn:=0
+		for e := dbs.Connec.Front(); e != nil; e = e.Next() {
+			c := e.Value.(*Connection)
+			if c.E.ARB[rb] {
+				for nat:=0;nat<c.E.NAt;nat++{
+					ConnecList[Nc] = c
+					IndexNAt[Nc] = nat
+					Nc++
+				}
+			}else {
+				ConnecListNotEmitting[nn]=c
+				nn++
+			}
+
+		}
+
+
+		if Nc > 0 {
+
+			HI2:=HI.GetMatrix(0,0,Nc,dbs.NAr)
+
+			for m,c  := range ConnecList[0:Nc]{
+				for nar := 0; nar < dbs.NAr; nar++ {
+					for nat:=0;nat<c.E.NAt;nat++{
+					HI2.Set(m, nar, c.HRB.Get( nar, rb*c.E.NAt+nat    ) )
+				}}
+			}
+
+			compMatrix.HilbertTimes(HI2, HI2, II2)
+		}
+
+
+			Eye := compMatrix.Eye(NA)
+			Eye.Scale(complex(Sigma2, 0))
+
+			II.Add(Eye)
+			II.Add(II2)
+
+		for _,c :=range ConnecListNotEmitting[0:nn] {
+
+			Hp:=H.GetMatrix(0,0,c.E.NAt,dbs.NAr)
+			Whp:=Wh.GetMatrix(0,0,dbs.NAr,c.E.NAt)
+
+			for nar := 0; nar < dbs.NAr; nar++ {
+				for nat:=0;nat<c.E.NAt;nat++{
+					Hp.Set(nat, nar, c.HRB.Get( nar, rb*c.E.NAt+nat    ) )
+			}}		
+
+			compMatrix.HilbertTimes(Hp, Hp, R)
+			R.Add(II)
+
+
+			Ri, err := R.Inverse()
+
+			if err == nil  {
+				compMatrix.TimesHilbert(Ri, Hp, Whp)
+				W := Whp.Transpose()
+				Wrows := W.Arrays()
+					
+				for nat:=0;nat<c.E.NAt;nat++{	
+					c.SetGains(dbs, Wrows[nat], rb, nat)
+				}
+			} else {
+				fmt.Println(err)
+			}
+
+		}
+
+	}
+}
 
 
 func (dbs *DBS) SetReceiverGainsMRC() {

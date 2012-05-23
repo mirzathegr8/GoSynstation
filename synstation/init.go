@@ -71,14 +71,13 @@ func init() {
 		}
 	}
 
-	for i := range Mobiles {
-		Mobiles[i].Init(i)
-	}
 
 	// we use that to create a filter used to generates inputs to the doppler filters for each signals	
 	A := Butter(corrF)
 	B := Cheby(10, corrF)
 	CoherenceFilter = MultFilter(A, B)
+
+	
 
 }
 
@@ -90,10 +89,22 @@ var Rgen2 *rand.Rand //one used to init shadow maps
 
 var IntereNodeBDist float64
 
+<<<<<<< HEAD
 func Init() {/* Synstations is of type DBS (it is different from package synstation). It is a vector of length D (no. of DBS defined in constants.go file with D = 143). DBS is a structure defined in synstation.go file.*/
 	
 for i := range Synstations {
 		go Synstations[i].Init(i)/* Synstations[i].Init() is defined in synstation.go file (under DBS structure). It initializes the variables in DBS structure. */
+=======
+func Init() {
+
+	for i := range Mobiles {		
+		go Mobiles[i].Init(i)
+	}
+	Sync(M)
+
+	for i := range Synstations {
+		go Synstations[i].Init(i)
+>>>>>>> de14f3ae79fd220ccd0eaf82334a4d38d04b5f3d
 	}
 
 	//sync

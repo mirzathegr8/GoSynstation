@@ -5,8 +5,8 @@ import "geom"
 import rand "math/rand"
 import . "compMatrix"
 
-//import "math/cmplx"
-//import "fmt"
+import "math/cmplx"
+import "fmt"
 
 // TODO what difference for SNR estimates on used/unsued rbs. should be equal for gensearch
 
@@ -14,12 +14,12 @@ var num_con int
 
 func GetDiversity() int { a := num_con; num_con = 0; return a }
 
-const NP = 3  // numbers of simulated paths
+const NP = 2  // numbers of simulated paths
 const NA = 8 //numbers of antennas at receiver
 
 
 //var PathGain = [5]float64{1, .5, 0.25, 0.05, 0.01} //0.5, 0.125} // relative powers of each path
-var PathGain = [5]float64{1, 1, 1, 1, 1} //0.5, 0.125} // relative powers of each path
+var PathGain = [10]float64{1, 1, 1, 1, 1, 1, 1, 1, 1, 1} //0.5, 0.125} // relative powers of each path
 
 const NPdiv= NP*NA
 
@@ -32,7 +32,7 @@ func init() {
 	for np := 0; np < NP; np++ {
 		PathGain[np] = math.Sqrt(PathGain[np] / sum)
 	}	
-
+	fmt.Println("init connection done")
 }
 
 type Connection struct {
@@ -218,17 +218,21 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 				
 				var Val complex128
 				for np := 0; np < NP; np++ {			
-					Val += co.sRr.Get(nar,np)*co.ff_R[np+nar*NP][rb]*co.sRt.Get(np,nat)	
+			Val += co.sRr.Get(nar,np)*co.ff_R[np+nar*NP][rb]*co.sRt.Get(np,nat)	
+					//Val += co.sRr.Get(nar,np)*co.ff_R[np][rb]*co.sRt.Get(np,nat)					
 				}
 				Val*=complex(p*co.E.PowerNt[nat],0)
-				co.HRB.Set(nar, nat+ NAt*rb, Val )
+				co.HRB.Set(nar, nat+ NAt*rb,  Val )
+				
+				//that represents an Hiid case.
+				//co.HRB.Set(nar,nat + NAt*rb, complex(p*co.E.Power[nat],0)*co.ff_R[nat*NArMAX+nar][rb])
 			}
 		}
 	}
 
 	
 	//SetGains for all rb including unsuded ones
-	AoA := dbs.AoA[co.E.Id]
+/*	AoA := dbs.AoA[co.E.Id]
 
 	cosAoA_2 := math.Cos(AoA) / 2
 	sin, cos := math.Sincos(cosAoA_2)
@@ -246,6 +250,19 @@ func (co *Connection) GenerateChannel(dbs *DBS) {
 	for nat:=0 ;nat<NAt*NCh;nat++{
 		co.WhRB.FillRow(nat,defaultGain[0:NAr])		
 	}
+*/
+
+	for nat:=0 ;nat<NAt*NCh;nat++{
+	for nar:=0 ;nar<NAr;nar++{ 
+		co.WhRB.Set(nat,nar,cmplx.Conj(co.HRB.Get(nar,nat)))		
+	}}
+
+
+	/*if co.E.PowerNt[1]>0 {
+		A:=co.HRB.GetMatrix(0,50,8,2).Copy()
+		A.Scale(complex(100000,0))
+		fmt.Println(A)
+	}*/
 
 }
 
@@ -355,15 +372,35 @@ func (co *Connection) BitErrorRate(dbs *DBS) {
 
 	co.WhRB.SumRowMag(co.NoisePower);
 
+//
 //	fmt.Println(co.NoisePower)
 //	fmt.Println(co.InterferersResidual)
+//	fmt.Println(co.MultuPathMAgain)
 	for nat, Pr :=  range co.MultiPathMAgain {
-		co.SNRrb[nat] = Pr / (
+		if Pr>1e-35{ //we check since WhRB may not be defined if Pr too small (no significant emititng power) otherwise, we might get a NaN
+		co.SNRrb[nat] = (Pr ) / (
 co.InterferencePowerExtra[nat]+ 
 co.InterferencePowerIntra[nat] +  
-//co.InterferersResidual[nat] + 
+co.InterferersResidual[nat] + 
 WNoise*co.NoisePower[nat])
+		}else{
+			co.SNRrb[nat] =0
+		}
+		
 	}
+
+
+	//if (co.Status==0) {fmt.Println(co.SNRrb)}
+
+
+/*	for nat, Pr :=  range co.MultiPathMAgain {
+		co.NoisePower[nat]=Pr/co.InterferersResidual[nat]
+	}
+	fmt.Println(co.NoisePower)
+*/
+
+//	fmt.Println(co.WhRB)
+	co.InstEqSNR=0
 
 	var nrbnt int
 
@@ -371,15 +408,17 @@ WNoise*co.NoisePower[nat])
 
 		if use {
 			for nat:=rb*NAt; nat<(rb+1)*NAt;nat++{
-				if co.SNRrb[nat]>0.001 {
+				if co.SNRrb[nat]> 1 {
 
 				BER:= L1 * math.Exp(- co.SNRrb[nat] /2/L2) / 2.0
 				co.meanPr.Add(co.MultiPathMAgain[nat])
 				co.meanSNR.Add(co.SNRrb[nat])
 				co.meanBER.Add(BER)
 
-				co.InstEqSNR += co.SNRrb[nat]
-				nrbnt++
+				//if co.InstEqSNR< co.SNRrn[nat]{
+					co.InstEqSNR += co.SNRrb[nat]
+				//}
+				//nrbnt++
 				touch = true
 				}
 			}
@@ -420,49 +459,11 @@ func (co *Connection) EvalRatioDisconnect() float64 {
 	return Ptot * math.Log(Ptot/co.GetLogMeanBER())
 }
 
-func (co *Connection) InitConnection(E *Emitter, v float64, dbs *DBS) {
-
-	co.E = E
+func (co *Connection) Reset(v float64, dbs *DBS){
+	co.IdB = dbs.Id
 	co.meanBER.Clear(v)
 	co.Status = 1
-
 	co.Rgen = dbs.Rgen
-
-	Speed := E.GetSpeed()
-	DopplerF := Speed * F / cel // 1000 samples per seconds speed already divided by 1000 for RB TTI
-
-	if DopplerF < 0.002 { // the frequency is so low, a simple antena diversity will compensate for 	
-		DopplerF = 0.002
-	}
-
-	A := Butter(DopplerF)
-	B := Cheby(10, DopplerF)
-	C := MultFilter(A, B)
-
-	co.filterF = CoherenceFilter.CopyNew()
-
-	for np := 0; np < NPdiv; np++ {
-		for i := 0; i < NCh; i++ {
-			co.filterAr[np][i] = C.CopyNew()
-		}
-
-		for l := 0; l < int(2.5/DopplerF); l++ {
-
-			// for speed optimization, decorelation samples or not used, it makes little difference 
-			for i := 0; i < 50; i++ {
-				co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))
-			}
-			//co.filterF.nextValues(co.initz[np][0:50])
-
-			for i := 0; i < NCh; i++ {
-				co.filterAr[np][i].nextValue(co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())))
-			}
-	//		co.filterF.nextValues(co.initz[np][0:NCh])			
-
-		//	co.filterAr[np].nextValues(&co.initz[np])
-
-		}
-	}
 
 	co.pathAoA[0] = dbs.AoA[co.E.Id]
 	co.pathGains[0] = PathGain[0]
@@ -473,45 +474,8 @@ func (co *Connection) InitConnection(E *Emitter, v float64, dbs *DBS) {
 		//	divF *= 5.0
 	}
 
-	//generate MIMO
-
-	NAt:=co.E.NAt
-	NAr:=dbs.NAr
-
-	
-	//co.HhHRB = Zeros(NAt,NAt*NCh)
-	co.HRB = Zeros(NAr,NAt*NCh)
-	
-
-	co.sRt= Zeros(NP,NAt)
-	
-	co.sRr= Zeros(NAr,NP)
-
-	co.WhRB = Zeros(NAt*NCh,NAr)
-
-	co.WhHRB = Zeros(NAt*NCh,NAt)
-	//co.CorrI = Zeros(NAt*NCh,NAt)
-
-	for np:=0;np<NP;np++{
-		co.pathAoD[np]=co.Rgen.Float64()*PI2
-	}
-
-
-	co.MultiPathMAgain  = make([]float64, NAt*NCh) 		// NAt*NCh vector length
-	co.InterferencePowerExtra = make([]float64, NAt*NCh)
-	co.InterferencePowerIntra = make([]float64, NAt*NCh)
-	for n:=0;n<NConnec;n++{
-		co.InterferersP[n] = make([]float64, NAt*NCh)
-	}
-	co.InterferersResidual = make([]float64, NAt*NCh)
-	co.SNRrb = make([]float64, NAt*NCh)
-
-	co.NoisePower = make([]float64, NAt*NCh)
-
-
 	//init sRt sRr in case they are not updated immediately
-
-		//signals phase at each antenna (for each path)
+	//signals phase at each antenna (for each path)
 	for np := 0; np < NP; np++ {
 		cosAoA_2 := math.Cos(co.pathAoA[np]) / 2.0
 		sin, cos := math.Sincos(cosAoA_2)
@@ -536,22 +500,111 @@ func (co *Connection) InitConnection(E *Emitter, v float64, dbs *DBS) {
 		}
 	}
 
+	// Add some decorelation to the filters
+	/*Speed := co.E.GetSpeed()
+	DopplerF := Speed * F / cel //
+	for np := 0; np < NPdiv; np++ {
+		for l := 0; l < int(2.5/DopplerF); l++ {
+
+			// for speed optimization, decorelation samples or not used, it makes little difference 
+			for i := 0; i < 50; i++ {
+				co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64()))
+			}
+			
+			for i := 0; i < NCh; i++ {
+				co.filterAr[np][i].nextValue(co.filterF.nextValue(complex(co.Rgen.NormFloat64(), co.Rgen.NormFloat64())))
+			}
+		}
+	}*/
+
+
+}
+
+func (co *Connection) InitConnection(E *Emitter, R *rand.Rand) {
+
+	co.E = E
+
+	Speed := E.GetSpeed()
+	DopplerF := Speed * F / cel // 1000 samples per seconds speed already divided by 1000 for RB TTI
+
+	if DopplerF < 0.002 { // the frequency is so low, a simple antena diversity will compensate for 	
+		DopplerF = 0.002
+	}
+
+	A := Butter(DopplerF)
+	B := Cheby(10, DopplerF)
+	C := MultFilter(A, B)
+
+	co.filterF = CoherenceFilter.CopyNew()
+
+	//generate MIMO
+
+	NAt:=co.E.NAt
+	NAr:=NArMAX
+
+	
+	//co.HhHRB = Zeros(NAt,NAt*NCh)
+	co.HRB = Zeros(NAr,NAt*NCh)
+	
+
+	co.sRt= Zeros(NP,NAt)
+	
+	co.sRr= Zeros(NAr,NP)
+
+	co.WhRB = Zeros(NAt*NCh,NAr)
+
+	co.WhHRB = Zeros(NAt*NCh,NAt)
+
+	for np:=0;np<NP;np++{
+		co.pathAoD[np]=R.Float64()*PI2
+	}
+
+
+	co.MultiPathMAgain  = make([]float64, NAt*NCh) 		// NAt*NCh vector length
+	co.InterferencePowerExtra = make([]float64, NAt*NCh)
+	co.InterferencePowerIntra = make([]float64, NAt*NCh)
+	for n:=0;n<NConnec;n++{
+		co.InterferersP[n] = make([]float64, NAt*NCh)
+	}
+	co.InterferersResidual = make([]float64, NAt*NCh)
+	co.SNRrb = make([]float64, NAt*NCh)
+
+	co.NoisePower = make([]float64, NAt*NCh)
+
+
+	
+	
+	for np := 0; np < NPdiv; np++ {
+		for i := 0; i < NCh; i++ {
+			co.filterAr[np][i] = C.CopyNew()
+		}
+
+		for l := 0; l < int(2.5/DopplerF); l++ {
+			// for speed optimization, decorelation samples or not used, it makes little difference 
+			for i := 0; i < 50; i++ {
+				co.filterF.nextValue(complex(R.NormFloat64(), R.NormFloat64()))
+			}
+			for i := 0; i < NCh; i++ {
+				co.filterAr[np][i].nextValue(co.filterF.nextValue(complex(R.NormFloat64(), R.NormFloat64())))
+			}
+		}
+	}
+
 
 }
 
 func (co *Connection) clear() {
 	// free some memory . perhaps need to rethink this and have a filterbank
-	for np := 0; np < NPdiv; np++ {
+	/*for np := 0; np < NPdiv; np++ {
 		for rb := range co.filterAr {
 			co.filterAr[np][rb] = nil
 		}
-	}
+	}*/
 
 }
 
-func NewConnection(dbs *DBS) (Conn *Connection) {
+func NewConnection() (Conn *Connection) {
 	Conn = new(Connection)
-	Conn.IdB = dbs.Id
 	return
 }
 
@@ -559,5 +612,8 @@ func (co *Connection) GetLogMeanBER() float64 {
 	return math.Log10(co.meanBER.Get() + 1e-10) //prevent saturation
 }
 
+func (co *Connection) PushBack()  {
+	co.E.ConnectionBank <- co
+}
 
 

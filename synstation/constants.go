@@ -2,9 +2,9 @@ package synstation
 
 import "math"
 
-const Field = 1500 //length in meters
+const Field = 4000 //length in meters
 
-const Duration =500// in iterations 
+const Duration = 500// in iterations 
 
 const M = 500 //numbers of mobiles
 const D =  50// numbers of DBS
@@ -16,7 +16,7 @@ const L1 = 2.0/km*(1.0-1.0/km)
 
 const beta=1 // SNR Gap
 
-const NRB=100
+const NRB=30
 const NTDMA=1
 const DivCh=1
 const NCh = NRB*NTDMA/DivCh + NChRes // number of channels
@@ -29,7 +29,7 @@ const corrF = 0.3
 const roverlap = 0.0 // ratio of overlaping of two adjacent channels
 
 // thermal noise per RB 121.45dBm normalized per maximum terminal power output 21dBm and divided for one TTI
-const WNoise = DivCh * 5.6885e-15 //7.1614e-16 // White noise at reciever //21.484e-16
+const WNoise = DivCh * 5.6885e-120 //7.1614e-16 // White noise at reciever //21.484e-16
 const NChRes = 1              //numbers of reserved channels, not used yet, but chan 0 must be reserved
 const NConnec = 25        // numbers of connections per dbs
 
@@ -194,7 +194,7 @@ const ICIMdistRatio=0.3
 
 //var ICIMfunc=ICIMSplitEdgeCenter2
 var ICIMfunc=ICIMNone
-var PowerAllocation =  optimizePowerAllocationAgent // optimizePowerAllocationAgentRB//  optimizePowerAllocationAgent // optimizePowerNone // 
+var PowerAllocation = optimizePowerNone //  optimizePowerAllocationAgentRB//  optimizePowerAllocationAgent // optimizePowerNone // 
 const PowerAgentFact = 0.8//0.8//0.2 
 const PowerAgentAlpha = 1 //0.8//0.2 
 
@@ -209,3 +209,4 @@ const (
 	NORMAL
 )
 
+const MaxMacrodiv = 5

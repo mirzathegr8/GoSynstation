@@ -312,7 +312,7 @@ func HilbertTimes(A, B, C *DenseMatrix) error {
 	return nil
 }
 
-
+// returns A*B^h where ^h is the hilbert transform
 func TimesHilbert(A, B, C *DenseMatrix) {
 
 	//Bt := B.Transpose()
@@ -449,13 +449,16 @@ func (Mat *DenseMatrix) BlockDiagMag(diag []float64){
 func (Mat *DenseMatrix) SumNotDiagMag(diag []float64){
 	for i := 0; i < Mat.rows;i++ {
 		diag[i]=0.0
-		j:=i%Mat.cols
-		for _,v:=range Mat.elements[i*Mat.step : i*Mat.step +  j]{
+		//j:=i%Mat.cols
+		for _,v:=range Mat.elements[i*Mat.step : i*Mat.step + Mat.cols]{
 			diag[i]+=Mag(v)
 		}
-		for _,v:=range Mat.elements[i*Mat.step + j + 1 : i*Mat.step +  Mat.cols] {
+
+/*		for _,v:=range Mat.elements[i*Mat.step + j + 1 : i*Mat.step +  Mat.cols] {
 			diag[i]+=Mag(v)
-		}
+		}*/
+		diag[i] -= Mag(Mat.elements[ i*Mat.step + i%Mat.cols ])
+		
 	}
 }
 
@@ -475,10 +478,10 @@ func (Mat *DenseMatrix) SumRowMag(sum []float64) {
 //  A=[Ab1 ; Ab2] B=[Bb1, Bb2] ; C= []Ab1*Bb1, Ab2*Bb2]
 func (A *DenseMatrix) BlockTimesSumMag(B *DenseMatrix, sliceR []float64, NB int) (err error) {
 
-	if  A.cols != B.rows {
+	/*if  A.cols != B.rows {
 		err = ErrorDimensionMismatch
 		return
-	}
+	}*/
 
 	NAt2:=B.cols/NB
 	
