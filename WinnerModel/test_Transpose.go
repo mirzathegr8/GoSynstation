@@ -25,8 +25,8 @@ func main() {
 	}
 	
 	fmt.Println("Complex Matrix:\n", H, "\n")
-
-	fmt.Println("Determinant : ", H.Transpose())
+//	conj := H.Conj()
+	fmt.Println("Conjugate Transpose : ", H.Hilbert())
 
 }
 
